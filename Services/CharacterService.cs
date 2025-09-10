@@ -1,12 +1,13 @@
-﻿using System.Text.Json;
-using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Players;
 using MyriaLib.Models;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace MyriaLib.Services
 {
-    public static class JsonSaveService
+    public static class CharacterService
     {
         public static void SaveCharacter(UserAccount user, Player player)
         {
@@ -54,6 +55,33 @@ namespace MyriaLib.Services
             }
             SkillFactory.UpdateSkills(ref player);
             return player;
+        }
+        public static List<Player> LoadCharacters(UserAccount account)
+        {
+            List<Player> characters = new List<Player>();
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new ItemConverter() }  // ✅ this line is crucial
+            };
+
+            foreach (string characterName in account.CharacterNames)
+            {
+                string path = Path.Combine("Data/saves", $"{account.Username}-{characterName}.json");
+                var json = File.ReadAllText(path);
+
+                var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
+                Player player = jsonHero;
+                try
+                {
+                    int roomId = player.CurrentRoomId;
+                    player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
+                }
+                catch (Exception ex) { }
+                SkillFactory.UpdateSkills(ref player);
+                characters.Add(player);
+            }
+            return characters;
         }
 
     }
