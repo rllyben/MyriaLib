@@ -30,7 +30,6 @@ namespace MyriaLib.Services
                 CaveRegistry.Load();
                 CityRegistry.Load();
                 ForestRegistry.Load();
-                ItemFactory.LoadItems();
                 QuestManager.LoadQuests();
                 SkillFactory.LoadSkills();
                 NotifyUser("Day cycle");

@@ -5,7 +5,6 @@ namespace MyriaLib.Entities.Items
 {
     public class EquipmentItem : Item
     {
-        public List<PlayerClass> AllowedClasses { get; set; } = new(); 
         public EquipmentType SlotType { get; set; }
         public override int BuyPrice { get; set; } = 300; // base cost
 
@@ -45,7 +44,6 @@ namespace MyriaLib.Entities.Items
         public float BonusBlock { get; set; }
         public int UpgradeLevel { get; set; } = 0;
 
-        public bool IsUsableBy(Player player) => AllowedClasses.Contains(player.Class);
         public override void Use(Player player)
         {
         }
