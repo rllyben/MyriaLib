@@ -11,7 +11,7 @@ namespace MyriaLib.Services.Builder
     {
         private static Dictionary<string, GameItem> _itemDefs;
 
-        public static void LoadItems(string path = "Data/items.json")
+        public static void LoadItems(string path = "Data/common/items.json")
         {
             string json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<GameItem>>(json);

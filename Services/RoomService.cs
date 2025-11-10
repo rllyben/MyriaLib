@@ -8,7 +8,7 @@ namespace MyriaLib.Services
     public static class RoomService
     {
         public static List<Room> AllRooms { get; private set; } = new List<Room>();
-        private static readonly string _filePath = "Data/rooms.json";
+        private static readonly string _filePath = "Data/common/rooms.json";
 
         /// <summary>
         /// Loads all rooms from Data/rooms.json

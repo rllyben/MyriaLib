@@ -15,8 +15,6 @@ namespace MyriaLib.Models.JsonModel
             MaxStackSize = def.MaxStackSize;
             BuyPrice = def.BuyPrice;
             SlotType = Enum.Parse<EquipmentType>(def.SlotType.ToString());
-            AllowedClasses = def.AllowedClasses?
-                .Select(c => Enum.Parse<PlayerClass>(c)).ToList() ?? new();
 
             BaseBonusHP = def.BaseBonusHP;
             BaseBonusMP = def.BaseBonusMP;
