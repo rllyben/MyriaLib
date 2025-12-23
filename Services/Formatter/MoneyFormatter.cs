@@ -11,7 +11,7 @@ namespace MyriaLib.Services.Formatter
     public static class MoneyFormatter
     {
         // Short form like: "1 CC 2 Pt 3 G 4 S 500 B" (skips leading zero groups)
-        internal static string FormatShort(long cc, long pt, long g, long s, long b, NumberFormatInfo nfi)
+        public static string FormatShort(long cc, long pt, long g, long s, long b, NumberFormatInfo nfi)
         {
             string fmt(long v, string unit) => v == 0 ? string.Empty : $"{v.ToString("N0", nfi)} {unit}";
             // Keep at least Bronze
@@ -22,7 +22,7 @@ namespace MyriaLib.Services.Formatter
         }
 
         // Compact form keeps the most significant two units, e.g., "1 Pt 23 G" or "450 S"
-        internal static string FormatCompact(long cc, long pt, long g, long s, long b, NumberFormatInfo nfi)
+        public static string FormatCompact(long cc, long pt, long g, long s, long b, NumberFormatInfo nfi)
         {
             (long val, string unit)[] seq =
             {
