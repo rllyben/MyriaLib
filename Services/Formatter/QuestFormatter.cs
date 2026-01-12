@@ -1,5 +1,4 @@
-﻿using MyriaLib.Entities.Items;
-using MyriaLib.Entities.Monsters;
+﻿using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Services.Builder;
 using System;

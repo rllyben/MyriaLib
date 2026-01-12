@@ -70,7 +70,7 @@ namespace MyriaLib.Services.Builder
         //        .Where(bs => bs.Class == player.Class && bs.RequiredLevel <= player.Level)
         //        .ToList();
         //}
-        public static void UpdateSkills(ref Player player, bool loading = false)
+        public static void UpdateSkills(Player player, bool loading = false)
         {
             var unlocked = GetSkillsFor(player);
             foreach (var skill in unlocked)

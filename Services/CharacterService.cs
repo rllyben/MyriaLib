@@ -53,7 +53,7 @@ namespace MyriaLib.Services
                 Console.ResetColor();
                 return player;
             }
-            SkillFactory.UpdateSkills(ref player);
+            SkillFactory.UpdateSkills(player);
             return player;
         }
         public static List<Player> LoadCharacters(UserAccount account)
@@ -78,7 +78,7 @@ namespace MyriaLib.Services
                     player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
                 }
                 catch (Exception ex) { }
-                SkillFactory.UpdateSkills(ref player);
+                SkillFactory.UpdateSkills(player);
                 characters.Add(player);
             }
             return characters;
