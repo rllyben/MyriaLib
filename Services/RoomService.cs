@@ -1,7 +1,8 @@
+using MyriaLib.Entities.Maps;
+using MyriaLib.Entities.Monsters;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MyriaLib.Entities.Maps;
 
 namespace MyriaLib.Services
 {
@@ -70,6 +71,23 @@ namespace MyriaLib.Services
         {
             return AllRooms.FirstOrDefault(r => r.Id == id);
         }
+        /// <summary>
+        /// connects monsters to their saved rooms
+        /// </summary>
+        public static void ConnectMonsterRooms(List<Monster> monster, List<Room> rooms)
+        {
+            foreach (Monster mob in monster)
+            {
+                foreach (Room room in rooms)
+                {
+                    if (room.EncounterableMonsters.Keys.Contains(mob.Id))
+                        room.Monsters.Add(mob);
+                }
+
+            }
+
+        }
+
     }
 
 }

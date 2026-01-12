@@ -8,7 +8,7 @@ namespace MyriaLib.Services.Manager
     {
         private static List<Quest> _allQuests = new();
 
-        public static void LoadQuests(string path = "Data/quests.json")
+        public static void LoadQuests(string path = "Data/common/quests.json")
         {
             var json = File.ReadAllText(path);
             _allQuests = JsonSerializer.Deserialize<List<Quest>>(json)!;

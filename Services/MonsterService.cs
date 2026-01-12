@@ -26,6 +26,24 @@ namespace MyriaLib.Services
         {
             return _monsterList.FirstOrDefault(m => m.Id == id);
         }
+        public static Monster PickMonsterForFight(List<Monster> monsters, Dictionary<int, float> chances)
+        {
+            Random rnd = new Random();
+
+            float totalWeight = monsters.Sum(m => chances[m.Id]);
+            float roll = rnd.NextSingle();
+
+            float cumulative = 0;
+            foreach (Monster monster in monsters)
+            {
+                cumulative += chances[monster.Id];
+                if (roll < cumulative)
+                    return monster;
+            }
+            return monsters[^1];
+
+        }
+
     }
 
 }
