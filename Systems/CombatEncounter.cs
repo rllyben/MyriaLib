@@ -194,21 +194,22 @@ namespace MyriaLib.Systems
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
-            UserAccoundService.CurrentCharacter.Experience += Enemy.Exp;
-            UserAccoundService.CurrentCharacter.CheckForLevelup();
-            SkillFactory.UpdateSkills(UserAccoundService.CurrentCharacter);
+            Player.Experience += Enemy.Exp;
+            Player.CheckForLevelup();
+            SkillFactory.UpdateSkills(Player);
 
-            foreach (var quest in UserAccoundService.CurrentCharacter.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            foreach (var quest in Player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
             {
                 if (quest.RequiredKills.TryGetValue(Enemy.Id, out int required))
                 {
+                    if (quest.KillProgress[Enemy.Id] >= quest.RequiredKills[Enemy.Id])
+                        continue;
                     quest.KillProgress[Enemy.Id]++;
                     int current = quest.KillProgress[Enemy.Id];
 
                     if (quest.KillProgress.All(kp => kp.Value >= quest.RequiredKills[kp.Key]))
                     {
                         quest.Status = QuestStatus.Completed;
-                        quest.GrantRewards(UserAccoundService.CurrentCharacter);
                     }
 
                 }
@@ -222,13 +223,13 @@ namespace MyriaLib.Systems
                 if (Enemy.DropsCorpse)
                 {
                     var corpse = new Corpse(Enemy.Name, drops);
-                    UserAccoundService.CurrentCharacter.CurrentRoom.Corpses.Add(corpse);
+                    Player.CurrentRoom.Corpses.Add(corpse);
                 }
                 else
                 {
                     foreach (var drop in drops)
                     {
-                        if (UserAccoundService.CurrentCharacter.Inventory.AddItem(drop, UserAccoundService.CurrentCharacter))
+                        if (Player.Inventory.AddItem(drop, Player))
                         {
                             Console.WriteLine();
                         }
@@ -241,9 +242,9 @@ namespace MyriaLib.Systems
                 }
 
             }
-            if (UserAccoundService.CurrentCharacter.CurrentRoom.IsDungeonRoom && UserAccoundService.CurrentCharacter.CurrentRoom.CurrentMonsters.Count < 1)
+            if (Player.CurrentRoom.IsDungeonRoom && Player.CurrentRoom.CurrentMonsters.Count < 1)
             {
-                UserAccoundService.CurrentCharacter.CurrentRoom.IsCleared = true;
+                Player.CurrentRoom.IsCleared = true;
             }
             Log.Add(new CombatLogEntry("pg.fight.log.win", Enemy.Name));
         }

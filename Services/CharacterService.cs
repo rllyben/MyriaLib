@@ -48,9 +48,6 @@ namespace MyriaLib.Services
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"An error accured when setting the heros position: {ex.Message}!");
-                Console.ResetColor();
                 return player;
             }
             SkillFactory.UpdateSkills(player);

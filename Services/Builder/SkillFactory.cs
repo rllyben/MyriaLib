@@ -11,7 +11,7 @@ namespace MyriaLib.Services.Builder
         private static List<Skill> _skills = new();
         // private static List<BaseSkill> _baseSkills = new();
 
-        public static void LoadSkills(string path = "Data/skills.json")
+        public static void LoadSkills(string path = "Data/common/skills.json")
         {
             var skillJson = File.ReadAllText(path);
             var skillData = JsonSerializer.Deserialize<List<SkillData>>(skillJson);
@@ -70,7 +70,7 @@ namespace MyriaLib.Services.Builder
         //        .Where(bs => bs.Class == player.Class && bs.RequiredLevel <= player.Level)
         //        .ToList();
         //}
-        public static void UpdateSkills(Player player, bool loading = false)
+        public static void UpdateSkills(Player player)
         {
             var unlocked = GetSkillsFor(player);
             foreach (var skill in unlocked)
@@ -78,9 +78,6 @@ namespace MyriaLib.Services.Builder
                 if (!player.Skills.Any(s => s.Id == skill.Id))
                 {
                     player.Skills.Add(skill);
-
-                    if (!loading)
-                        Console.WriteLine($"✨ New skill learned: {skill.Name}!");
                 }
 
             }
