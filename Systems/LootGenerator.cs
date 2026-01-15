@@ -31,38 +31,93 @@ namespace MyriaLib.Systems
                     if (ItemFactory.TryCreateItem(entry.ItemId, out var item))
                         loot.Add(item);
                 }
-                Console.WriteLine(rnd);
+
             }
 
             return loot;
         }
         private static List<Item> GetTypeBasedLoot(MonsterType monsterType)
         {
-            var loot = new List<Item>();
+            List<Item> loot = new List<Item>();
             switch (monsterType)
             {
                 case MonsterType.Spirit:
-                    if (_rand.NextDouble() < 0.7) loot.Add(ItemFactory.CreateItem("spirit_dust"));
+                    if (_rand.NextDouble() < 0.7)
+                    {
+                        Item drop = ItemFactory.CreateItem("spirit_dust");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }  
                     break;
                 case MonsterType.Shadow:
-                    if (_rand.NextDouble() < 0.7) loot.Add(ItemFactory.CreateItem("shadow_remnant"));
+                    if (_rand.NextDouble() < 0.7)
+                    {
+                        Item drop = ItemFactory.CreateItem("shadow_remnant");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
                     break;
                 case MonsterType.Elemental:
-                    if (_rand.NextDouble() < 0.3) loot.Add(ItemFactory.CreateItem("earth_essence")); // use actual elemental info later
-                    if (_rand.NextDouble() < 0.3) loot.Add(ItemFactory.CreateItem("stone_fragment"));
-                    if (_rand.NextDouble() < 0.3) loot.Add(ItemFactory.CreateItem("fire_ash"));
-                    if (_rand.NextDouble() < 0.3) loot.Add(ItemFactory.CreateItem("wind_whisper"));
-                    if (_rand.NextDouble() < 0.3) loot.Add(ItemFactory.CreateItem("water_bead"));
+                    if (_rand.NextDouble() < 0.3)
+                    {
+                        Item drop = ItemFactory.CreateItem("earth_essence");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.3)
+                    {
+                        Item drop = ItemFactory.CreateItem("stone_fragment");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.3)
+                    {
+                        Item drop = ItemFactory.CreateItem("fire_ash");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.3)
+                    {
+                        Item drop = ItemFactory.CreateItem("wind_whisper");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.3)
+                    {
+                        Item drop = ItemFactory.CreateItem("water_bead");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
                     break;
                 case MonsterType.Beast:
-                    if (_rand.NextDouble() < 0.6) loot.Add(ItemFactory.CreateItem("beast_flesh"));
-                    if (_rand.NextDouble() < 0.4) loot.Add(ItemFactory.CreateItem("feral_leather"));
-                    if (_rand.NextDouble() < 0.2) loot.Add(ItemFactory.CreateItem("beast_fang"));
+                    if (_rand.NextDouble() < 0.6)
+                    {
+                        Item drop = ItemFactory.CreateItem("beast_flesh");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.4)
+                    {
+                        Item drop = ItemFactory.CreateItem("feral_leather");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
+                    if (_rand.NextDouble() < 0.2)
+                    {
+                        Item drop = ItemFactory.CreateItem("beast_fang");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
                     break;
                 case MonsterType.Humanoid:
-                    if (_rand.NextDouble() < 0.7) loot.Add(ItemFactory.CreateItem("beast_flesh"));
+                    if (_rand.NextDouble() < 0.7)
+                    {
+                        Item drop = ItemFactory.CreateItem("beast_flesh");
+                        drop.StackSize++;
+                        loot.Add(drop);
+                    }
                     break;
-                    // more types here...
+
             }
             return loot;
         }
