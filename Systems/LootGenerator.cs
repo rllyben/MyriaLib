@@ -45,7 +45,6 @@ namespace MyriaLib.Systems
                     if (_rand.NextDouble() < 0.7)
                     {
                         Item drop = ItemFactory.CreateItem("spirit_dust");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }  
                     break;
@@ -53,7 +52,6 @@ namespace MyriaLib.Systems
                     if (_rand.NextDouble() < 0.7)
                     {
                         Item drop = ItemFactory.CreateItem("shadow_remnant");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     break;
@@ -61,31 +59,26 @@ namespace MyriaLib.Systems
                     if (_rand.NextDouble() < 0.3)
                     {
                         Item drop = ItemFactory.CreateItem("earth_essence");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.3)
                     {
                         Item drop = ItemFactory.CreateItem("stone_fragment");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.3)
                     {
                         Item drop = ItemFactory.CreateItem("fire_ash");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.3)
                     {
                         Item drop = ItemFactory.CreateItem("wind_whisper");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.3)
                     {
                         Item drop = ItemFactory.CreateItem("water_bead");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     break;
@@ -93,19 +86,16 @@ namespace MyriaLib.Systems
                     if (_rand.NextDouble() < 0.6)
                     {
                         Item drop = ItemFactory.CreateItem("beast_flesh");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.4)
                     {
                         Item drop = ItemFactory.CreateItem("feral_leather");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     if (_rand.NextDouble() < 0.2)
                     {
                         Item drop = ItemFactory.CreateItem("beast_fang");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     break;
@@ -113,7 +103,6 @@ namespace MyriaLib.Systems
                     if (_rand.NextDouble() < 0.7)
                     {
                         Item drop = ItemFactory.CreateItem("beast_flesh");
-                        drop.StackSize++;
                         loot.Add(drop);
                     }
                     break;

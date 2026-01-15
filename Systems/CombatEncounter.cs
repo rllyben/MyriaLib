@@ -27,6 +27,7 @@ namespace MyriaLib.Systems
 
         private Action? _pendingAction;
         private List<Item> _drops = new List<Item>();
+        public bool InventoryFull { get; set; } = false;
         public CombatEncounter(Player player, Monster enemy)
         {
             Player = player;
@@ -234,20 +235,14 @@ namespace MyriaLib.Systems
 
             if (_drops.Count > 0)
             {
-                if (Enemy.DropsCorpse)
+                foreach (var drop in _drops)
                 {
-                    var corpse = new Corpse(Enemy.Name, _drops);
-                    Player.CurrentRoom.Corpses.Add(corpse);
+                    if (drop.StackSize == 0)
+                        drop.StackSize = 1;
+                    if (!Player.Inventory.AddItem(drop, Player));
+                        InventoryFull = true;
+                    InventoryFull = false;
                 }
-                else
-                {
-                    foreach (var drop in _drops)
-                    {
-                        Player.Inventory.AddItem(drop, Player);
-                    }
-
-                }
-
             }
             if (Player.CurrentRoom.IsDungeonRoom && Player.CurrentRoom.CurrentMonsters.Count < 1)
             {
