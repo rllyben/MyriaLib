@@ -44,6 +44,7 @@ namespace MyriaLib.Entities.Items
         public float BonusBlock { get; set; }
         public int UpgradeLevel { get; set; } = 0;
 
+        public bool IsUsableBy(Player player) => AllowedClasses.Contains(player.Class);
         public override void Use(Player player)
         {
         }

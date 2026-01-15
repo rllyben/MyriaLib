@@ -1,4 +1,5 @@
-﻿using MyriaLib.Entities.Monsters;
+﻿using MyriaLib.Entities.Items;
+using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services;
@@ -25,7 +26,7 @@ namespace MyriaLib.Systems
         public List<CombatLogEntry> Log { get; } = new();
 
         private Action? _pendingAction;
-
+        private List<Item> _drops = new List<Item>();
         public CombatEncounter(Player player, Monster enemy)
         {
             Player = player;
@@ -191,6 +192,15 @@ namespace MyriaLib.Systems
             if (!Player.IsAlive) FinishPlayerLost();
             else Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.PlayerTurn;
         }
+        public Dictionary<string, int> GetDropNames()
+        {
+            Dictionary<string, int> names = new Dictionary<string, int>();
+            foreach (Item item in _drops)
+            {
+                names.Add(item.Name, item.StackSize);
+            }
+            return names;
+        }
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
@@ -220,27 +230,20 @@ namespace MyriaLib.Systems
 
             }
 
-            var drops = LootGenerator.GetLootFor(Enemy);
+            _drops = LootGenerator.GetLootFor(Enemy);
 
-            if (drops.Count > 0)
+            if (_drops.Count > 0)
             {
                 if (Enemy.DropsCorpse)
                 {
-                    var corpse = new Corpse(Enemy.Name, drops);
+                    var corpse = new Corpse(Enemy.Name, _drops);
                     Player.CurrentRoom.Corpses.Add(corpse);
                 }
                 else
                 {
-                    foreach (var drop in drops)
+                    foreach (var drop in _drops)
                     {
-                        if (Player.Inventory.AddItem(drop, Player))
-                        {
-                            Console.WriteLine();
-                        }
-                        else
-                        {
-                            Console.WriteLine();
-                        }
+                        Player.Inventory.AddItem(drop, Player);
                     }
 
                 }
