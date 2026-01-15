@@ -6,6 +6,7 @@ namespace MyriaLib.Entities.Items
 {
     public abstract class Item
     {
+        public List<PlayerClass> AllowedClasses { get; set; } = new();
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }

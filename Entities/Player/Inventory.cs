@@ -1,4 +1,5 @@
-﻿using MyriaLib.Entities.Items;
+﻿using ConsoleWorldRPG.Utils;
+using MyriaLib.Entities.Items;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Entities.Players
@@ -8,6 +9,122 @@ namespace MyriaLib.Entities.Players
         public int Capacity { get; set; } = 20;
         public List<Item> Items { get; set; } = new(); // could become Item class later
 
+        public bool SwapEquipment(string itemname, Player player)
+        {
+            var match = InventoryUtils.ResolveInventoryItem(itemname, player);
+            if (match is not EquipmentItem equipment)
+                return false;
+            if (!equipment.IsUsableBy(player))
+                return false;
+            switch (equipment.SlotType)
+            {
+                case EquipmentType.Weapon:
+                    {
+                        if (player.WeaponSlot != null)
+                        {
+                            EquipmentItem we = player.WeaponSlot;
+                            player.WeaponSlot = equipment;
+                            RemoveItem(equipment);
+                            AddItem(we, player);
+                            return true;
+                        }
+                        player.WeaponSlot = equipment;
+                        RemoveItem(equipment);
+                        return true;
+                    }
+                case EquipmentType.Armor:
+                    {
+                        if (player.ArmorSlot != null)
+                        {
+                            EquipmentItem arm = player.ArmorSlot;
+                            player.ArmorSlot = equipment;
+                            RemoveItem(equipment);
+                            AddItem(arm, player);
+                            return true;
+                        }
+                        player.ArmorSlot = equipment;
+                        RemoveItem(equipment);
+                        return true;
+                    }
+                case EquipmentType.Accessory:
+                    {
+                        if (player.AccessorySlot != null)
+                        {
+                            EquipmentItem acce = player.AccessorySlot;
+                            player.AccessorySlot = equipment;
+                            RemoveItem(equipment);
+                            AddItem(acce, player);
+                            return true;
+                        }
+                        player.AccessorySlot = equipment;
+                        RemoveItem(equipment);
+                        return true;
+                    }
+
+
+            }
+            return false;
+        }
+        public bool UnequipItem(string itemname, Player player)
+        {
+            var match = InventoryUtils.ResolveInventoryItem(itemname, player);
+            if (match is not EquipmentItem equipment)
+                return false;
+            if (equipment.IsUsableBy(player))
+                return false;
+            switch (equipment.SlotType)
+            {
+                case EquipmentType.Weapon:
+                    {
+                        if (player.WeaponSlot == null)
+                            return false;
+                        EquipmentItem we = player.WeaponSlot;
+                        if (AddItem(we, player))
+                        {
+                            player.WeaponSlot = null;
+                            return true;
+                        }
+                        return false;
+                    }
+                case EquipmentType.Armor:
+                    {
+                        if (player.ArmorSlot == null)
+                            return false;
+                        EquipmentItem arm = player.ArmorSlot;
+                        if (AddItem(arm, player))
+                        { 
+                            player.ArmorSlot = null;
+                            return true;
+                        }
+                        return false;
+                    }
+                case EquipmentType.Accessory:
+                    {
+                        if (player.AccessorySlot == null)
+                            return false;
+                        EquipmentItem accs = player.AccessorySlot;
+                        if (AddItem(accs, player))
+                        {
+                            player.AccessorySlot = null;
+                            return true;
+                        }
+                        return false;
+                    }
+
+
+            }
+            return false;
+        }
+        public bool UseItem(string itemname, Player player)
+        {
+            var item = InventoryUtils.ResolveInventoryItem(itemname, player);
+            if (item == null || item is not ConsumableItem consumable) 
+                return false;
+
+            consumable.Use(player);
+            RemoveItem(item);
+            return true;
+        }
         /// <summary>
         /// tries to add item to the inventory
         /// </summary>
