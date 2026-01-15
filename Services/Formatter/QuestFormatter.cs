@@ -82,7 +82,12 @@ namespace MyriaLib.Services.Formatter
             foreach(int mobId in quest.RequiredKills.Keys)
             {
                 Monster mob = MonsterService.GetMonsterById(mobId);
-                lines.Add($"{mob.Name}: {quest.KillProgress[mobId]}/{quest.RequiredKills[mobId]}");
+                int killProgress;
+                if (quest.KillProgress.Any(a => a.Key == mobId))
+                    killProgress = quest.KillProgress[mobId];
+                else
+                    killProgress = 0;
+                lines.Add($"{mob.Name}: {killProgress}/{quest.RequiredKills[mobId]}");
             }
             return lines;
         }

@@ -202,6 +202,10 @@ namespace MyriaLib.Systems
             {
                 if (quest.RequiredKills.TryGetValue(Enemy.Id, out int required))
                 {
+                    if (quest.KillProgress.Count < 1)
+                        quest.KillProgress.Add(Enemy.Id, 0);
+                    else if (quest.KillProgress.All(a => a.Key != Enemy.Id))
+                        quest.KillProgress.Add(Enemy.Id, 0);
                     if (quest.KillProgress[Enemy.Id] >= quest.RequiredKills[Enemy.Id])
                         continue;
                     quest.KillProgress[Enemy.Id]++;

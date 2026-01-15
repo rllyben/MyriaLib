@@ -13,7 +13,7 @@ namespace MyriaLib.Systems
         {
             var loot = new List<Item>();
 
-            if (monster.LootTable.Any())
+            if (monster.LootTable.Count > 0)
             {
                 loot.AddRange(monster.LootTable); // optional override
                 return loot;
@@ -31,7 +31,6 @@ namespace MyriaLib.Systems
                     if (ItemFactory.TryCreateItem(entry.ItemId, out var item))
                         loot.Add(item);
                 }
-                Console.WriteLine(rnd);
             }
 
             return loot;
