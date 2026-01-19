@@ -13,7 +13,7 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// initialises the session time
         /// </summary>
-        public static void Initialize(Player player)
+        public static void Initialize()
         {
             var now = DateTime.Now;
 
@@ -26,13 +26,13 @@ namespace MyriaLib.Services.Manager
                 if (room.GatheringSpots.Any())
                     room.RollGatherLimit();
             }
-
+            StartBackgroundLoop();
         }
         /// <summary>
         /// starts the background time sync
         /// </summary>
         /// <param name="intervalMs"></param>
-        public static void StartBackgroundLoop(Player player, int intervalMs = 30000)
+        public static void StartBackgroundLoop(int intervalMs = 30000)
         {
             if (_running) return;
             _running = true;
@@ -43,7 +43,7 @@ namespace MyriaLib.Services.Manager
                 {
                     try
                     {
-                        Update(player);
+                        Update();
                     }
                     catch (Exception ex)
                     {
@@ -58,7 +58,7 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// Updates the Session time
         /// </summary>
-        public static void Update(Player player)
+        public static void Update()
         {
             var now = DateTime.Now;
 
@@ -70,7 +70,7 @@ namespace MyriaLib.Services.Manager
                 {
                     if (room.GatheringSpots.Any())
                         room.RollGatherLimit(); 
-                    player.RoomGatheringStatus.Clear();
+                    UserAccoundService.CurrentCharacter.RoomGatheringStatus.Clear();
                 }
 
             }
