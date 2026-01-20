@@ -1,4 +1,3 @@
-using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.Monsters;
 using MyriaLib.Services.Builder;
@@ -17,32 +16,30 @@ namespace MyriaLib.Services
         /// Loads all game data
         /// </summary>
         /// <returns>if all loadings where successful</returns>
-        public static bool InitializeGame(Player player)
+        public static bool InitializeGame()
         {
             bool success = false;
             try
             { 
                 Game = GameStatusService.Load();
+                ItemFactory.LoadItems();
                 monster = MonsterService.LoadMonsters();
+                NpcService.LoadNpcs();
                 success = LoadRooms();
-                ConnectMonsterRooms();
+                RoomService.ConnectMonsterRooms(monster, RoomService.AllRooms);
+                NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
+                DayCycleManager.Initialize();
                 DungeonRegistry.Load();
                 CaveRegistry.Load();
                 CityRegistry.Load();
                 ForestRegistry.Load();
                 QuestManager.LoadQuests();
                 SkillFactory.LoadSkills();
-                NotifyUser("Day cycle");
-                DayCycleManager.Initialize(player);
-                DayCycleManager.StartBackgroundLoop(player);
-                Console.WriteLine();
             }
             catch (Exception ex)
             {
                 success = false;
-                Console.WriteLine("Exited with error: ", ex.ToString());
             }
-
             return success;
         }
         /// <summary>
@@ -54,34 +51,9 @@ namespace MyriaLib.Services
             rooms = RoomService.LoadRooms();
             if (rooms.Count == 0)
             {
-                Console.WriteLine("No rooms found! Exiting...");
                 return false;
             }
             return true;
-        }
-        /// <summary>
-        /// connects monsters to their saved rooms
-        /// </summary>
-        private static void ConnectMonsterRooms()
-        {
-            foreach (Monster mob in monster)
-            {
-                var selectedRooms = rooms.Values.Where(r => r.HasMonsters && r.EncounterableMonsters.ContainsKey(mob.Id));
-                foreach (Room room in selectedRooms)
-                {
-                    room.Monsters.Add(mob);
-                }
-
-            }
-
-        }
-        /// <summary>
-        /// prints an user notification what is loaded currently
-        /// </summary>
-        /// <param name="status">the info whats loaded</param>
-        private static void NotifyUser(string status)
-        {
-            Console.WriteLine($"Loading {status} ...");
         }
 
     }

@@ -1,7 +1,7 @@
 using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Players;
 
-namespace ConsoleWorldRPG.Utils
+namespace MyriaLib.Utils
 {
     public static class InventoryUtils
     {

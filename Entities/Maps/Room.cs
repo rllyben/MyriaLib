@@ -1,4 +1,5 @@
 ﻿using MyriaLib.Entities.Monsters;
+using MyriaLib.Entities.NPCs;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Entities.Maps
@@ -30,7 +31,8 @@ namespace MyriaLib.Entities.Maps
         public Dictionary<int, float> EncounterableMonsters { get; set; } = new();
         public List<Monster> Monsters { get; set; } = new List<Monster>(); 
         public List<Monster> CurrentMonsters { get; set; } = new();
-        public List<Corpse> Corpses { get; set; } = new();
+        public List<Corpse> Corpses { get; set; } = new(); 
+        public List<Npc> NpcRefs { get; set; } = new();
 
         public Room(string name, string description)
         {

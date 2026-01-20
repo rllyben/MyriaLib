@@ -5,7 +5,7 @@ namespace MyriaLib.Services
 {
     public static class GameStatusService
     {
-        private static string path = Path.Combine("Data", "gameStatus.json");
+        private static string path = Path.Combine("Data/common", "gameStatus.json");
 
         public static GameStatus Load()
         {

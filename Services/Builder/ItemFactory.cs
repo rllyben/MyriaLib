@@ -9,7 +9,7 @@ namespace MyriaLib.Services.Builder
 {
     public static class ItemFactory
     {
-        private static Dictionary<string, GameItem> _itemDefs;
+        public static Dictionary<string, GameItem> _itemDefs;
 
         public static void LoadItems(string path = "Data/common/items.json")
         {

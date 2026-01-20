@@ -1,4 +1,4 @@
-﻿using ConsoleWorldRPG.Utils;
+﻿using System.Text.Json.Serialization;
 using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;

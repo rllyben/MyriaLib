@@ -1,5 +1,7 @@
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.Monsters;
+using MyriaLib.Entities.Players;
+using MyriaLib.Systems.Enums;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -86,6 +88,19 @@ namespace MyriaLib.Services
 
             }
 
+        }
+        public static bool CanEnterRoom(Room room, Player player)
+        {
+            if (room.IsDungeonRoom && room.CurrentMonsters.Count > 0)
+                return false;
+            switch (room.RequirementType)
+            {
+                case RoomRequirementType.Party: return false;
+                case RoomRequirementType.None: return true;
+                case RoomRequirementType.Level: return player.Level > room.AccessLevel;
+                case RoomRequirementType.Quest: return false;
+            }
+            return true;
         }
 
     }
