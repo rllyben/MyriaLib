@@ -1,4 +1,3 @@
-using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.Monsters;
 using MyriaLib.Services.Builder;

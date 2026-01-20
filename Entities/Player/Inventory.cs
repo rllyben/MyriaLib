@@ -1,4 +1,4 @@
-﻿using ConsoleWorldRPG.Utils;
+﻿using MyriaLib.Utils;
 using MyriaLib.Entities.Items;
 using MyriaLib.Systems.Enums;
 

@@ -1,18 +1,14 @@
 ﻿using MyriaLib.Entities.NPCs;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+using MyriaLib.Models.BaseModel;
+using MyriaLib.Services.Builder;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace MyriaLib.Utils
 {
     public class TestingClass
     {
-        private static string path = "C:/Users/Benn/Documents/test.json";
+        private static string path = "C:/Users/Benn/Documents/";
         public static void TestSaveNpc()
         {
             Npc npc = new Npc();
@@ -23,7 +19,7 @@ namespace MyriaLib.Utils
             npc.Services = new() { "hi" };
 
             var json = JsonSerializer.Serialize(npc);
-            File.WriteAllText(path, json);
+            File.WriteAllText(path + "test.json", json);
             LoadNpcs();
         }
 
@@ -49,9 +45,23 @@ namespace MyriaLib.Utils
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
             };
 
-            AllNpcs = JsonSerializer.Deserialize<List<Npc>>(json, options) ?? new();
+            //var list = JsonSerializer.Deserialize<List<Npc>>(json, options) ?? new();
+           // AllNpcs = list.ToList();
 
             return AllNpcs;
+        }
+        public static void UpdateItems()
+        {
+            foreach (GameItem item in ItemFactory._itemDefs.Values)
+            {
+                item.Name = "item." + item.Id;
+            }
+            JsonSerializerOptions options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            var json = JsonSerializer.Serialize(ItemFactory._itemDefs.Values, options);
+            File.WriteAllText(path + "items.json", json);
         }
 
     }

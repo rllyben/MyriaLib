@@ -1,5 +1,4 @@
-﻿using MyriaLib.Entities.Players;
-using MyriaLib.Systems;
+﻿using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Services.Manager
@@ -70,7 +69,8 @@ namespace MyriaLib.Services.Manager
                 {
                     if (room.GatheringSpots.Any())
                         room.RollGatherLimit(); 
-                    UserAccoundService.CurrentCharacter.RoomGatheringStatus.Clear();
+                    if (UserAccoundService.CurrentCharacter != null)
+                        UserAccoundService.CurrentCharacter.RoomGatheringStatus.Clear();
                 }
 
             }
