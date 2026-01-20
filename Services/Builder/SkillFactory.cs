@@ -1,8 +1,9 @@
-﻿using System.Text.Json;
+﻿using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Skills;
-using MyriaLib.Entities.Players;
 using MyriaLib.Models;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Utils;
+using System.Text.Json;
 
 namespace MyriaLib.Services.Builder
 {
@@ -31,38 +32,11 @@ namespace MyriaLib.Services.Builder
                 IsHealing = d.IsHealing
             }).ToList();
 
-            //var baseJson = File.ReadAllText("Data/baseSkills.json");
-            //var baseData = JsonSerializer.Deserialize<List<BaseSkillData>>(baseJson);
-
-            //_baseSkills = baseData.Select(d => new BaseSkill
-            //{
-            //    Id = d.Id,
-            //    Name = d.Name,
-            //    Description = d.Description,
-            //    Class = Enum.Parse<PlayerClass>(d.Class),
-            //    ManaCost = d.ManaCost,
-            //    ScalingFactor = d.ScalingFactor,
-            //    StatToScaleFrom = d.StatToScaleFrom,
-            //    RequiredLevel = d.RequiredLevel,
-            //}).ToList();
-
-            //foreach (var skill in baseData)
-            //{
-            //    BaseSkill baseSkill = _baseSkills.FirstOrDefault(bs => bs.Id == skill.Id);
-            //    foreach (string componentType in skill.ComponentType)
-            //    {
-            //        baseSkill.ComponentType.Add(Enum.Parse<SkillComponentType>(componentType));
-            //    }
-
-            //}
-
         }
 
         public static List<Skill> GetSkillsFor(Player player)
         {
-            return _skills
-                .Where(s => s.Class == player.Class && s.MinLevel <= player.Level)
-                .ToList();
+            return _skills.Where(s => s.Class == player.Class && s.MinLevel <= player.Level).ToList();
         }
         //public static List<BaseSkill> GetBaseSkillsFor(Player player)
         //{
@@ -75,11 +49,7 @@ namespace MyriaLib.Services.Builder
             var unlocked = GetSkillsFor(player);
             foreach (var skill in unlocked)
             {
-                if (!player.Skills.Any(s => s.Id == skill.Id))
-                {
-                    player.Skills.Add(skill);
-                }
-
+                player.LearnSkill(skill);
             }
 
         }

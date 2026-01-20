@@ -24,11 +24,7 @@ namespace MyriaLib.Entities.NPCs
 
         public void GrantRewards(Player player)
         {
-            if (RewardXp > 0)
-            {
-                player.Experience += RewardXp;
-                player.CheckForLevelup();
-            }
+            player.GainXp(RewardXp);
 
             if (RewardGold > 0)
             {

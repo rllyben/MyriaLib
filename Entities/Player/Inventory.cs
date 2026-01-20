@@ -1,11 +1,13 @@
 ﻿using ConsoleWorldRPG.Utils;
 using MyriaLib.Entities.Items;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Systems.Events;
 
 namespace MyriaLib.Entities.Players
 {
     public class Inventory
     {
+        public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
         public int Capacity { get; set; } = 20;
         public List<Item> Items { get; set; } = new(); // could become Item class later
 
@@ -131,8 +133,9 @@ namespace MyriaLib.Entities.Players
         /// <param name="item">item to add</param>
         /// <param name="player">player character</param>
         /// <returns>if the item was added</returns>
-        public bool AddItem(Item item, Player player)
+        public bool AddItem(Item item, Player player, string? source = null)
         {
+            int stackSize = item.StackSize;
             foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
             {
                 foreach (var itemReq in quest.RequiredItems)
@@ -150,7 +153,6 @@ namespace MyriaLib.Entities.Players
                 }
 
             }
-
             // First try to stack
             foreach (var existing in Items)
             {
@@ -163,9 +165,12 @@ namespace MyriaLib.Entities.Players
                     item.StackSize -= toAdd;
 
                     Restack();
-                    
+
                     if (item.StackSize == 0)
+                    {
+                        ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                         return true;
+                    }
                         
                 }
 
@@ -176,6 +181,7 @@ namespace MyriaLib.Entities.Players
             {
                 Items.Add(item);
                 Restack();
+                ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                 return true;
             }
 

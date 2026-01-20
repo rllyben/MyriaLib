@@ -1,24 +1,35 @@
-﻿using System.Text.Json.Serialization;
-using ConsoleWorldRPG.Utils;
+﻿using ConsoleWorldRPG.Utils;
 using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Systems.Events;
+using MyriaLib.Utils;
+using System.Text.Json.Serialization;
 
 namespace MyriaLib.Entities.Players
 {
     public class Player : CombatEntity
     {
+        public event EventHandler<SkillLearnedEventArgs>? SkillLearned;
+        public event EventHandler<XpGainedEventArgs>? XpGained;
+        public event EventHandler<LevelUpEventArgs>? LeveledUp;
+        public event EventHandler<HealthChangedEventArgs>? HealthChanged;
+        public event EventHandler<ManaChangedEventArgs>? ManaChanged;
         public PlayerClass Class { get; set; } = PlayerClass.Fighter;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;
         public long ExpForNextLvl { get; set; }
         public int PotionTierAvailable { get; set; } = 1;
         public Inventory Inventory { get; set; } = new();
-        public MoneyBag Money { get; set; } = new(); 
-        public List<Skill> Skills => SkillFactory.GetSkillsFor(this); 
+        public MoneyBag Money { get; set; } = new();
+        public List<Skill> Skills
+        {
+            get;
+            set;
+        } = new();
         public List<Quest> ActiveQuests { get; set; } = new();
         public List<Quest> CompletedQuests { get; set; } = new(); 
         public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
@@ -36,19 +47,90 @@ namespace MyriaLib.Entities.Players
             CurrentHealth = stats.MaxHealth;
             CurrentMana = stats.MaxMana;
             ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
+            Skills = SkillFactory.GetSkillsFor(this);
         }
-        /// <summary>
-        /// Handels level ups
-        /// </summary>
-        public void CheckForLevelup()
+        public void GainXp(long amount)
         {
-            while (ExpForNextLvl < Experience)
+            if (amount <= 0) return;
+
+            Experience += amount;
+
+            // Level-up loop in case you gain a lot at once
+            while (Experience >= ExpForNextLvl)
             {
-                LevelUp();
+                int old = Level;
+                LevelUp(); // your existing method (or implement it)
+                LeveledUp?.Invoke(this, new LevelUpEventArgs(old, Level));
                 Experience -= ExpForNextLvl;
-                ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
             }
 
+            XpGained?.Invoke(this, new XpGainedEventArgs(
+                amount,
+                Experience,
+                ExpForNextLvl
+            ));
+
+        }
+        public int ApplyDamage(int amount, string? source = null)
+        {
+            if (amount <= 0) return 0;
+
+            int old = CurrentHealth;
+            int newValue = Math.Max(0, CurrentHealth - amount);
+            CurrentHealth = newValue;
+
+            int actual = old - newValue;
+            if (actual != 0)
+                HealthChanged?.Invoke(this, new HealthChangedEventArgs(old, newValue, source));
+
+            return actual;
+        }
+
+        public int Heal(int amount, string? source = null)
+        {
+            if (amount <= 0) return 0;
+
+            int old = CurrentHealth;
+            int max = Stats.MaxHealth;
+            int newValue = Math.Min(max, CurrentHealth + amount);
+            CurrentHealth = newValue;
+
+            int actual = newValue - old;
+            if (actual != 0)
+                HealthChanged?.Invoke(this, new HealthChangedEventArgs(old, newValue, source));
+
+            return actual;
+        }
+
+        public int SpendMana(int amount, string? source = null)
+        {
+            if (amount <= 0) return 0;
+
+            int old = CurrentMana;
+            int newValue = Math.Max(0, CurrentMana - amount);
+            CurrentMana = newValue;
+
+            int actual = old - newValue;
+            if (actual != 0)
+                ManaChanged?.Invoke(this, new ManaChangedEventArgs(old, newValue, source));
+
+            return actual;
+        }
+
+        public int RestoreMana(int amount, string? source = null)
+        {
+            if (amount <= 0) return 0;
+
+            int old = CurrentMana;
+            int max = Stats.MaxMana;
+            int newValue = Math.Min(max, CurrentMana + amount);
+            CurrentMana = newValue;
+
+            int actual = newValue - old;
+            if (actual != 0)
+                ManaChanged?.Invoke(this, new ManaChangedEventArgs(old, newValue, source));
+
+            return actual;
         }
         /// <summary>
         /// Applies an death penalty if the player dies
@@ -101,6 +183,20 @@ namespace MyriaLib.Entities.Players
             CurrentHealth = Stats.MaxHealth;
             CurrentMana = Stats.MaxMana;
         }
+        public bool LearnSkill(Skill skill)
+        {
+            if (skill == null) return false;
+
+            // prevent duplicates (use Id if you have it)
+            if (Skills.Any(s => s.Id == skill.Id))
+                return false;
+
+            Skills.Add(skill);
+
+            SkillLearned?.Invoke(this, new SkillLearnedEventArgs(skill));
+            return true;
+        }
+
         /// <summary>
         /// returns the bonus from equiped gear
         /// </summary>

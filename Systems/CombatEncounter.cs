@@ -26,6 +26,7 @@ namespace MyriaLib.Systems
         public List<CombatLogEntry> Log { get; } = new();
 
         private Action? _pendingAction;
+        private Dictionary<string, int> _dropnumbers = new Dictionary<string, int>();
         private List<Item> _drops = new List<Item>();
         public bool InventoryFull { get; set; } = false;
         public CombatEncounter(Player player, Monster enemy)
@@ -119,14 +120,14 @@ namespace MyriaLib.Systems
         {
             // This mirrors your existing UseSkill logic :contentReference[oaicite:3]{index=3}
             // but logs keys instead of Console.WriteLine.
-            Player.CurrentMana -= skill.ManaCost;
+            Player.SpendMana(skill.ManaCost);
 
             if (skill.IsHealing)
             {
                 int baseStat = ResolveSkillBaseStat(skill);
                 int heal = (int)(baseStat * skill.ScalingFactor);
                 int healed = Math.Min(heal, Player.Stats.MaxHealth - Player.CurrentHealth);
-                Player.CurrentHealth += healed;
+                Player.Heal(healed);
                 Log.Add(new CombatLogEntry("pg.fight.log.heal", Player.Name, healed));
             }
             else
@@ -186,7 +187,7 @@ namespace MyriaLib.Systems
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyMiss", Enemy.Name));
             else
             {
-                Player.TakeDamage(dmg);
+                Player.ApplyDamage(dmg);
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyHit", Enemy.Name, dmg));
             }
 
@@ -195,18 +196,12 @@ namespace MyriaLib.Systems
         }
         public Dictionary<string, int> GetDropNames()
         {
-            Dictionary<string, int> names = new Dictionary<string, int>();
-            foreach (Item item in _drops)
-            {
-                names.Add(item.Name, item.StackSize);
-            }
-            return names;
+            return _dropnumbers;
         }
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
-            Player.Experience += Enemy.Exp;
-            Player.CheckForLevelup();
+            Player.GainXp(Enemy.Exp);
             SkillFactory.UpdateSkills(Player);
 
             foreach (var quest in Player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
@@ -232,7 +227,11 @@ namespace MyriaLib.Systems
             }
 
             _drops = LootGenerator.GetLootFor(Enemy);
-
+            _dropnumbers = new();
+            foreach (var drop in _drops)
+            {
+                _dropnumbers.Add(drop.Name, drop.StackSize);
+            }
             if (_drops.Count > 0)
             {
                 foreach (var drop in _drops)
