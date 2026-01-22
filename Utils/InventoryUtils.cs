@@ -8,7 +8,7 @@ namespace MyriaLib.Utils
         public static Item ResolveInventoryItem(string input, Player player)
         {
             var matches = player.Inventory.Items
-                .Where(i => i.Name.StartsWith(input, StringComparison.OrdinalIgnoreCase))
+                .Where(i => i.Id.StartsWith(input, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (matches.All(i => i.Name.ToLower() == matches[0].Name.ToLower()))

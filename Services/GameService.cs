@@ -29,12 +29,12 @@ namespace MyriaLib.Services
                 RoomService.ConnectMonsterRooms(monster, RoomService.AllRooms);
                 NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
                 DayCycleManager.Initialize();
+                QuestManager.LoadQuests();
+                SkillFactory.LoadSkills();
                 DungeonRegistry.Load();
                 CaveRegistry.Load();
                 CityRegistry.Load();
                 ForestRegistry.Load();
-                QuestManager.LoadQuests();
-                SkillFactory.LoadSkills();
             }
             catch (Exception ex)
             {

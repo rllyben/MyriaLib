@@ -25,11 +25,7 @@ namespace MyriaLib.Entities.Players
         public int PotionTierAvailable { get; set; } = 1;
         public Inventory Inventory { get; set; } = new();
         public MoneyBag Money { get; set; } = new();
-        public List<Skill> Skills
-        {
-            get;
-            set;
-        } = new();
+        public List<Skill> Skills { get; set;} = new();
         public List<Quest> ActiveQuests { get; set; } = new();
         public List<Quest> CompletedQuests { get; set; } = new(); 
         public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
@@ -162,6 +158,7 @@ namespace MyriaLib.Entities.Players
                     AccessorySlot = item;
                     break;
             }
+
         }
         /// <summary>
         /// updates stats for an Level up

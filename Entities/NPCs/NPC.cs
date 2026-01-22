@@ -1,4 +1,6 @@
-﻿using MyriaLib.Systems;
+﻿using MyriaLib.Entities.Items;
+using MyriaLib.Services;
+using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Entities.NPCs
@@ -11,9 +13,32 @@ namespace MyriaLib.Entities.NPCs
 
         public NpcType Type { get; set; }                // Healer, Shop, QuestGiver, etc.
         public List<string> Services { get; set; } = new(); // optional: "heal", "shop", "quests"
+        public List<string> ItemNames { get; set; } = new();
+        public List<Item> ItemRefs { get; set; } = new();
         public override string ToString()
         {
             return Localization.T(NameKey);
+        }
+        public void HealingAction()
+        {
+            UserAccoundService.CurrentCharacter.Heal(int.MaxValue, this.ToString());
+            UserAccoundService.CurrentCharacter.CurrentMana = UserAccoundService.CurrentCharacter.MaxMana;
+        }
+        public void BuyItem(Item item)
+        {
+            UserAccoundService.CurrentCharacter.Inventory.AddItem(item, UserAccoundService.CurrentCharacter, this.ToString());
+        }
+        public void SellItem(Item item)
+        {
+
+        }
+        public void UpgradeItem(Item item)
+        {
+
+        }
+        public void CraftItem(Item item)
+        {
+
         }
 
     }
