@@ -22,7 +22,7 @@ namespace MyriaLib.Entities.NPCs
         public void HealingAction()
         {
             UserAccoundService.CurrentCharacter.Heal(int.MaxValue, this.ToString());
-            UserAccoundService.CurrentCharacter.CurrentMana = UserAccoundService.CurrentCharacter.MaxMana;
+            UserAccoundService.CurrentCharacter.RestoreMana(int.MaxValue, this.ToString());
         }
         public void BuyItem(Item item)
         {

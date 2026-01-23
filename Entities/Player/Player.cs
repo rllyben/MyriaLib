@@ -88,6 +88,8 @@ namespace MyriaLib.Entities.Players
 
             int old = CurrentHealth;
             int max = Stats.MaxHealth;
+            if (amount > max)
+                amount = max;
             int newValue = Math.Min(max, CurrentHealth + amount);
             CurrentHealth = newValue;
 
@@ -116,9 +118,10 @@ namespace MyriaLib.Entities.Players
         public int RestoreMana(int amount, string? source = null)
         {
             if (amount <= 0) return 0;
-
             int old = CurrentMana;
             int max = Stats.MaxMana;
+            if (amount > max)
+                amount = max;
             int newValue = Math.Min(max, CurrentMana + amount);
             CurrentMana = newValue;
 
