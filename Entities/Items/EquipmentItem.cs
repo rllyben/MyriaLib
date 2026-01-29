@@ -61,17 +61,15 @@ namespace MyriaLib.Entities.Items
             }
 
             string requiredItemId = "upgrade_stone"; // later: different items per tier
-            var material = player.Inventory.Items
-                .FirstOrDefault(i => i.Id == requiredItemId);
+            var material = player.Inventory.Items.Where(i => i.Id == requiredItemId)
+                .FirstOrDefault();
 
             if (material == null)
             {
                 return false;
             }
-            if (material.StackSize < 2)
-                player.Inventory.RemoveItem(material);
-            else
-                material.StackSize--;
+            if (!player.Inventory.RemoveItem(material))
+                return false;
 
             UpgradeLevel++;
             float multiplier = 1.1f;

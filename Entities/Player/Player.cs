@@ -171,6 +171,8 @@ namespace MyriaLib.Entities.Players
             var profile = ClassProfile.All[Class];
 
             Level++;
+            ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
+
             Stats.Strength += profile.StatGrowth["STR"];
             Stats.Dexterity += profile.StatGrowth["DEX"];
             Stats.Endurance += profile.StatGrowth["END"];
