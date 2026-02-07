@@ -9,7 +9,7 @@ namespace MyriaLib.Entities.Players
     {
         public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
         public int Capacity { get; set; } = 20;
-        public List<Item> Items { get; set; } = new();
+        public List<Item> Items { get; set; } = new(); // could become Item class later
 
         public bool SwapEquipment(string itemname, Player player)
         {
@@ -154,7 +154,7 @@ namespace MyriaLib.Entities.Players
 
             }
             // First try to stack
-            foreach (Item existing in Items)
+            foreach (var existing in Items)
             {
                 if (existing.CanStackWith(item) && existing.StackSize < existing.MaxStackSize)
                 {
@@ -192,42 +192,7 @@ namespace MyriaLib.Entities.Players
         /// </summary>
         /// <param name="item">item to remove</param>
         /// <returns>if the item was removed</returns>
-        public bool RemoveItem(Item item)
-        {
-            if (!Items.Any(i => i.Id == item.Id))
-                return false;
-            Item temp = Items.Where(i => i.Id == item.Id).FirstOrDefault();
-            if (temp == null)
-                return false;
-            int difference = 0;
-            if (temp.StackSize >= item.StackSize)
-            {
-                temp.StackSize -= item.StackSize;
-                if (temp.StackSize == 0)
-                    Items.Remove(temp);
-                return true;
-            }
-
-            int TotalStackSize = Items.FindAll(a => a.Id == item.Id).Sum(s => s.StackSize);
-
-            if (item.StackSize > TotalStackSize)
-                return false;
-
-            foreach (Item invItem in Items.FindAll(a => a.Id == item.Id))
-            {
-                int stack = item.StackSize;
-                if (invItem.StackSize > stack)
-                {
-                    invItem.StackSize -= stack;
-                    if (invItem.StackSize == 0)
-                        Items.Remove(invItem);
-                    return true;
-                }
-                item.StackSize -= invItem.StackSize;
-                Items.Remove(invItem);
-            }
-            return false;
-        }
+        public bool RemoveItem(Item item) => Items.Remove(item);
 
         /// <summary>
         /// tries to sell an item
