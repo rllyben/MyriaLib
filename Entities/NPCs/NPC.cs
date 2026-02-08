@@ -100,6 +100,7 @@ namespace MyriaLib.Entities.NPCs
         // --- Craft (Smith) ---
         public NpcActionResult CraftItem(Player player, Item item)
         {
+
             // Crafting rules differ per game. The console version crafts upgrade_stone from iron_ore :contentReference[oaicite:7]{index=7}.
             // Keep this as a simple hook for now:
             return NpcActionResult.Fail("npc.action.craft.notImplemented");

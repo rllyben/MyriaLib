@@ -35,10 +35,7 @@ namespace MyriaLib.Systems
             return new NpcActionResult
             {
                 Success = true,
-                MessageKey = "npc.healer.healed",
-                HpRestored = player.CurrentHealth - hpBefore,
-                MpRestored = player.CurrentMana - mpBefore,
-                GoldChange = -cost
+                MessageKey = "npc.healer.healed"
             };
 
         }

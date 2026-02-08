@@ -10,13 +10,13 @@ namespace MyriaLib.Entities.NPCs
     {
         public bool Success { get; init; }
         public string MessageKey { get; init; } = "";   // for Localization.T(...)
-        public object[] Args { get; init; } = System.Array.Empty<object>();
+        public object[] MessageArgs { get; init; } = System.Array.Empty<object>();
 
         public static NpcActionResult Ok(string key, params object[] args)
-            => new() { Success = true, MessageKey = key, Args = args };
+            => new() { Success = true, MessageKey = key, MessageArgs = args };
 
         public static NpcActionResult Fail(string key, params object[] args)
-            => new() { Success = false, MessageKey = key, Args = args };
+            => new() { Success = false, MessageKey = key, MessageArgs = args };
     }
 
 }

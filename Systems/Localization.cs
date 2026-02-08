@@ -38,6 +38,8 @@ namespace MyriaLib.Systems
 
         public static string T(string key, params object[] args)
         {
+            if (key == null)
+                return "";
             if (!_strings.TryGetValue(key, out var format))
                 return $"[{key}]"; // visible fallback so missing keys are easy to spot
 
