@@ -176,6 +176,7 @@ namespace MyriaLib.Entities.Players
             Stats.Endurance += profile.StatGrowth["END"];
             Stats.Intelligence += profile.StatGrowth["INT"];
             Stats.Spirit += profile.StatGrowth["SPR"];
+            Stats.UnusedPoints++;
 
             Stats.BaseHealth += profile.HpPerLevel;
             Stats.BaseMana += profile.ManaPerLevel;
@@ -225,6 +226,22 @@ namespace MyriaLib.Entities.Players
                 _ => false
             };
 
+        }
+
+        /// <summary>
+        /// Recalculates unused stat points based on level and spent points.
+        /// Useful for imported characters or save migrations.
+        /// </summary>
+        public void RecalculateUnusedPoints()
+        {
+            // 1 point per level starting from level 2 (level 1 has 0 points)
+            int totalPointsEarned = Math.Max(0, Level - 1);
+
+            // Calculate points spent by summing up the "Added" properties
+            int pointsSpent = Stats.StrengthAdded + Stats.DexterityAdded + Stats.EnduranceAdded + Stats.IntelligenceAdded + Stats.SpiritAdded;
+
+            // Unused = Total Earned - Spent
+            Stats.UnusedPoints = Math.Max(0, totalPointsEarned - pointsSpent);
         }
 
     }

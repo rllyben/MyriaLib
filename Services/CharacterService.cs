@@ -47,8 +47,12 @@ namespace MyriaLib.Services
             }
             catch (Exception ex)
             {
-                return player;
+                // Log error or handle gracefully
             }
+            
+            // Recalculate unused points for imported/loaded characters
+            player.RecalculateUnusedPoints();
+            
             SkillFactory.UpdateSkills(player);
             return player;
         }
@@ -74,6 +78,10 @@ namespace MyriaLib.Services
                     player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
                 }
                 catch (Exception ex) { }
+                
+                // Recalculate unused points for imported/loaded characters
+                player.RecalculateUnusedPoints();
+
                 SkillFactory.UpdateSkills(player);
                 characters.Add(player);
             }

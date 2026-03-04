@@ -11,6 +11,9 @@ namespace MyriaLib.Utils
                 .Where(i => i.Id.StartsWith(input, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+            if (matches.Count == 0)
+                return null;
+
             if (matches.All(i => i.Name.ToLower() == matches[0].Name.ToLower()))
                 return matches[0];
             else

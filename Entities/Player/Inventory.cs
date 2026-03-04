@@ -8,7 +8,7 @@ namespace MyriaLib.Entities.Players
     public class Inventory
     {
         public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
-        public int Capacity { get; set; } = 20;
+        public int Capacity { get; set; } = 49;
         public List<Item> Items { get; set; } = new(); // could become Item class later
 
         public bool SwapEquipment(string itemname, Player player)
