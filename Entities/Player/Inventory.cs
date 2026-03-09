@@ -11,110 +11,204 @@ namespace MyriaLib.Entities.Players
         public int Capacity { get; set; } = 49;
         public List<Item> Items { get; set; } = new(); // could become Item class later
 
-        public bool SwapEquipment(string itemname, Player player)
+        public bool SwapEquipment(string itemId, Player player)
         {
-            var match = InventoryUtils.ResolveInventoryItem(itemname, player);
+            System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment called for: {itemId}");
+            
+            var match = InventoryUtils.ResolveInventoryItem(itemId, player);
+            System.Diagnostics.Debug.WriteLine($"[Inventory] Resolved item: {match?.Name ?? "NULL"}");
+            
             if (match is not EquipmentItem equipment)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Inventory] Item is not EquipmentItem");
                 return false;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment found: {equipment.Name}, SlotType: {equipment.SlotType}");
+            
             if (!equipment.IsUsableBy(player))
+            {
+                System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment not usable by player");
                 return false;
+            }
+
             switch (equipment.SlotType)
             {
                 case EquipmentType.Weapon:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Weapon slot");
+                        
                         if (player.WeaponSlot != null)
                         {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot occupied, swapping out: {player.WeaponSlot.Name}");
                             EquipmentItem we = player.WeaponSlot;
                             player.WeaponSlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] New weapon equipped: {equipment.Name}");
+                            
                             RemoveItem(equipment);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
+                            
                             AddItem(we, player);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped weapon to inventory: {we.Name}");
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot empty, equipping: {equipment.Name}");
                         player.WeaponSlot = equipment;
                         RemoveItem(equipment);
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon equipped successfully");
                         return true;
                     }
                 case EquipmentType.Armor:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Armor slot");
+                        
                         if (player.ArmorSlot != null)
                         {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot occupied, swapping out: {player.ArmorSlot.Name}");
                             EquipmentItem arm = player.ArmorSlot;
                             player.ArmorSlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] New armor equipped: {equipment.Name}");
+                            
                             RemoveItem(equipment);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
+                            
                             AddItem(arm, player);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped armor to inventory: {arm.Name}");
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot empty, equipping: {equipment.Name}");
                         player.ArmorSlot = equipment;
                         RemoveItem(equipment);
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Armor equipped successfully");
                         return true;
                     }
                 case EquipmentType.Accessory:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Accessory slot");
+                        
                         if (player.AccessorySlot != null)
                         {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot occupied, swapping out: {player.AccessorySlot.Name}");
                             EquipmentItem acce = player.AccessorySlot;
                             player.AccessorySlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] New accessory equipped: {equipment.Name}");
+                            
                             RemoveItem(equipment);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
+                            
                             AddItem(acce, player);
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped accessory to inventory: {acce.Name}");
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot empty, equipping: {equipment.Name}");
                         player.AccessorySlot = equipment;
                         RemoveItem(equipment);
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory equipped successfully");
                         return true;
                     }
-
-
             }
+            
+            System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment failed - unknown slot type");
             return false;
         }
         public bool UnequipItem(string itemname, Player player)
         {
+            System.Diagnostics.Debug.WriteLine($"[Inventory] UnequipItem called for: {itemname}");
+            
             var match = InventoryUtils.ResolveInventoryItem(itemname, player);
+            System.Diagnostics.Debug.WriteLine($"[Inventory] Resolved item: {match?.Name ?? "NULL"}");
+            
             if (match is not EquipmentItem equipment)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Inventory] Item is not EquipmentItem");
                 return false;
+            }
+            
             if (equipment.IsUsableBy(player))
+            {
+                System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment IS usable by player (should be false for this check)");
                 return false;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment found: {equipment.Name}, SlotType: {equipment.SlotType}");
+            
             switch (equipment.SlotType)
             {
                 case EquipmentType.Weapon:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Weapon slot");
+                        
                         if (player.WeaponSlot == null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot is empty");
                             return false;
+                        }
+                        
                         EquipmentItem we = player.WeaponSlot;
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped weapon to inventory: {we.Name}");
+                        
                         if (AddItem(we, player))
                         {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing weapon slot");
                             player.WeaponSlot = null;
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Failed to add item to inventory (inventory full?)");
                         return false;
                     }
                 case EquipmentType.Armor:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Armor slot");
+                        
                         if (player.ArmorSlot == null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot is empty");
                             return false;
+                        }
+                        
                         EquipmentItem arm = player.ArmorSlot;
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped armor to inventory: {arm.Name}");
+                        
                         if (AddItem(arm, player))
                         { 
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing armor slot");
                             player.ArmorSlot = null;
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Failed to add item to inventory (inventory full?)");
                         return false;
                     }
                 case EquipmentType.Accessory:
                     {
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Accessory slot");
+                        
                         if (player.AccessorySlot == null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot is empty");
                             return false;
+                        }
+                        
                         EquipmentItem accs = player.AccessorySlot;
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped accessory to inventory: {accs.Name}");
+                        
                         if (AddItem(accs, player))
                         {
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing accessory slot");
                             player.AccessorySlot = null;
                             return true;
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[Inventory] Failed to add item to inventory (inventory full?)");
                         return false;
                     }
-
-
             }
+            
+            System.Diagnostics.Debug.WriteLine($"[Inventory] UnequipItem failed - unknown slot type");
             return false;
         }
         public bool UseItem(string itemname, Player player)
