@@ -11,6 +11,7 @@ namespace MyriaLib.Models.BaseModel
         public string Rarity { get; set; } = "Common"; // read from JSON
         public int BuyPrice { get; set; }
         public int MaxStackSize { get; set; } = 1;
+        public bool IsTool { get; set; } = false;
         public List<string> AllowedClasses { get; set; } = new();
         public string Type { get; set; } // "consumable", "equipment", etc.
         public int HealAmount { get; set; }

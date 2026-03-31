@@ -8,6 +8,7 @@ namespace MyriaLib.Entities.Players
     public class Inventory
     {
         public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
+        public event EventHandler<ItemReceivedEventArgs>? ItemSold;
         public int Capacity { get; set; } = 49;
         public List<Item> Items { get; set; } = new(); // could become Item class later
 
@@ -306,18 +307,20 @@ namespace MyriaLib.Entities.Players
 
             int coinsReceived = item.SellValue * quantity;
 
+            // Snapshot item data before any mutation
+            Item soldCopy = item.CloneOne();
+            soldCopy.StackSize = quantity;
+
             // Reduce stack or remove item
             if (player.Money.TryAdd(coinsReceived))
             {
                 if (item.StackSize == quantity)
-                {
                     Items.Remove(item);
-                }
                 else
-                {
                     item.StackSize -= quantity;
-                }
+
                 Restack();
+                ItemSold?.Invoke(this, new ItemReceivedEventArgs(soldCopy, quantity, "sell"));
                 return true;
             }
             else

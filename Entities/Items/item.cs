@@ -14,6 +14,7 @@ namespace MyriaLib.Entities.Items
         [JsonInclude]
         public int StackSize { get; set; } = 1;
         public virtual int MaxStackSize { get; set; } = 50;
+        public bool IsTool { get; set; } = false;
 
         public virtual int BuyPrice { get; set; } = 100; // default value
         public virtual int SellValue => (int)(BuyPrice * 0.75);

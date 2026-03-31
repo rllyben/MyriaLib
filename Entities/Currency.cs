@@ -1,4 +1,6 @@
-﻿namespace MyriaLib.Entities
+﻿using MyriaLib.Systems;
+
+namespace MyriaLib.Entities
 {
     public class Currency
     {
@@ -18,20 +20,41 @@
 
         public override string ToString()
         {
+            Decompose(out int crystals, out int platinum, out int gold, out int silver, out int bronze);
+            return $"{crystals}C {platinum}P {gold}G {silver}S {bronze}B";
+        }
+
+        /// <summary>
+        /// Returns a localized display string, skipping zero denominations.
+        /// Unit abbreviations come from currency.unit.* locale keys.
+        /// Always shows at least bronze (e.g. "0 B") when the purse is empty.
+        /// </summary>
+        public string ToDisplayString()
+        {
+            Decompose(out int crystals, out int platinum, out int gold, out int silver, out int bronze);
+
+            var parts = new List<string>();
+            if (crystals > 0) parts.Add($"{crystals} {Localization.T("currency.unit.crystals")}");
+            if (platinum > 0) parts.Add($"{platinum} {Localization.T("currency.unit.platinum")}");
+            if (gold > 0)     parts.Add($"{gold} {Localization.T("currency.unit.gold")}");
+            if (silver > 0)   parts.Add($"{silver} {Localization.T("currency.unit.silver")}");
+            if (bronze > 0 || parts.Count == 0)
+                              parts.Add($"{bronze} {Localization.T("currency.unit.bronze")}");
+
+            return string.Join(" ", parts);
+        }
+
+        private void Decompose(out int crystals, out int platinum, out int gold, out int silver, out int bronze)
+        {
             int remaining = Bronze;
-            int crystals = remaining / (BronzePerSilver * SilverPerGold * GoldPerPlatinum * PlatinumPerCrystal);
+            crystals = remaining / (BronzePerSilver * SilverPerGold * GoldPerPlatinum * PlatinumPerCrystal);
             remaining %= BronzePerSilver * SilverPerGold * GoldPerPlatinum * PlatinumPerCrystal;
-
-            int platinum = remaining / (BronzePerSilver * SilverPerGold * GoldPerPlatinum);
+            platinum = remaining / (BronzePerSilver * SilverPerGold * GoldPerPlatinum);
             remaining %= BronzePerSilver * SilverPerGold * GoldPerPlatinum;
-
-            int gold = remaining / (BronzePerSilver * SilverPerGold);
+            gold = remaining / (BronzePerSilver * SilverPerGold);
             remaining %= BronzePerSilver * SilverPerGold;
-
-            int silver = remaining / BronzePerSilver;
-            remaining %= BronzePerSilver;
-
-            return $"{crystals}C {platinum}P {gold}G {silver}S {remaining}B";
+            silver = remaining / BronzePerSilver;
+            bronze = remaining % BronzePerSilver;
         }
 
         public bool CanAfford(int cost) => Bronze >= cost;

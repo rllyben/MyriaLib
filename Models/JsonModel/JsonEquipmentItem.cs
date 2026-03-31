@@ -17,6 +17,7 @@ namespace MyriaLib.Models.JsonModel
             SlotType = Enum.Parse<EquipmentType>(def.SlotType.ToString());
             AllowedClasses = def.AllowedClasses?
                 .Select(c => Enum.Parse<PlayerClass>(c)).ToList() ?? new();
+            IsTool = def.IsTool;
 
             BaseBonusHP = def.BaseBonusHP;
             BaseBonusMP = def.BaseBonusMP;
