@@ -238,8 +238,10 @@ namespace MyriaLib.Entities.Players
                     quest.ItemProgress[itemReq.Key] = Math.Min(owned, itemReq.Value);
                 }
 
-                bool allKillsDone = quest.KillProgress.All(kp => kp.Value >= quest.RequiredKills[kp.Key]);
-                bool allItemsDone = quest.ItemProgress.All(ip => ip.Value >= quest.RequiredItems[ip.Key]);
+                bool allKillsDone = quest.RequiredKills.All(rk =>
+                    quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
+                bool allItemsDone = quest.RequiredItems.All(ri =>
+                    quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
 
                 if (allKillsDone && allItemsDone)
                 {
