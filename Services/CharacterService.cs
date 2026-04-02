@@ -52,7 +52,8 @@ namespace MyriaLib.Services
             
             // Recalculate unused points for imported/loaded characters
             player.RecalculateUnusedPoints();
-            
+            player.ValidateQuestStatuses();
+
             SkillFactory.UpdateSkills(player);
             return player;
         }
@@ -81,6 +82,7 @@ namespace MyriaLib.Services
                 
                 // Recalculate unused points for imported/loaded characters
                 player.RecalculateUnusedPoints();
+                player.ValidateQuestStatuses();
 
                 SkillFactory.UpdateSkills(player);
                 characters.Add(player);

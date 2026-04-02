@@ -4,6 +4,7 @@ using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Systems.Events;
 
 namespace MyriaLib.Systems
 {
@@ -23,12 +24,15 @@ namespace MyriaLib.Systems
         private Dictionary<string, int> _dropnumbers = new Dictionary<string, int>();
         private List<Item> _drops = new List<Item>();
         public bool InventoryFull { get; set; } = false;
+        public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
+
         public CombatEncounter(Player player, Monster enemy)
         {
             Player = player;
             Enemy = enemy;
             Enemy.ResetHealth(); // if you do that elsewhere, remove
             Log.Add(new CombatLogEntry("pg.fight.log.start", enemy.Name));
+            MonsterKilled += UpdateQuestProgress;
         }
 
         public void PlayerAttack()
@@ -198,27 +202,7 @@ namespace MyriaLib.Systems
             Player.GainXp(Enemy.Exp);
             SkillFactory.UpdateSkills(Player);
 
-            foreach (var quest in Player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-            {
-                if (quest.RequiredKills.TryGetValue(Enemy.Id, out int required))
-                {
-                    if (quest.KillProgress.Count < 1)
-                        quest.KillProgress.Add(Enemy.Id, 0);
-                    else if (quest.KillProgress.All(a => a.Key != Enemy.Id))
-                        quest.KillProgress.Add(Enemy.Id, 0);
-                    if (quest.KillProgress[Enemy.Id] >= quest.RequiredKills[Enemy.Id])
-                        continue;
-                    quest.KillProgress[Enemy.Id]++;
-                    int current = quest.KillProgress[Enemy.Id];
-
-                    if (quest.RequiredKills.All(rk => quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
-                    {
-                        quest.Status = QuestStatus.Completed;
-                    }
-
-                }
-
-            }
+            MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(Enemy.Id));
 
             _drops = LootGenerator.GetLootFor(Enemy);
             _dropnumbers = new();
@@ -242,6 +226,26 @@ namespace MyriaLib.Systems
                 Player.CurrentRoom.IsCleared = true;
             }
             Log.Add(new CombatLogEntry("pg.fight.log.win", Enemy.Name));
+        }
+
+        private void UpdateQuestProgress(object? sender, MonsterKilledEventArgs e)
+        {
+            foreach (var quest in Player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            {
+                if (!quest.RequiredKills.TryGetValue(e.MonsterId, out int required))
+                    continue;
+
+                if (!quest.KillProgress.ContainsKey(e.MonsterId))
+                    quest.KillProgress[e.MonsterId] = 0;
+
+                if (quest.KillProgress[e.MonsterId] >= required)
+                    continue;
+
+                quest.KillProgress[e.MonsterId]++;
+
+                if (quest.RequiredKills.All(rk => quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
+                    quest.Status = QuestStatus.Completed;
+            }
         }
 
         private void FinishPlayerLost()

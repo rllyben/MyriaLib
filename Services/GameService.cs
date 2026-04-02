@@ -16,31 +16,48 @@ namespace MyriaLib.Services
         /// Loads all game data
         /// </summary>
         /// <returns>if all loadings where successful</returns>
-        public static bool InitializeGame()
+        public static bool InitializeGame() => InitializeGame(null);
+
+        public static bool InitializeGame(IProgress<string>? progress)
         {
-            bool success = false;
-            try
-            { 
-                Game = GameStatusService.Load();
-                ItemFactory.LoadItems();
-                monster = MonsterService.LoadMonsters();
-                NpcService.LoadNpcs();
-                success = LoadRooms();
-                RoomService.ConnectMonsterRooms(monster, RoomService.AllRooms);
-                NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
-                DayCycleManager.Initialize();
-                QuestManager.LoadQuests();
-                SkillFactory.LoadSkills();
-                DungeonRegistry.Load();
-                CaveRegistry.Load();
-                CityRegistry.Load();
-                ForestRegistry.Load();
-            }
-            catch (Exception ex)
-            {
-                success = false;
-            }
-            return success;
+            void Report(string step) => progress?.Report(step);
+
+            Game = GameStatusService.Load();
+            Report("game_status");
+
+            ItemFactory.LoadItems();
+            Report("items");
+
+            monster = MonsterService.LoadMonsters();
+            Report("monsters");
+
+            NpcService.LoadNpcs();
+            Report("npcs");
+
+            if (!LoadRooms())
+                throw new Exception("Failed to load rooms — check rooms.json for syntax errors.");
+            Report("rooms");
+
+            RoomService.ConnectMonsterRooms(monster, RoomService.AllRooms);
+            NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
+            Report("connections");
+
+            DayCycleManager.Initialize();
+            Report("day_cycle");
+
+            QuestManager.LoadQuests();
+            Report("quests");
+
+            SkillFactory.LoadSkills();
+            Report("skills");
+
+            DungeonRegistry.Load();
+            CaveRegistry.Load();
+            CityRegistry.Load();
+            ForestRegistry.Load();
+            Report("registries");
+
+            return true;
         }
         /// <summary>
         /// loads all rooms from RoomService

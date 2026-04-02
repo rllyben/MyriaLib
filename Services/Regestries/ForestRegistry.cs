@@ -34,6 +34,7 @@ namespace MyriaLib.Services.Regestries
             _caves.TryGetValue(id, out var d) ? d : null;
         public static Forest? GetForestByName(string name) =>
             _caves.Values.FirstOrDefault(f => f.Name.ToLower() == name);
+        public static IReadOnlyCollection<Forest> GetAll() => _caves.Values.ToList();
     }
 
 }

@@ -8,6 +8,7 @@ namespace MyriaLib.Entities.Players
     public class Inventory
     {
         public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
+        public event EventHandler<ItemReceivedEventArgs>? ItemRemoved;
         public event EventHandler<ItemReceivedEventArgs>? ItemSold;
         public int Capacity { get; set; } = 49;
         public List<Item> Items { get; set; } = new(); // could become Item class later
@@ -289,7 +290,12 @@ namespace MyriaLib.Entities.Players
         /// </summary>
         /// <param name="item">item to remove</param>
         /// <returns>if the item was removed</returns>
-        public bool RemoveItem(Item item) => Items.Remove(item);
+        public bool RemoveItem(Item item)
+        {
+            if (!Items.Remove(item)) return false;
+            ItemRemoved?.Invoke(this, new ItemReceivedEventArgs(item, item.StackSize));
+            return true;
+        }
 
         /// <summary>
         /// tries to sell an item

@@ -27,7 +27,8 @@ namespace MyriaLib.Entities.Players
         public MoneyBag Money { get; set; } = new();
         public List<Skill> Skills { get; set;} = new();
         public List<Quest> ActiveQuests { get; set; } = new();
-        public List<Quest> CompletedQuests { get; set; } = new(); 
+        public List<Quest> CompletedQuests { get; set; } = new();
+        public Dictionary<string, RepeatRecord> RepeatableQuestRecords { get; set; } = new();
         public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
 
         [JsonIgnore]
@@ -55,9 +56,9 @@ namespace MyriaLib.Entities.Players
             while (Experience >= ExpForNextLvl)
             {
                 int old = Level;
+                Experience -= ExpForNextLvl;
                 LevelUp(); // your existing method (or implement it)
                 LeveledUp?.Invoke(this, new LevelUpEventArgs(old, Level));
-                Experience -= ExpForNextLvl;
             }
 
             XpGained?.Invoke(this, new XpGainedEventArgs(
@@ -183,6 +184,7 @@ namespace MyriaLib.Entities.Players
 
             CurrentHealth = Stats.MaxHealth;
             CurrentMana = Stats.MaxMana;
+            ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
         }
         public bool LearnSkill(Skill skill)
         {
@@ -226,6 +228,24 @@ namespace MyriaLib.Entities.Players
                 _ => false
             };
 
+        }
+
+        /// <summary>
+        /// Reverts any quest that is marked Completed but whose requirements are not actually met.
+        /// Corrects saves that were written while the completion bug was active.
+        /// </summary>
+        public void ValidateQuestStatuses()
+        {
+            foreach (var quest in ActiveQuests.Where(q => q.Status == QuestStatus.Completed))
+            {
+                bool killsDone = quest.RequiredKills.All(rk =>
+                    quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
+                bool itemsDone = quest.RequiredItems.All(ri =>
+                    quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
+
+                if (!killsDone || !itemsDone)
+                    quest.Status = QuestStatus.InProgress;
+            }
         }
 
         /// <summary>

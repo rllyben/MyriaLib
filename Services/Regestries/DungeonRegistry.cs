@@ -34,6 +34,7 @@ namespace MyriaLib.Services.Regestries
             _dungeons.TryGetValue(id, out var d) ? d : null;
         public static Dungeon? GetDungeonByName(string name) =>
             _dungeons.Values.FirstOrDefault(d => d.Name.ToLower() == name);
+        public static IReadOnlyCollection<Dungeon> GetAll() => _dungeons.Values.ToList();
     }
 
 }

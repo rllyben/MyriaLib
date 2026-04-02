@@ -34,5 +34,6 @@ namespace MyriaLib.Services.Regestries
             _cities.TryGetValue(id, out var d) ? d : null;
         public static City? GetCityByName(string name) =>
             _cities.Values.FirstOrDefault(c => c.Name.ToLower() == name);
+        public static IReadOnlyCollection<City> GetAll() => _cities.Values.ToList();
     }
 }
