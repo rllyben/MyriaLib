@@ -211,7 +211,7 @@ namespace MyriaLib.Systems
                     quest.KillProgress[Enemy.Id]++;
                     int current = quest.KillProgress[Enemy.Id];
 
-                    if (quest.KillProgress.All(kp => kp.Value >= quest.RequiredKills[kp.Key]))
+                    if (quest.RequiredKills.All(rk => quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
                     {
                         quest.Status = QuestStatus.Completed;
                     }
