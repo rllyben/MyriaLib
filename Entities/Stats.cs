@@ -1,5 +1,24 @@
 namespace MyriaLib.Entities
 {
+    public enum StatType
+    {
+        Strength,
+        Dexterity,
+        Endurance,
+        Intelligence,
+        Spirit
+    }
+    public enum DerivedStatType
+    {
+        PhysicalAttack,
+        PhysicalDefense,
+        MagicAttack,
+        MagicDefense,
+        MaxHealth,
+        MaxMana,
+        HitChance,
+        DodgeChance
+    }
     public class Stats
     {
         // Base stats (from class/level)
@@ -29,8 +48,8 @@ namespace MyriaLib.Entities
         public int BaseHealth { get; set; } = 30;
         public int BaseMana { get; set; } = 30;
 
-        public int MaxHealth => BaseHealth + TotalEndurance * 5; // Reduced effect from END
-        public int MaxMana => BaseMana + TotalSpirit * 5; // Spirit no longer affects this
+        public int MaxHealth => BaseHealth + TotalEndurance * 5;
+        public int MaxMana => BaseMana + TotalSpirit * 5;
 
         public int PhysicalAttack => (int)((TotalStrength * 2 + TotalEndurance) * (1 + TotalStrength * 0.005));
         public int PhysicalDefense => (int)((TotalEndurance * 2 + TotalStrength) * (1 + TotalEndurance * 0.005));
@@ -39,12 +58,55 @@ namespace MyriaLib.Entities
         public int MagicDefense => (int)((TotalSpirit * 2 + TotalIntelligence) * (1 + TotalSpirit * 0.005));
         public int HitChance => (int)(TotalDexterity * (1 + TotalDexterity * 0.005));
         public int DodgeChance => (int)(TotalDexterity * 0.85f * (1 + TotalDexterity * 0.005));
-        public float GearBlockBonus { get; set; } = 0f; // To be set via gear
+        public float GearBlockBonus { get; set; } = 0f;
 
+        public int GetAddedStatBonus(StatType statType)
+        {
+            return statType switch
+            {
+                StatType.Strength => StrengthAdded,
+                StatType.Dexterity => DexterityAdded,
+                StatType.Endurance => EnduranceAdded,
+                StatType.Intelligence => IntelligenceAdded,
+                StatType.Spirit => SpiritAdded,
+                _ => 0
+            };
+
+        }
+
+        public int GetAddedStatBonus(DerivedStatType derivedStat)
+        {
+            // Clone current stats (with bonuses)
+            var withBonus = this;
+
+            // Clone and remove all added stats
+            var withoutBonus = this.Clone();
+            withoutBonus.StrengthAdded = 0;
+            withoutBonus.DexterityAdded = 0;
+            withoutBonus.EnduranceAdded = 0;
+            withoutBonus.IntelligenceAdded = 0;
+            withoutBonus.SpiritAdded = 0;
+
+            int GetValue(Stats s) => derivedStat switch
+            {
+                DerivedStatType.PhysicalAttack => s.PhysicalAttack,
+                DerivedStatType.PhysicalDefense => s.PhysicalDefense,
+                DerivedStatType.MagicAttack => s.MagicAttack,
+                DerivedStatType.MagicDefense => s.MagicDefense,
+                DerivedStatType.MaxHealth => s.MaxHealth,
+                DerivedStatType.MaxMana => s.MaxMana,
+                DerivedStatType.HitChance => s.HitChance,
+                DerivedStatType.DodgeChance => s.DodgeChance,
+                _ => 0
+            };
+
+            return GetValue(withBonus) - GetValue(withoutBonus);
+        }
         public Stats Clone()
         {
             return (Stats)this.MemberwiseClone();
         }
+
     }
 
 }

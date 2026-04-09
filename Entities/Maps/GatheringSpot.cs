@@ -9,6 +9,7 @@ namespace MyriaLib.Entities.Maps
         public string Description { get; set; }
         public GatheringType Type { get; set; }
         public string GatheredItemId { get; set; } // e.g., "iron_ore"
+        public string? RequiredToolId { get; set; } // e.g., "pickaxe" — null means no tool required
     }
 
 }
