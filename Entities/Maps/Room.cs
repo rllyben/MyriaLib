@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Monsters;
+using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Systems.Enums;
 
@@ -13,25 +13,33 @@ namespace MyriaLib.Entities.Maps
         public bool HasMonsters { get; set; }
         public RoomRequirementType RequirementType { get; set; } = RoomRequirementType.None;
         public int AccessLevel { get; set; } = 0;
-        public string RequiredQuestId { get; set; } = null!;
-        public bool RequiresParty { get; set; } = false;
-        public bool IsCity { get; set; } = false; 
-        public bool IsCaveRoom { get; set; } = false;
-        public string? CaveId { get; set; } = null;
+        public string? RequiredQuestId { get; set; } = null;
         public bool IsDungeonRoom { get; set; } = false;
         public bool IsBossRoom { get; set; } = false;
-        public bool IsCleared { get; set; } = false; // unlocked once monsters defeated
+        public bool IsCleared { get; set; } = false; // unlocked once all dungeon monsters are defeated
         public int DailyGatherLimit { get; set; } = 0;
         public int GathersRemaining { get; set; } = 0;
         public List<GatheringSpot> GatheringSpots { get; set; } = new();
         public List<string> Npcs { get; set; } = new(); // e.g. ["Healer", "Smith"]
-        public Dictionary<string, int> ExitIds { get; set; } = new(); // "north": "2"
+        public Dictionary<string, int> ExitIds { get; set; } = new();
         public Dictionary<string, Room> Exits { get; set; } = new();     // populated after loading
-        public List<Room> DungonList { get; set; } = new();
         public Dictionary<int, float> EncounterableMonsters { get; set; } = new();
-        public List<Monster> Monsters { get; set; } = new List<Monster>(); 
+
+        /// <summary>
+        /// Monster templates for this room — loaded once at startup by RoomService.ConnectMonsterRooms.
+        /// Used as the source for random encounters (overworld) or dungeon spawns.
+        /// Do not mutate these; use <see cref="SpawnDungeonMonsters"/> for dungeon combat.
+        /// </summary>
+        public List<Monster> Monsters { get; set; } = new();
+
+        /// <summary>
+        /// Active monster instances currently alive in this room.
+        /// Only populated in dungeon rooms via <see cref="SpawnDungeonMonsters"/>.
+        /// When this list reaches zero the room becomes <see cref="IsCleared"/>.
+        /// </summary>
         public List<Monster> CurrentMonsters { get; set; } = new();
-        public List<Corpse> Corpses { get; set; } = new(); 
+
+        public List<Corpse> Corpses { get; set; } = new();
         public List<Npc> NpcRefs { get; set; } = new();
 
         public Room(string name, string description)
@@ -44,16 +52,40 @@ namespace MyriaLib.Entities.Maps
         {
             Exits[direction] = room;
         }
-        /// <summary>
-        /// rolles the dayly gather limit for the room
-        /// </summary>
+
+        /// <summary>Rolls the daily gather limit for this room (1–5).</summary>
         public void RollGatherLimit()
         {
-            var rng = new Random();
-            DailyGatherLimit = rng.Next(1, 6); // 1 to 5
+            DailyGatherLimit = Random.Shared.Next(1, 6);
             GathersRemaining = DailyGatherLimit;
         }
 
-    }
+        /// <summary>
+        /// Spawns fresh monster instances into <see cref="CurrentMonsters"/> from the room's
+        /// <see cref="Monsters"/> templates. Call this when the player enters a dungeon room.
+        /// </summary>
+        public void SpawnDungeonMonsters()
+        {
+            if (!IsDungeonRoom) return;
+            CurrentMonsters.Clear();
+            foreach (var template in Monsters)
+                CurrentMonsters.Add(template.Clone());
+        }
 
+        /// <summary>
+        /// Attempts to consume one gather action from this room.
+        /// Returns the chosen <see cref="GatheringSpot"/> via <paramref name="spot"/> on success,
+        /// or null on failure. Item creation and inventory logic live in GatherService.
+        /// </summary>
+        public GatherResult TryConsumeGather(out GatheringSpot? spot)
+        {
+            spot = null;
+            if (GatheringSpots.Count == 0) return GatherResult.NoSpots;
+            if (GathersRemaining <= 0)     return GatherResult.Depleted;
+
+            spot = GatheringSpots[Random.Shared.Next(GatheringSpots.Count)];
+            GathersRemaining--;
+            return GatherResult.Success;
+        }
+    }
 }

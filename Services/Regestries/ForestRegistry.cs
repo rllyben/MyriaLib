@@ -1,40 +1,15 @@
-﻿using System.Text.Json;
 using MyriaLib.Entities.Maps;
 
 namespace MyriaLib.Services.Regestries
 {
     public static class ForestRegistry
     {
-        private static Dictionary<string, Forest> _caves = new();
-        /// <summary>
-        /// loads all dungons
-        /// </summary>
-        /// <param name="path">path to an dungon file, default is Data/dungeons.json</param>
-        public static void Load(string path = "Data/Maps/forests.json")
-        {
-            var json = File.ReadAllText(path);
-            var list = JsonSerializer.Deserialize<List<Forest>>(json);
-            _caves = list.ToDictionary(d => d.Id);
-        }
-        /// <summary>
-        /// retruns the dungon a room belongs to
-        /// </summary>
-        /// <param name="room">a room of the dungeon</param>
-        /// <returns>the found dungon or null</returns>
-        public static Forest? GetForestByRoom(Room room)
-        {
-            return _caves.Values.FirstOrDefault(d => d.ContainsRoom(room));
-        }
-        /// <summary>
-        /// Gets the dungeon by its id
-        /// </summary>
-        /// <param name="id">the dungon id of the wanted dungeon</param>
-        /// <returns>the found dungeon or null</returns>
-        public static Forest? GetForestById(string id) =>
-            _caves.TryGetValue(id, out var d) ? d : null;
-        public static Forest? GetForestByName(string name) =>
-            _caves.Values.FirstOrDefault(f => f.Name.ToLower() == name);
-        public static IReadOnlyCollection<Forest> GetAll() => _caves.Values.ToList();
-    }
+        private static readonly MapAreaRegistry<Forest> _registry = new();
 
+        public static void Load(string path = "Data/common/forests.json") => _registry.Load(path);
+        public static Forest? GetForestByRoom(Room room) => _registry.GetByRoom(room);
+        public static Forest? GetForestById(string id) => _registry.GetById(id);
+        public static Forest? GetForestByName(string name) => _registry.GetByName(name);
+        public static IReadOnlyCollection<Forest> GetAll() => _registry.GetAll();
+    }
 }

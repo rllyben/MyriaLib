@@ -1,102 +1,145 @@
-﻿using MyriaLib.Systems;
+using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Services.Manager
 {
     public static class DayCycleManager
     {
-        private static DateOnly _lastDay; 
-        private static bool _running = false;
-        private static GameStatus _gameStatus = new();
-        public static TimeSegment CurrentTimeSegment { get; private set; }
+        // ── Configuration ────────────────────────────────────────────────────────
+
         /// <summary>
-        /// initialises the session time
+        /// How many ticks constitute one time segment.
+        /// Four segments make one full game-day, so a day costs 4 × this value.
+        /// Default 50 → 200 ticks/day. Tune per app before calling Initialize.
+        /// </summary>
+        public static int TicksPerSegment { get; set; } = 50;
+
+        // ── State ────────────────────────────────────────────────────────────────
+
+        public static TimeSegment CurrentTimeSegment => GameService.Game.TimeOfDay;
+        public static int GameDay => GameService.Game.GameDay;
+
+        /// <summary>Ticks accumulated toward the next segment transition (0 … TicksPerSegment-1).</summary>
+        public static int CurrentTicks => GameService.Game.Ticks;
+
+        // ── Events ───────────────────────────────────────────────────────────────
+
+        /// <summary>Fires each time the time-of-day segment changes. Carries the new segment.</summary>
+        public static event Action<TimeSegment>? SegmentChanged;
+
+        /// <summary>Fires each time a new game-day begins. Carries the new day number.</summary>
+        public static event Action<int>? DayAdvanced;
+
+        // ── Inactivity timer ─────────────────────────────────────────────────────
+
+        private static CancellationTokenSource? _inactivityCts;
+        private static readonly object _lock = new();
+
+        // ── Public API ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Restores in-game time state from the loaded <see cref="GameService.Game"/> and
+        /// rolls daily gather limits for all rooms that have gathering spots.
+        /// Called by <see cref="GameService.InitializeGame"/> — do not call manually.
         /// </summary>
         public static void Initialize()
         {
-            var now = DateTime.Now;
+            // Clamp saved ticks in case TicksPerSegment was changed since the last save.
+            var game = GameService.Game;
+            if (game.Ticks < 0 || game.Ticks >= TicksPerSegment)
+                game.Ticks = 0;
 
-            _lastDay = DateOnly.FromDateTime(GameService.Game.LastUpdateTime);
-            UpdateTimeSegment(now.Hour);
-
-            // Roll gathering limits for the new day
-            foreach (var room in RoomService.AllRooms)
-            {
-                if (room.GatheringSpots.Any())
-                    room.RollGatherLimit();
-            }
-            StartBackgroundLoop();
+            foreach (var room in RoomService.AllRooms.Where(r => r.GatheringSpots.Count > 0))
+                room.RollGatherLimit();
         }
+
         /// <summary>
-        /// starts the background time sync
+        /// Adds <paramref name="ticks"/> to the in-game clock.
+        /// Segments and days advance automatically as thresholds are crossed.
+        /// Thread-safe — called from both the main thread and the inactivity timer.
         /// </summary>
-        /// <param name="intervalMs"></param>
-        public static void StartBackgroundLoop(int intervalMs = 30000)
+        public static void AddTicks(int ticks)
         {
-            if (_running) return;
-            _running = true;
+            if (ticks <= 0) return;
+
+            lock (_lock)
+            {
+                var game = GameService.Game;
+                game.Ticks += ticks;
+
+                while (game.Ticks >= TicksPerSegment)
+                {
+                    game.Ticks -= TicksPerSegment;
+                    AdvanceSegmentInternal(game);
+                }
+
+                game.LastSavedAt = DateTime.Now;
+                GameStatusService.Save(game);
+            }
+        }
+
+        /// <summary>
+        /// Starts a background timer that slowly adds ticks while the player is idle.
+        /// Useful to give the impression that time passes even without input.
+        /// Call <see cref="StopInactivityTimer"/> before starting a new one or on app shutdown.
+        /// </summary>
+        /// <param name="ticksPerInterval">Ticks added each interval (default 1).</param>
+        /// <param name="intervalMs">Milliseconds between each tick injection (default 10 000 = 10 s).</param>
+        public static void StartInactivityTimer(int ticksPerInterval = 1, int intervalMs = 10_000)
+        {
+            StopInactivityTimer();
+
+            _inactivityCts = new CancellationTokenSource();
+            var token = _inactivityCts.Token;
 
             Task.Run(async () =>
             {
-                while (_running)
+                while (!token.IsCancellationRequested)
                 {
                     try
                     {
-                        Update();
+                        await Task.Delay(intervalMs, token);
+                        AddTicks(ticksPerInterval);
                     }
-                    catch (Exception ex)
+                    catch (OperationCanceledException)
                     {
+                        break;
                     }
-
-                    await Task.Delay(intervalMs);
                 }
-
-            });
-
+            }, token);
         }
-        /// <summary>
-        /// Updates the Session time
-        /// </summary>
-        public static void Update()
+
+        /// <summary>Stops the inactivity timer if one is running.</summary>
+        public static void StopInactivityTimer()
         {
-            var now = DateTime.Now;
+            _inactivityCts?.Cancel();
+            _inactivityCts = null;
+        }
 
-            if (DateOnly.FromDateTime(now) != _lastDay)
+        // ── Private ──────────────────────────────────────────────────────────────
+
+        private static readonly TimeSegment[] _segments = Enum.GetValues<TimeSegment>();
+
+        private static void AdvanceSegmentInternal(GameStatus game)
+        {
+            int next = ((int)game.TimeOfDay + 1) % _segments.Length;
+            bool newDay = next == 0; // Night → Morning wrap
+
+            game.TimeOfDay = _segments[next];
+            SegmentChanged?.Invoke(game.TimeOfDay);
+
+            if (newDay)
             {
-                _lastDay = DateOnly.FromDateTime(now);
-
-                foreach (var room in RoomService.AllRooms)
-                {
-                    if (room.GatheringSpots.Any())
-                        room.RollGatherLimit(); 
-                    if (UserAccoundService.CurrentCharacter != null)
-                        UserAccoundService.CurrentCharacter.RoomGatheringStatus.Clear();
-                }
-
+                game.GameDay++;
+                OnNewDay();
+                DayAdvanced?.Invoke(game.GameDay);
             }
-
-            _gameStatus.LastUpdateTime = DateTime.Now;
-            GameStatusService.Save(_gameStatus);
-
-            UpdateTimeSegment(now.Hour);
         }
-        /// <summary>
-        /// Updates the day time segement
-        /// </summary>
-        /// <param name="hour">current hour</param>
-        private static void UpdateTimeSegment(int hour)
+
+        private static void OnNewDay()
         {
-            TimeSegment previousTime = CurrentTimeSegment;
-            CurrentTimeSegment = hour switch
-            {
-                >= 6 and < 12 => TimeSegment.Morning,
-                >= 12 and < 17 => TimeSegment.Midday,
-                >= 17 and < 21 => TimeSegment.Evening,
-                _ => TimeSegment.Night
-            };
-
+            foreach (var room in RoomService.AllRooms.Where(r => r.GatheringSpots.Count > 0))
+                room.RollGatherLimit();
         }
-
     }
-
 }

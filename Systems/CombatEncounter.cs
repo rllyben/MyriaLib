@@ -3,8 +3,10 @@ using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
+using MyriaLib.Systems.Interfaces;
 
 namespace MyriaLib.Systems
 {
@@ -116,26 +118,51 @@ namespace MyriaLib.Systems
 
         private void ExecuteSkill(Skill skill)
         {
-            // This mirrors your existing UseSkill logic :contentReference[oaicite:3]{index=3}
-            // but logs keys instead of Console.WriteLine.
             Player.SpendMana(skill.ManaCost);
 
+            switch (skill.Target)
+            {
+                case SkillTarget.Self:
+                    ExecuteSkillOnSelf(skill);
+                    break;
+
+                case SkillTarget.AllEnemies:
+                    // Current combat is 1v1; hitting the single enemy covers the intent.
+                    // When group combat is added, iterate all enemies here instead.
+                    ExecuteSkillOnEnemy(skill, Enemy);
+                    break;
+
+                case SkillTarget.SingleEnemy:
+                default:
+                    ExecuteSkillOnEnemy(skill, Enemy);
+                    break;
+            }
+
+            // Invoke optional code-defined effect last (buffs, status effects, etc.)
+            skill.Effect?.Invoke(Player, Enemy);
+        }
+
+        private void ExecuteSkillOnSelf(Skill skill)
+        {
             if (skill.IsHealing)
             {
                 int baseStat = ResolveSkillBaseStat(skill);
                 int heal = (int)(baseStat * skill.ScalingFactor);
-                int healed = Math.Min(heal, Player.Stats.MaxHealth - Player.CurrentHealth);
+                int healed = Math.Min(heal, Player.MaxHealth - Player.CurrentHealth);
                 Player.Heal(healed);
                 Log.Add(new CombatLogEntry("pg.fight.log.heal", Player.Name, healed));
             }
-            else
-            {
-                int baseStat = ResolveSkillBaseStat(skill);
-                int dmg = (int)(baseStat * skill.ScalingFactor);
-                Enemy.TakeDamage(dmg);
-                Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Player.Name, skill.Name, dmg));
-            }
+            // Non-healing Self skills (buffs) rely entirely on skill.Effect invoked after this.
+        }
 
+        private void ExecuteSkillOnEnemy(Skill skill, ICombatant target)
+        {
+            if (skill.IsHealing) return; // healing a target-enemy would be a design mistake; skip
+
+            int baseStat = ResolveSkillBaseStat(skill);
+            int dmg = (int)(baseStat * skill.ScalingFactor);
+            target.TakeDamage(dmg);
+            Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Player.Name, skill.Name, dmg));
         }
 
         private int ResolveSkillBaseStat(Skill skill)
@@ -210,21 +237,21 @@ namespace MyriaLib.Systems
             {
                 _dropnumbers.Add(drop.Name, drop.StackSize);
             }
-            if (_drops.Count > 0)
+            foreach (var drop in _drops)
             {
-                foreach (var drop in _drops)
-                {
-                    if (drop.StackSize == 0)
-                        drop.StackSize = 1;
-                    if (!Player.Inventory.AddItem(drop, Player));
-                        InventoryFull = true;
-                    InventoryFull = false;
-                }
+                if (drop.StackSize == 0)
+                    drop.StackSize = 1;
+                if (!Player.Inventory.AddItem(drop, Player))
+                    InventoryFull = true;
             }
-            if (Player.CurrentRoom.IsDungeonRoom && Player.CurrentRoom.CurrentMonsters.Count < 1)
+            if (Player.CurrentRoom.IsDungeonRoom)
             {
-                Player.CurrentRoom.IsCleared = true;
+                Player.CurrentRoom.CurrentMonsters.Remove(Enemy);
+                if (Player.CurrentRoom.CurrentMonsters.Count == 0)
+                    Player.CurrentRoom.IsCleared = true;
             }
+
+            DayCycleManager.AddTicks(GameTick.CombatVictory);
             Log.Add(new CombatLogEntry("pg.fight.log.win", Enemy.Name));
         }
 

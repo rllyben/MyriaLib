@@ -22,7 +22,7 @@ namespace MyriaLib.Entities.Monsters
             Name = name;
             Stats = stats;
             Description = description;
-            CurrentHealth = stats.MaxHealth;
+            CurrentHealth = MaxHealth;
             Exp = exp;
         }
 
@@ -31,6 +31,18 @@ namespace MyriaLib.Entities.Monsters
             CurrentHealth = MaxHealth;
         }
 
+        /// <summary>
+        /// Returns a fresh instance with the same definition but independent health.
+        /// Use this when spawning dungeon monsters so the shared template is not mutated.
+        /// </summary>
+        public Monster Clone() => new Monster(Id, Name, Stats.Clone(), Description, Exp)
+        {
+            Type             = Type,
+            MinLoot          = MinLoot,
+            MaxLoot          = MaxLoot,
+            LootTable        = new List<Item>(LootTable),
+            UniqueLootTable  = new List<UniqueLootEntry>(UniqueLootTable),
+        };
     }
 
 }

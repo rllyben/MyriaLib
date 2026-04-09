@@ -10,7 +10,7 @@ namespace MyriaLib.Services
         public static GameStatus Load()
         {
             if (!File.Exists(path))
-                return new GameStatus { LastUpdateTime = DateTime.Now };
+                return new GameStatus { LastSavedAt = DateTime.Now };
 
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<GameStatus>(json);

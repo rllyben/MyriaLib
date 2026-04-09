@@ -38,16 +38,21 @@ namespace MyriaLib.Entities.NPCs
 
             int totalCost = item.BuyPrice * amount;
 
-            // placeholder API, adjust if your MoneyBag differs
             if (!player.Money.TrySpend(totalCost))
                 return NpcActionResult.Fail("npc.action.buy.notEnoughMoney", totalCost);
 
-            // Create the correct amount as stack(s)
-            // If stackable, we can just create one stack with StackSize=amount
             var toAdd = ItemFactory.CreateItem(item.Id, amount);
+            if (toAdd == null)
+                return NpcActionResult.Fail("npc.action.buy.itemNotFound", item.Id);
 
-            // Inventory.AddItem signature in your projects has been used as AddItem(item, player)
-            // If yours differs, adjust here.
+            // Inventory expansions are applied immediately and never stored as items
+            if (toAdd is InventoryExpansion expansion)
+            {
+                for (int i = 0; i < amount; i++)
+                    expansion.Use(player);
+                return NpcActionResult.Ok("npc.action.buy.expansion.ok", player.Inventory.Pages);
+            }
+
             bool ok = player.Inventory.AddItem(toAdd, player);
             if (!ok)
             {

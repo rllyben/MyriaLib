@@ -10,43 +10,41 @@ namespace MyriaLib.Entities
         public int CurrentHealth { get; set; }
         public int CurrentMana { get; set; }
 
-        public int MaxHealth => Stats.MaxHealth;
-        public int MaxMana => Stats.MaxMana;
+        // Full stat totals — class base + player investment + gear bonuses
+        public int TotalSTR => Stats.TotalStrength + GetBonusFromGear(g => g.Bonuses.STR);
+        public int TotalDEX => Stats.TotalDexterity + GetBonusFromGear(g => g.Bonuses.DEX);
+        public int TotalEND => Stats.TotalEndurance + GetBonusFromGear(g => g.Bonuses.END);
+        public int TotalINT => Stats.TotalIntelligence + GetBonusFromGear(g => g.Bonuses.INT);
+        public int TotalSPR => Stats.TotalSpirit + GetBonusFromGear(g => g.Bonuses.SPR);
+
+        // MaxHealth/MaxMana live here so gear HP/MP bonuses are included
+        public int MaxHealth => Stats.BaseHealth + TotalEND * 5 + GetBonusFromGear(g => g.Bonuses.HP);
+        public int MaxMana   => Stats.BaseMana   + TotalSPR * 5 + GetBonusFromGear(g => g.Bonuses.MP);
+
         public bool IsAlive => CurrentHealth > 0;
-        public EquipmentItem? WeaponSlot { get; set; }
-        public EquipmentItem? ArmorSlot { get; set; }
+
+        public EquipmentItem? WeaponSlot    { get; set; }
+        public EquipmentItem? ArmorSlot     { get; set; }
         public EquipmentItem? AccessorySlot { get; set; }
 
-        // Optional: effective STR, DEX, etc.
-        public int TotalSTR => Stats.Strength + GetBonusFromGear(g => g.BonusSTR);
-        public int TotalDEX => Stats.Dexterity + GetBonusFromGear(g => g.BonusDEX);
-        public int TotalEND => Stats.Endurance + GetBonusFromGear(g => g.BonusEND);
-        public int TotalINT => Stats.Intelligence + GetBonusFromGear(g => g.BonusINT);
-        public int TotalSPR => Stats.Spirit + GetBonusFromGear(g => g.BonusSPR);
+        public int TotalPhysicalAttack  => (TotalSTR * 2 + TotalEND) + GetBonusFromGear(g => g.Bonuses.ATK);
+        public int TotalPhysicalDefense => (TotalEND * 2 + TotalSTR) + GetBonusFromGear(g => g.Bonuses.DEF);
+        public int TotalMagicAttack     => (TotalINT * 2 + TotalSPR) + GetBonusFromGear(g => g.Bonuses.MATK);
+        public int TotalMagicDefense    => (TotalSPR * 2 + TotalINT) + GetBonusFromGear(g => g.Bonuses.MDEF);
+        public int TotalAim             => TotalDEX + GetBonusFromGear(g => g.Bonuses.Aim);
+        public int TotalEvasion         => (int)(TotalDEX * 0.85f) + GetBonusFromGear(g => g.Bonuses.Evasion);
 
-        public int TotalPhysicalAttack =>
-            (TotalSTR * 2 + TotalEND) + GetBonusFromGear(g => g.BonusATK);
+        public float CritChance =>
+            GetBonusFromGear(g => g.Bonuses.DEX) * 0.1f + GetBonusFromGear(g => g.Bonuses.Crit);
 
-        public int TotalPhysicalDefense =>
-            (TotalEND * 2 + TotalSTR) + GetBonusFromGear(g => g.BonusDEF);
-
-        public int TotalMagicAttack =>
-            (TotalINT * 2 + TotalSPR) + GetBonusFromGear(g => g.BonusMATK);
-
-        public int TotalMagicDefense =>
-            (TotalSPR * 2 + TotalINT) + GetBonusFromGear(g => g.BonusMDEF);
-
-        public int TotalAim =>
-            (TotalDEX) + GetBonusFromGear(g => g.BonusAim);
-
-        public int TotalEvasion =>
-            (int)(TotalDEX * 0.85f) + GetBonusFromGear(g => g.BonusEvasion);
-        public float CritChance => GetBonusFromGear(g => g.BonusDEX) * 0.1f + GetBonusFromGear(g => g.BonusCrit);
         public float BlockChance
         {
             get
             {
-                float blockRaw = (GetBonusFromGear(g => g.BonusEND) * 0.3f) + (GetBonusFromGear(g => g.BonusINT) * 0.2f) + (GetBonusFromGear(g => g.BonusSTR) * 0.1f) + GetBonusFromGear(g => g.BonusBlock);
+                float blockRaw = (GetBonusFromGear(g => g.Bonuses.END) * 0.3f)
+                               + (GetBonusFromGear(g => g.Bonuses.INT) * 0.2f)
+                               + (GetBonusFromGear(g => g.Bonuses.STR) * 0.1f)
+                               + GetBonusFromGear(g => g.Bonuses.Block);
                 return MathF.Min(blockRaw * 0.01f, 0.75f);
             }
         }
@@ -56,45 +54,26 @@ namespace MyriaLib.Entities
             CurrentHealth = Math.Max(0, CurrentHealth - amount);
         }
 
-        public virtual int DealPhysicalDamage()
-        {
-            return Stats.PhysicalAttack;
-        }
-        public virtual int DefandPhysical()
-        {
-            return Stats.PhysicalDefense;
-        }
-        public virtual float GetBlockChance()
-        {
-            return BlockChance;
-        }
-        /// <summary>
-        /// returns the bonus from equiped gear
-        /// </summary>
-        /// <param name="selector">function to select from</param>
-        /// <returns>the bonmus as an int</returns>
+        public virtual int DealPhysicalDamage() => TotalPhysicalAttack;
+        public virtual int DefandPhysical()      => TotalPhysicalDefense;
+        public virtual float GetBlockChance()    => BlockChance;
+
         public int GetBonusFromGear(Func<EquipmentItem, int> selector)
         {
             int total = 0;
-            if (WeaponSlot != null) total += selector(WeaponSlot);
-            if (ArmorSlot != null) total += selector(ArmorSlot);
+            if (WeaponSlot    != null) total += selector(WeaponSlot);
+            if (ArmorSlot     != null) total += selector(ArmorSlot);
             if (AccessorySlot != null) total += selector(AccessorySlot);
             return total;
         }
-        /// <summary>
-        /// returns the bonus from equiped gear
-        /// </summary>
-        /// <param name="selector">function to select from</param>
-        /// <returns>the bonmus as an float</returns>
+
         public float GetBonusFromGear(Func<EquipmentItem, float> selector)
         {
             float total = 0;
-            if (WeaponSlot != null) total += selector(WeaponSlot);
-            if (ArmorSlot != null) total += selector(ArmorSlot);
+            if (WeaponSlot    != null) total += selector(WeaponSlot);
+            if (ArmorSlot     != null) total += selector(ArmorSlot);
             if (AccessorySlot != null) total += selector(AccessorySlot);
             return total;
         }
-
     }
-
 }

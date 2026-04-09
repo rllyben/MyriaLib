@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using MyriaLib.Entities.Monsters;
+using MyriaLib.Systems;
 
 namespace MyriaLib.Services
 {
@@ -22,26 +23,32 @@ namespace MyriaLib.Services
             string json = JsonSerializer.Serialize(monsters, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);
         }
-        public static Monster GetMonsterById(int id)
+        public static Monster? GetMonsterById(int id)
         {
-            return _monsterList.FirstOrDefault(m => m.Id == id);
+            var monster = _monsterList.FirstOrDefault(m => m.Id == id);
+            if (monster == null)
+                GameLog.Error($"Monster ID {id} not found in loaded data.");
+            return monster;
         }
         public static Monster PickMonsterForFight(List<Monster> monsters, Dictionary<int, float> chances)
         {
-            Random rnd = new Random();
+            // Only consider monsters that have a defined encounter weight
+            var eligible = monsters.Where(m => chances.ContainsKey(m.Id)).ToList();
+            if (eligible.Count == 0)
+                return monsters[0];
 
-            float totalWeight = monsters.Sum(m => chances[m.Id]);
-            float roll = rnd.NextSingle();
+            Random rnd = new Random();
+            float totalWeight = eligible.Sum(m => chances[m.Id]);
+            float roll = rnd.NextSingle() * totalWeight;
 
             float cumulative = 0;
-            foreach (Monster monster in monsters)
+            foreach (Monster monster in eligible)
             {
                 cumulative += chances[monster.Id];
                 if (roll < cumulative)
                     return monster;
             }
-            return monsters[^1];
-
+            return eligible[^1];
         }
 
     }

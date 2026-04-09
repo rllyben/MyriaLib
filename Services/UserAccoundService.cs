@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace MyriaLib.Services
 {
-    public class UserAccoundService
+    public static class UserAccoundService
     {
         public static UserAccount CurrentUser { get; set; }
         public static Player CurrentCharacter { get; set; }

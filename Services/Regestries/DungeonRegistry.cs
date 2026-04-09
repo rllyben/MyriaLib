@@ -1,40 +1,15 @@
-using System.Text.Json;
 using MyriaLib.Entities.Maps;
 
 namespace MyriaLib.Services.Regestries
 {
     public static class DungeonRegistry
     {
-        private static Dictionary<string, Dungeon> _dungeons = new();
-        /// <summary>
-        /// loads all dungons
-        /// </summary>
-        /// <param name="path">path to an dungon file, default is Data/dungeons.json</param>
-        public static void Load(string path = "Data/Maps/dungeons.json")
-        {
-            var json = File.ReadAllText(path);
-            var list = JsonSerializer.Deserialize<List<Dungeon>>(json);
-            _dungeons = list.ToDictionary(d => d.Id);
-        }
-        /// <summary>
-        /// retruns the dungon a room belongs to
-        /// </summary>
-        /// <param name="room">a room of the dungeon</param>
-        /// <returns>the found dungon or null</returns>
-        public static Dungeon? GetDungeonByRoom(Room room)
-        {
-            return _dungeons.Values.FirstOrDefault(d => d.ContainsRoom(room));
-        }
-        /// <summary>
-        /// Gets the dungeon by its id
-        /// </summary>
-        /// <param name="id">the dungon id of the wanted dungeon</param>
-        /// <returns>the found dungeon or null</returns>
-        public static Dungeon? GetDungeonById(string id) =>
-            _dungeons.TryGetValue(id, out var d) ? d : null;
-        public static Dungeon? GetDungeonByName(string name) =>
-            _dungeons.Values.FirstOrDefault(d => d.Name.ToLower() == name);
-        public static IReadOnlyCollection<Dungeon> GetAll() => _dungeons.Values.ToList();
-    }
+        private static readonly MapAreaRegistry<Dungeon> _registry = new();
 
+        public static void Load(string path = "Data/common/dungeons.json") => _registry.Load(path);
+        public static Dungeon? GetDungeonByRoom(Room room) => _registry.GetByRoom(room);
+        public static Dungeon? GetDungeonById(string id) => _registry.GetById(id);
+        public static Dungeon? GetDungeonByName(string name) => _registry.GetByName(name);
+        public static IReadOnlyCollection<Dungeon> GetAll() => _registry.GetAll();
+    }
 }
