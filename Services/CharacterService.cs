@@ -3,6 +3,7 @@ using MyriaLib.Models;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MyriaLib.Services
 {
@@ -21,7 +22,7 @@ namespace MyriaLib.Services
             {
                 PropertyNameCaseInsensitive = true,
                 WriteIndented = true,
-                Converters = { new ItemConverter() }  // ✅ this line is crucial
+                Converters = { new ItemConverter() }
             };
             var json = JsonSerializer.Serialize(player, options);
             File.WriteAllText(path, json);
@@ -35,7 +36,7 @@ namespace MyriaLib.Services
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new ItemConverter() }  // ✅ this line is crucial
+                Converters = { new ItemConverter() }
             };
 
             var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
@@ -55,6 +56,7 @@ namespace MyriaLib.Services
             player.ValidateQuestStatuses();
 
             SkillFactory.UpdateSkills(player);
+            ResolveAdvancedSystems(player);
             return player;
         }
         public static List<Player> LoadCharacters(UserAccount account)
@@ -63,7 +65,7 @@ namespace MyriaLib.Services
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new ItemConverter() }  // ✅ this line is crucial
+                Converters = { new ItemConverter() }
             };
 
             foreach (string characterName in account.CharacterNames)
@@ -79,15 +81,25 @@ namespace MyriaLib.Services
                     player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
                 }
                 catch (Exception ex) { }
-                
-                // Recalculate unused points for imported/loaded characters
+
                 player.RecalculateUnusedPoints();
                 player.ValidateQuestStatuses();
 
                 SkillFactory.UpdateSkills(player);
+                ResolveAdvancedSystems(player);
                 characters.Add(player);
             }
             return characters;
+        }
+
+        /// <summary>
+        /// Re-resolves fusion and runic skill data after a player is loaded from save.
+        /// Safe to call for console players and old saves — empty collections are a no-op.
+        /// </summary>
+        private static void ResolveAdvancedSystems(Player player)
+        {
+            BaseRuneService.ResolveRunes(player);
+            SkillFusionSystem.ResolveCompositeSkills(player);
         }
 
     }

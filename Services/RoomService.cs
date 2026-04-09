@@ -43,23 +43,11 @@ namespace MyriaLib.Services
             // Resolve exits
             foreach (var room in roomMap.Values)
             {
-                if (room.IsDungeonRoom)
-                    room.DungonList.Add(room);
-
                 foreach (var (direction, targetId) in room.ExitIds)
                 {
                     if (roomMap.TryGetValue(targetId, out var targetRoom))
-                    {
                         room.Exits[direction] = targetRoom;
-                        if (targetRoom.DungonId == room.DungonId && room.IsDungeonRoom)
-                        {
-                            room.DungonList.Add(targetRoom);
-                        }
-
-                    }
-
                 }
-
             }
 
             return roomMap;
@@ -93,12 +81,20 @@ namespace MyriaLib.Services
         {
             if (room.IsDungeonRoom && room.CurrentMonsters.Count > 0)
                 return false;
+
             switch (room.RequirementType)
             {
-                case RoomRequirementType.Party: return false;
-                case RoomRequirementType.None: return true;
-                case RoomRequirementType.Level: return player.Level > room.AccessLevel;
-                case RoomRequirementType.Quest: return false;
+                case RoomRequirementType.None:
+                    return true;
+                case RoomRequirementType.Level:
+                    return player.Level >= room.AccessLevel;
+                case RoomRequirementType.Quest:
+                    return !string.IsNullOrEmpty(room.RequiredQuestId)
+                        && player.CompletedQuests.Any(q => q.Id == room.RequiredQuestId);
+                case RoomRequirementType.Party:
+                    // TODO: enforce party check once multiplayer is implemented.
+                    // In singleplayer there are no parties, so this gate is a no-op for now.
+                    return true;
             }
             return true;
         }

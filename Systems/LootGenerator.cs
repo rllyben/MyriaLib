@@ -1,13 +1,25 @@
-﻿using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.Items;
-using MyriaLib.Systems.Enums;
+using MyriaLib.Entities.Monsters;
 using MyriaLib.Services.Builder;
+using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Systems
 {
     public static class LootGenerator
     {
-        private static Random _rand = new();
+        // ── Item IDs ─────────────────────────────────────────────────────────────
+        private const string SpiritDust     = "spirit_dust";
+        private const string ShadowRemnant  = "shadow_remnant";
+        private const string EarthEssence   = "earth_essence";
+        private const string StoneFragment  = "stone_fragment";
+        private const string FireAsh        = "fire_ash";
+        private const string WindWhisper    = "wind_whisper";
+        private const string WaterBead      = "water_bead";
+        private const string BeastFlesh     = "beast_flesh";
+        private const string FeralLeather   = "feral_leather";
+        private const string BeastFang      = "beast_fang";
+
+        // ─────────────────────────────────────────────────────────────────────────
 
         public static List<Item> GetLootFor(Monster monster)
         {
@@ -15,102 +27,66 @@ namespace MyriaLib.Systems
 
             if (monster.LootTable.Count > 0)
             {
-                loot.AddRange(monster.LootTable); // optional override
+                loot.AddRange(monster.LootTable);
                 return loot;
             }
-            else
-            {
-                loot.AddRange(GetTypeBasedLoot(monster.Type)); // your existing elemental/beast/spirit logic
-            }
+
+            loot.AddRange(GetTypeBasedLoot(monster.Type));
 
             foreach (var entry in monster.UniqueLootTable)
             {
-                double rnd = _rand.NextDouble();
-                if (rnd <= entry.DropChance)
+                if (Random.Shared.NextDouble() <= entry.DropChance)
                 {
                     if (ItemFactory.TryCreateItem(entry.ItemId, out var item))
-                        loot.Add(item);
+                        loot.Add(item!);
                 }
-
             }
 
             return loot;
         }
+
         private static List<Item> GetTypeBasedLoot(MonsterType monsterType)
         {
-            List<Item> loot = new List<Item>();
+            var loot = new List<Item>();
+
             switch (monsterType)
             {
                 case MonsterType.Spirit:
-                    if (_rand.NextDouble() < 0.7)
-                    {
-                        Item drop = ItemFactory.CreateItem("spirit_dust");
-                        loot.Add(drop);
-                    }  
-                    break;
-                case MonsterType.Shadow:
-                    if (_rand.NextDouble() < 0.7)
-                    {
-                        Item drop = ItemFactory.CreateItem("shadow_remnant");
-                        loot.Add(drop);
-                    }
-                    break;
-                case MonsterType.Elemental:
-                    if (_rand.NextDouble() < 0.3)
-                    {
-                        Item drop = ItemFactory.CreateItem("earth_essence");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.3)
-                    {
-                        Item drop = ItemFactory.CreateItem("stone_fragment");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.3)
-                    {
-                        Item drop = ItemFactory.CreateItem("fire_ash");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.3)
-                    {
-                        Item drop = ItemFactory.CreateItem("wind_whisper");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.3)
-                    {
-                        Item drop = ItemFactory.CreateItem("water_bead");
-                        loot.Add(drop);
-                    }
-                    break;
-                case MonsterType.Beast:
-                    if (_rand.NextDouble() < 0.6)
-                    {
-                        Item drop = ItemFactory.CreateItem("beast_flesh");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.4)
-                    {
-                        Item drop = ItemFactory.CreateItem("feral_leather");
-                        loot.Add(drop);
-                    }
-                    if (_rand.NextDouble() < 0.2)
-                    {
-                        Item drop = ItemFactory.CreateItem("beast_fang");
-                        loot.Add(drop);
-                    }
-                    break;
-                case MonsterType.Humanoid:
-                    if (_rand.NextDouble() < 0.7)
-                    {
-                        Item drop = ItemFactory.CreateItem("beast_flesh");
-                        loot.Add(drop);
-                    }
+                    TryDrop(loot, SpiritDust, 0.7);
                     break;
 
+                case MonsterType.Shadow:
+                    TryDrop(loot, ShadowRemnant, 0.7);
+                    break;
+
+                case MonsterType.Elemental:
+                    TryDrop(loot, EarthEssence,  0.3);
+                    TryDrop(loot, StoneFragment,  0.3);
+                    TryDrop(loot, FireAsh,        0.3);
+                    TryDrop(loot, WindWhisper,    0.3);
+                    TryDrop(loot, WaterBead,      0.3);
+                    break;
+
+                case MonsterType.Beast:
+                    TryDrop(loot, BeastFlesh,    0.6);
+                    TryDrop(loot, FeralLeather,  0.4);
+                    TryDrop(loot, BeastFang,     0.2);
+                    break;
+
+                case MonsterType.Humanoid:
+                    // Placeholder until a proper humanoid drop item exists.
+                    TryDrop(loot, BeastFlesh, 0.7);
+                    break;
             }
+
             return loot;
         }
 
+        /// <summary>Rolls a drop chance and adds the item to <paramref name="loot"/> if successful.</summary>
+        private static void TryDrop(List<Item> loot, string itemId, double chance)
+        {
+            if (Random.Shared.NextDouble() < chance && ItemFactory.TryCreateItem(itemId, out var item))
+                loot.Add(item!);
+        }
     }
-
 }

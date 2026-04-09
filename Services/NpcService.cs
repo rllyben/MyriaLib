@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace MyriaLib.Services
 {
-    public class NpcService
+    public static class NpcService
     {
         private static readonly Dictionary<string, Npc> _npcs = new(StringComparer.OrdinalIgnoreCase);
         private static readonly string _filePath = "Data/common/npcs.json";

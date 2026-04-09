@@ -16,7 +16,7 @@ namespace MyriaLib.Systems
             // Example pricing logic (change as you like)
             int cost = 0;
 
-            if (player.Money.Coins.TotalBronze < cost)
+            if (!player.Money.CanAfford(cost))
                 return new NpcActionResult
                 {
                     Success = false,
@@ -24,13 +24,13 @@ namespace MyriaLib.Systems
                     MessageArgs = new object[] { cost }
                 };
 
-            player.Money.Coins.TrySpend(cost);
+            player.Money.TrySpend(cost);
 
             int hpBefore = player.CurrentHealth;
             int mpBefore = player.CurrentMana;
 
-            player.CurrentHealth = player.Stats.MaxHealth;
-            player.CurrentMana = player.Stats.MaxMana;
+            player.CurrentHealth = player.MaxHealth;
+            player.CurrentMana = player.MaxMana;
 
             return new NpcActionResult
             {

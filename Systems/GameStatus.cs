@@ -1,10 +1,15 @@
-﻿namespace MyriaLib.Systems
+using MyriaLib.Systems.Enums;
+
+namespace MyriaLib.Systems
 {
-    [Serializable]
     public class GameStatus
     {
-        public DateTime LastUpdateTime { get; set; }
-        public Dictionary<string, DateTime> RoomGatheringStatus { get; set; } = new();
-    }
+        public int GameDay { get; set; } = 1;
+        public TimeSegment TimeOfDay { get; set; } = TimeSegment.Morning;
 
+        /// <summary>Accumulated ticks within the current segment (0 .. TicksPerSegment-1).</summary>
+        public int Ticks { get; set; } = 0;
+
+        public DateTime LastSavedAt { get; set; }
+    }
 }

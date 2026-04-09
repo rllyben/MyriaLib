@@ -10,8 +10,43 @@ namespace MyriaLib.Entities.Players
         public event EventHandler<ItemReceivedEventArgs>? ItemReceived;
         public event EventHandler<ItemReceivedEventArgs>? ItemRemoved;
         public event EventHandler<ItemReceivedEventArgs>? ItemSold;
-        public int Capacity { get; set; } = 49;
-        public List<Item> Items { get; set; } = new(); // could become Item class later
+
+        /// <summary>Fixed size of one inventory page — matches the 7×7 UI grid.</summary>
+        public const int PageSize = 49;
+
+        /// <summary>Number of unlocked pages. Starts at 1; increased by purchasing inventory expansions.</summary>
+        public int Pages { get; set; } = 1;
+
+        /// <summary>Total slot capacity across all unlocked pages.</summary>
+        public int Capacity => Pages * PageSize;
+
+        public List<Item> Items { get; set; } = new();
+
+        /// <summary>
+        /// Returns a fixed-length array of <see cref="PageSize"/> slots for the given page (0-indexed).
+        /// Empty slots are null. Suitable for binding directly to a 7×7 UI grid.
+        /// </summary>
+        public Item?[] GetPage(int page)
+        {
+            var result = new Item?[PageSize];
+            int start = page * PageSize;
+            for (int i = 0; i < PageSize; i++)
+            {
+                int idx = start + i;
+                result[i] = idx < Items.Count ? Items[idx] : null;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns only the non-null items on the given page. Useful for logic that
+        /// doesn't need slot positions (console pager, quest tracking, etc.).
+        /// </summary>
+        public IEnumerable<Item> GetItemsOnPage(int page) =>
+            Items.Skip(page * PageSize).Take(PageSize);
+
+        /// <summary>How many pages currently contain at least one item (always ≥ 1).</summary>
+        public int UsedPages => Math.Max(1, (int)Math.Ceiling((double)Items.Count / PageSize));
 
         public bool SwapEquipment(string itemId, Player player)
         {

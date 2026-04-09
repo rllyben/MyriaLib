@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using MyriaLib.Entities.Items;
 using MyriaLib.Services.Builder;
@@ -14,20 +14,32 @@ namespace MyriaLib.Systems
 
             if (!root.TryGetProperty("Id", out var idProp))
                 throw new JsonException("Missing 'Id' field in item.");
-            int stackSize = 1;
-            if (doc.RootElement.TryGetProperty("StackSize", out var stackSizeProp))
-                stackSize = stackSizeProp.GetInt32(); // ✅ apply saved value
 
-            string id = idProp.GetString();
+            string id = idProp.GetString()!;
 
-            return ItemFactory.CreateItem(id, stackSize);
+            int stackSize = root.TryGetProperty("StackSize", out var stackProp)
+                ? stackProp.GetInt32()
+                : 1;
+
+            var item = ItemFactory.CreateItem(id, stackSize);
+            if (item == null)
+                throw new JsonException($"Save data references item '{id}' which no longer exists in item definitions.");
+
+            // Re-apply upgrade level so upgraded gear isn't reset on load
+            if (item is EquipmentItem equipment
+                && root.TryGetProperty("UpgradeLevel", out var upgradeProp))
+            {
+                int savedLevel = upgradeProp.GetInt32();
+                for (int i = 0; i < savedLevel; i++)
+                    equipment.TryUpgrade_Internal();
+            }
+
+            return item;
         }
 
         public override void Write(Utf8JsonWriter writer, Item value, JsonSerializerOptions options)
         {
             JsonSerializer.Serialize(writer, (object)value, value.GetType(), options);
         }
-
     }
-
 }

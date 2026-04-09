@@ -12,7 +12,7 @@ namespace MyriaLib.Systems
             public Action Execute { get; set; }
         }
 
-        private static readonly Random _random = new();
+        private static readonly Random _random = Random.Shared;
         public static bool TryHit(ICombatant attacker, ICombatant defender)
         {
             float aim = attacker.TotalAim;

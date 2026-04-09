@@ -3,11 +3,11 @@ using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Skills;
+using MyriaLib.Models.BaseModel;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 using MyriaLib.Utils;
-using System.Text.Json.Serialization;
 
 namespace MyriaLib.Entities.Players
 {
@@ -25,24 +25,55 @@ namespace MyriaLib.Entities.Players
         public int PotionTierAvailable { get; set; } = 1;
         public Inventory Inventory { get; set; } = new();
         public MoneyBag Money { get; set; } = new();
-        public List<Skill> Skills { get; set;} = new();
+        public List<Skill> Skills { get; set; } = new();
         public List<Quest> ActiveQuests { get; set; } = new();
         public List<Quest> CompletedQuests { get; set; } = new();
         public Dictionary<string, RepeatRecord> RepeatableQuestRecords { get; set; } = new();
-        public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
-
         [JsonIgnore]
         public Room CurrentRoom { get; set; }
         public int CurrentRoomId { get; set; }
         public int? LastHealerRoomId { get; set; } = null;
+
+        // ── Skill Fusion (WPF / Unity — physical/combat classes) ─────────────────
+        /// <summary>All composite skills the player has created via fusion.</summary>
+        public List<CompositeSkill> CompositeSkills { get; set; } = new();
+
+        /// <summary>
+        /// Which composite skill IDs are currently slotted for combat.
+        /// Count is capped by <see cref="FusionSlotCount"/>.
+        /// </summary>
+        public List<string> ActiveCompositeSkillIds { get; set; } = new();
+
+        /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
+        [JsonIgnore]
+        public int FusionSlotCount => Level switch
+        {
+            >= 72 => 10,
+            >= 63 => 9,
+            >= 54 => 8,
+            >= 45 => 7,
+            >= 36 => 6,
+            >= 27 => 5,
+            >= 18 => 4,
+            >= 9  => 3,
+            >= 3  => 2,
+            _     => 1
+        };
+
+        // ── Runic Magic (WPF / Unity — magic classes) ────────────────────────────
+        /// <summary>All runes the player knows, including those gained via word combinations.</summary>
+        public List<CompositeRune> KnownRunes { get; set; } = new();
+
+        /// <summary>The player's runic word discovery and translation state.</summary>
+        public List<PlayerRuneWordEntry> RuneDictionary { get; set; } = new();
 
         // Add inventory, experience, commands, etc.
         public Player(string name, Stats stats)
         {
             Name = name;
             Stats = stats;
-            CurrentHealth = stats.MaxHealth;
-            CurrentMana = stats.MaxMana;
+            CurrentHealth = MaxHealth;
+            CurrentMana = MaxMana;
             ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
             Skills = SkillFactory.GetSkillsFor(this);
         }
@@ -88,7 +119,7 @@ namespace MyriaLib.Entities.Players
             if (amount <= 0) return 0;
 
             int old = CurrentHealth;
-            int max = Stats.MaxHealth;
+            int max = MaxHealth;
             if (amount > max)
                 amount = max;
             int newValue = Math.Min(max, CurrentHealth + amount);
@@ -120,7 +151,7 @@ namespace MyriaLib.Entities.Players
         {
             if (amount <= 0) return 0;
             int old = CurrentMana;
-            int max = Stats.MaxMana;
+            int max = MaxMana;
             if (amount > max)
                 amount = max;
             int newValue = Math.Min(max, CurrentMana + amount);
@@ -182,8 +213,8 @@ namespace MyriaLib.Entities.Players
             Stats.BaseHealth += profile.HpPerLevel;
             Stats.BaseMana += profile.ManaPerLevel;
 
-            CurrentHealth = Stats.MaxHealth;
-            CurrentMana = Stats.MaxMana;
+            CurrentHealth = MaxHealth;
+            CurrentMana = MaxMana;
             ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
         }
         public bool LearnSkill(Skill skill)
@@ -201,33 +232,14 @@ namespace MyriaLib.Entities.Players
         }
 
         /// <summary>
-        /// returns the bonus from equiped gear
+        /// Returns true if the player has a tool that enables the given gathering type —
+        /// checks both the inventory bag and the equipped weapon slot.
         /// </summary>
-        /// <param name="selector">function to select from</param>
-        /// <returns>the bonmus as an int</returns>
-        public int GetBonusFromGear(Func<EquipmentItem, int> selector)
-        {
-            int total = 0;
-            if (WeaponSlot != null) total += selector(WeaponSlot);
-            if (ArmorSlot != null) total += selector(ArmorSlot);
-            if (AccessorySlot != null) total += selector(AccessorySlot);
-            return total;
-        }
-        /// <summary>
-        /// Checks if the player has gather equipment
-        /// </summary>
-        /// <param name="type">athering type of the source</param>
-        /// <returns>if the player can gather</returns>
         public bool HasToolFor(GatheringType type)
         {
-            return type switch
-            {
-                GatheringType.Ore => Inventory.Items.Any(i => i.Id == "pickaxe"),
-                GatheringType.Tree => Inventory.Items.Any(i => i.Id == "woodcutter_axe"),
-                GatheringType.Herb => true, // no tool required
-                _ => false
-            };
-
+            if (type == GatheringType.Herb) return true;
+            return Inventory.Items.Any(i => i.ToolType == type)
+                || WeaponSlot?.ToolType == type;
         }
 
         /// <summary>
@@ -257,10 +269,9 @@ namespace MyriaLib.Entities.Players
             // 1 point per level starting from level 2 (level 1 has 0 points)
             int totalPointsEarned = Math.Max(0, Level - 1);
 
-            // Calculate points spent by summing up the "Added" properties
-            int pointsSpent = Stats.StrengthAdded + Stats.DexterityAdded + Stats.EnduranceAdded + Stats.IntelligenceAdded + Stats.SpiritAdded;
+            int pointsSpent = Stats.StrengthBonus + Stats.DexterityBonus + Stats.EnduranceBonus
+                            + Stats.IntelligenceBonus + Stats.SpiritBonus;
 
-            // Unused = Total Earned - Spent
             Stats.UnusedPoints = Math.Max(0, totalPointsEarned - pointsSpent);
         }
 
