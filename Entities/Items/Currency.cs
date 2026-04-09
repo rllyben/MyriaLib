@@ -1,6 +1,4 @@
-﻿using MyriaLib.Entities.Players;
-
-namespace MyriaLib.Entities.Items
+﻿namespace MyriaLib.Entities.Items
 {
 
 
