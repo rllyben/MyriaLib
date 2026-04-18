@@ -16,6 +16,8 @@ namespace MyriaLib.Entities.Maps
         public string? RequiredQuestId { get; set; } = null;
         public bool IsDungeonRoom { get; set; } = false;
         public bool IsBossRoom { get; set; } = false;
+        public bool IsCaveRoom { get; set; } = false;
+        public bool IsCity { get; set; } = false;
         public bool IsCleared { get; set; } = false; // unlocked once all dungeon monsters are defeated
         public int DailyGatherLimit { get; set; } = 0;
         public int GathersRemaining { get; set; } = 0;

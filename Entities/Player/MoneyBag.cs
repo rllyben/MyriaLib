@@ -28,5 +28,8 @@ namespace MyriaLib.Entities.Players
         }
 
         public override string ToString() => Balance.ToString();
+
+        /// <summary>Compatibility alias for Balance (old API used Coins).</summary>
+        public Money Coins => Balance;
     }
 }

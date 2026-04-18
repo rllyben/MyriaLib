@@ -93,5 +93,12 @@ namespace MyriaLib.Entities.Players
                 _   => MoneyFormatter.FormatShort(cc, pt, g, s, b, nfi)
             };
         }
+
+        /// <summary>Compatibility alias for BronzeTotal.</summary>
+        public long Bronze => BronzeTotal;
+        /// <summary>Compatibility alias for BronzeTotal.</summary>
+        public long TotalBronze => BronzeTotal;
+        /// <summary>Compatibility alias for ToString().</summary>
+        public string ToDisplayString() => ToString();
     }
 }

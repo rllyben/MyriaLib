@@ -100,6 +100,9 @@ namespace MyriaLib.Services
         {
             BaseRuneService.ResolveRunes(player);
             SkillFusionSystem.ResolveCompositeSkills(player);
+            SkillCombinationService.ResolveCombinedSkills(player);
+            SkillSlotService.ResolveSlots(player);
+            SkillSlotService.MigrateIfEmpty(player);
         }
 
     }

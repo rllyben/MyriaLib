@@ -60,6 +60,36 @@ namespace MyriaLib.Entities.Players
             _     => 1
         };
 
+        // ── Skill Combination (combining 2–5 learned base skills) ─────────────────
+        /// <summary>All combined skills the player has created by pairing their learned skills.</summary>
+        public List<CombinedSkill> CombinedSkills { get; set; } = new();
+
+        // ── Combat Skill Slots ────────────────────────────────────────────────────
+        /// <summary>
+        /// The ordered list of skills configured for the combat skill bar.
+        /// Only slotted skills appear during a fight. Capped by <see cref="SkillSlotCount"/>.
+        /// </summary>
+        public List<SkillSlot> SkillSlots { get; set; } = new();
+
+        /// <summary>
+        /// Maximum number of skills the player can slot for combat, based on level.
+        /// Follows the rule: base 1 slot, then +1 at levels 3, 9, 18, 27, 36, 45, 54, 63, 72.
+        /// </summary>
+        [JsonIgnore]
+        public int SkillSlotCount => Level switch
+        {
+            >= 72 => 10,
+            >= 63 => 9,
+            >= 54 => 8,
+            >= 45 => 7,
+            >= 36 => 6,
+            >= 27 => 5,
+            >= 18 => 4,
+            >= 9  => 3,
+            >= 3  => 2,
+            _     => 1
+        };
+
         // ── Runic Magic (WPF / Unity — magic classes) ────────────────────────────
         /// <summary>All runes the player knows, including those gained via word combinations.</summary>
         public List<CompositeRune> KnownRunes { get; set; } = new();

@@ -7,6 +7,7 @@ namespace MyriaLib.Models.Settings
         public static Settings Current { get; set; } = new Settings();
         public Language LanguageSettings { get; set; } = new();
         public Visuals VisualSettings { get; set; } = new();
+        public KeybindingSettings Keybindings { get; set; } = new();
 
     }
 

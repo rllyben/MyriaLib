@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using MyriaLib.Entities.Players;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Entities.Maps;
 
 namespace MyriaLib.Entities.Items
 {
@@ -15,6 +16,7 @@ namespace MyriaLib.Entities.Items
         public int StackSize { get; set; } = 1;
         public virtual int MaxStackSize { get; set; } = 50;
         public bool IsTool { get; set; } = false;
+        public GatheringType? ToolType { get; set; } = null;
 
         public virtual int BuyPrice { get; set; } = 100; // default value
         public virtual int SellValue => (int)(BuyPrice * 0.75);

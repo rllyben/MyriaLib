@@ -91,6 +91,7 @@ namespace MyriaLib.Services
             BaseRuneService.Load();
             BaseSkillLoader.Load();
             FusionRecipeService.Load();
+            SkillCombinationService.Load();
             Report("skill_systems");
 
             return true;

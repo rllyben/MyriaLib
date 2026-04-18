@@ -6,99 +6,69 @@ namespace MyriaLib.Entities.Items
     public class EquipmentItem : Item
     {
         public EquipmentType SlotType { get; set; }
-        public override int BuyPrice { get; set; } = 300; // base cost
+        public override int BuyPrice { get; set; } = 300;
 
-        public int BaseBonusHP { get; set; }
-        public int BaseBonusMP { get; set; }
-        public int BaseBonusATK { get; set; }
-        public int BaseBonusDEF { get; set; }
-        public int BaseBonusMATK { get; set; }
-        public int BaseBonusMDEF { get; set; }
-        public int BaseBonusAim { get; set; }
-        public int BaseBonusEvasion { get; set; }
-        public float BaseBonusCrit { get; set; }
-        public float BaseBonusBlock { get; set; }
-        public int BaseBonusSTR { get; set; }
-        public int BaseBonusDEX { get; set; }
-        public int BaseBonusEND { get; set; }
-        public int BaseBonusINT { get; set; }
-        public int BaseBonusSPR { get; set; }
+        /// <summary>Base bonus values as defined in item data (before upgrades).</summary>
+        public EquipmentBonuses BaseStats { get; set; }
 
-        // Core stat bonuses (used by rare/special gear)
-        public int BonusHP { get; set; }
-        public int BonusMP { get; set; }
-        public int BonusSTR { get; set; }
-        public int BonusDEX { get; set; }
-        public int BonusEND { get; set; }
-        public int BonusINT { get; set; }
-        public int BonusSPR { get; set; }
+        /// <summary>Current bonus values (scales with upgrade level).</summary>
+        public EquipmentBonuses Bonuses { get; set; }
 
-        // Derived stat bonuses
-        public int BonusATK { get; set; }
-        public int BonusDEF { get; set; }
-        public int BonusMATK { get; set; }
-        public int BonusMDEF { get; set; }
-        public int BonusAim { get; set; }
-        public int BonusEvasion { get; set; }
-        public float BonusCrit { get; set; }
-        public float BonusBlock { get; set; }
         public int UpgradeLevel { get; set; } = 0;
 
+        // Convenience properties — delegate to Bonuses struct so existing UI code keeps working
+        public int BonusHP      => Bonuses.HP;
+        public int BonusMP      => Bonuses.MP;
+        public int BonusSTR     => Bonuses.STR;
+        public int BonusDEX     => Bonuses.DEX;
+        public int BonusEND     => Bonuses.END;
+        public int BonusINT     => Bonuses.INT;
+        public int BonusSPR     => Bonuses.SPR;
+        public int BonusATK     => Bonuses.ATK;
+        public int BonusDEF     => Bonuses.DEF;
+        public int BonusMATK    => Bonuses.MATK;
+        public int BonusMDEF    => Bonuses.MDEF;
+        public int BonusAim     => Bonuses.Aim;
+        public int BonusEvasion => Bonuses.Evasion;
+        public float BonusCrit  => Bonuses.Crit;
+        public float BonusBlock => Bonuses.Block;
+
         public bool IsUsableBy(Player player) => AllowedClasses.Contains(player.Class);
-        public override void Use(Player player)
-        {
-        }
+
+        public override void Use(Player player) { }
+
         /// <summary>
-        /// tries to upgrade the item
+        /// Applies one upgrade level, scaling Bonuses from BaseStats.
+        /// Called both from the UI upgrade flow and from save-file reload (ItemConverter).
         /// </summary>
-        /// <param name="player">player character</param>
-        /// <returns>retruns if its successful</returns>
         public bool TryUpgrade(Player player)
         {
-            if (UpgradeLevel >= 9)
-            {
-                return false;
-            }
+            if (UpgradeLevel >= 9) return false;
 
-            string requiredItemId = "upgrade_stone"; // later: different items per tier
-            var material = player.Inventory.Items
-                .FirstOrDefault(i => i.Id == requiredItemId);
+            string requiredItemId = "upgrade_stone";
+            var material = player.Inventory.Items.FirstOrDefault(i => i.Id == requiredItemId);
+            if (material == null) return false;
 
-            if (material == null)
-            {
-                return false;
-            }
             if (material.StackSize < 2)
                 player.Inventory.RemoveItem(material);
             else
                 material.StackSize--;
 
-            UpgradeLevel++;
-            float multiplier = 1.1f;
-            if (UpgradeLevel < 4)
-                multiplier = 1 + (UpgradeLevel * 0.1f);
-            else if (UpgradeLevel < 7)
-                multiplier = 1 + (UpgradeLevel * 0.3f);
-            else if (UpgradeLevel < 10)
-                multiplier = 1 + (UpgradeLevel * 0.7f);
-
-            BonusATK = (int)(BaseBonusATK * multiplier);
-            BonusDEF = (int)(BaseBonusDEF * multiplier);
-            BonusMATK = (int)(BaseBonusMATK * multiplier);
-            BonusMDEF = (int)(BaseBonusMDEF * multiplier);
-            BonusAim = (int)(BaseBonusAim * multiplier);
-            BonusEvasion = (int)(BaseBonusEvasion * multiplier);
-            BonusSTR = (int)(BaseBonusSTR * multiplier);
-            BonusDEX = (int)(BaseBonusDEX * multiplier);
-            BonusEND = (int)(BaseBonusEND * multiplier);
-            BonusINT = (int)(BaseBonusINT * multiplier);
-            BonusSPR = (int)(BaseBonusSPR * multiplier);
-            BonusHP = (int)(BaseBonusHP * multiplier);
-            BonusMP = (int)(BaseBonusMP * multiplier);
-
+            TryUpgrade_Internal();
             return true;
         }
 
+        /// <summary>
+        /// Applies the next upgrade level without consuming materials.
+        /// Used by <see cref="TryUpgrade"/> and by save-file deserialization.
+        /// </summary>
+        public void TryUpgrade_Internal()
+        {
+            UpgradeLevel++;
+            float multiplier = UpgradeLevel < 4  ? 1 + (UpgradeLevel * 0.1f)
+                             : UpgradeLevel < 7  ? 1 + (UpgradeLevel * 0.3f)
+                                                 : 1 + (UpgradeLevel * 0.7f);
+            Bonuses = BaseStats.Scale(multiplier);
+        }
     }
-
 }
