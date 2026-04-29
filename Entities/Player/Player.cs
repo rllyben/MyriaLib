@@ -8,6 +8,7 @@ using MyriaLib.Services.Builder;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 using MyriaLib.Utils;
+using MyriaLib.Entities.Players;
 
 namespace MyriaLib.Entities.Players
 {
@@ -19,6 +20,7 @@ namespace MyriaLib.Entities.Players
         public event EventHandler<HealthChangedEventArgs>? HealthChanged;
         public event EventHandler<ManaChangedEventArgs>? ManaChanged;
         public PlayerClass Class { get; set; } = PlayerClass.Fighter;
+        public PlayerRace Race { get; set; } = PlayerRace.Myralu;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;
         public long ExpForNextLvl { get; set; }
@@ -230,7 +232,7 @@ namespace MyriaLib.Entities.Players
         /// </summary>
         public void LevelUp()
         {
-            var profile = ClassProfile.All[Class];
+            var profile = RaceProfile.All[Race];
 
             Level++;
             Stats.Strength += profile.StatGrowth["STR"];
