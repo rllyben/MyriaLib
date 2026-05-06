@@ -6,14 +6,15 @@ namespace MyriaLib.Services
 {
     public static class MonsterService
     {
-        private static readonly string _filePath = "Data/common/monsters.json";
+        private static readonly string _defaultPath = "Data/common/monsters.json";
         private static List<Monster> _monsterList = new List<Monster>();
-        public static List<Monster> LoadMonsters()
+        public static List<Monster> LoadMonsters(string path = "")
         {
-            if (!File.Exists(_filePath))
+            string filePath = string.IsNullOrEmpty(path) ? _defaultPath : path;
+            if (!File.Exists(filePath))
                 return new List<Monster>();
 
-            string json = File.ReadAllText(_filePath);
+            string json = File.ReadAllText(filePath);
             _monsterList = JsonSerializer.Deserialize<List<Monster>>(json) ?? new();
             return _monsterList;
         }
@@ -21,7 +22,7 @@ namespace MyriaLib.Services
         public static void SaveMonsters(List<Monster> monsters)
         {
             string json = JsonSerializer.Serialize(monsters, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+            File.WriteAllText(_defaultPath, json);
         }
         public static Monster? GetMonsterById(int id)
         {

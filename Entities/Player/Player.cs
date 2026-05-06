@@ -35,6 +35,7 @@ namespace MyriaLib.Entities.Players
         public Room CurrentRoom { get; set; }
         public int CurrentRoomId { get; set; }
         public int? LastHealerRoomId { get; set; } = null;
+        public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
 
         // ── Skill Fusion (WPF / Unity — physical/combat classes) ─────────────────
         /// <summary>All composite skills the player has created via fusion.</summary>

@@ -11,23 +11,24 @@ namespace MyriaLib.Services
     public static class RoomService
     {
         public static List<Room> AllRooms { get; private set; } = new List<Room>();
-        private static readonly string _filePath = "Data/common/rooms.json";
+        private static readonly string _defaultPath = "Data/common/rooms.json";
 
         /// <summary>
-        /// Loads all rooms from Data/rooms.json
+        /// Loads all rooms from the given path (default: Data/common/rooms.json).
         /// </summary>
-        /// <returns>returns an room Dictionary with the room id as Key and the rooms as Values</returns>
-        public static Dictionary<int, Room> LoadRooms()
+        /// <returns>Room dictionary keyed by room ID.</returns>
+        public static Dictionary<int, Room> LoadRooms(string path = "")
         {
-            string test = Path.Combine(Directory.GetCurrentDirectory(), _filePath);
+            string filePath = string.IsNullOrEmpty(path) ? _defaultPath : path;
+            string test = Path.Combine(Directory.GetCurrentDirectory(), filePath);
             Debug.WriteLine(Directory.GetCurrentDirectory());
-            Debug.WriteLine(_filePath);
+            Debug.WriteLine(filePath);
             Debug.WriteLine(test);
 
-            if (!File.Exists(_filePath))
+            if (!File.Exists(filePath))
                 return new();
 
-            string json = File.ReadAllText(_filePath);
+            string json = File.ReadAllText(filePath);
             
             var options = new JsonSerializerOptions
             {
