@@ -2,6 +2,7 @@
 using MyriaLib.Entities.Players;
 using MyriaLib.Services;
 using MyriaLib.Services.Builder;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 
@@ -79,7 +80,7 @@ namespace MyriaLib.Entities.NPCs
             if (invItem.StackSize < amount)
                 return NpcActionResult.Fail("npc.action.sell.notEnoughAmount", amount);
 
-            int totalGain = invItem.SellValue * amount;
+            int totalGain = JobManager.GetSellValue(invItem, player) * amount;
 
             // reduce stack / remove item
             if (invItem.StackSize == amount)

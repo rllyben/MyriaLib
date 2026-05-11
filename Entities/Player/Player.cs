@@ -117,6 +117,8 @@ namespace MyriaLib.Entities.Players
         // ── Jobs ─────────────────────────────────────────────────────────────────
         public string? ActiveJobId { get; set; }
         public List<PlayerJob> Jobs { get; set; } = new();
+        /// <summary>UTC timestamp of the last time the player switched to a new active job.</summary>
+        public DateTime LastJobChanged { get; set; } = DateTime.MinValue;
 
         // ── Runic Magic (WPF / Unity — magic classes) ────────────────────────────
         /// <summary>All runes the player knows, including those gained via word combinations.</summary>

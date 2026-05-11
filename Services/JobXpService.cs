@@ -48,11 +48,39 @@ namespace MyriaLib.Services
             return (double)XpInCurrentLevel(totalXp) / XpForCurrentLevel(totalXp);
         }
 
+        /// <summary>
+        /// Sell-value multiplier from Fame level.
+        /// Scales linearly from x1.0 (level 1, +0%) to x2.5 (level 100, +150%).
+        /// </summary>
+        public static double GetFameMultiplier(int level)
+        {
+            int clamped = Math.Clamp(level, 1, MaxLevel);
+            return 1.0 + (clamped - 1) * (1.5 / (MaxLevel - 1));
+        }
+
+        /// <summary>Fame sell multiplier derived from accumulated Fame XP.</summary>
+        public static double GetFameMultiplierFromXp(long fameXp)
+            => GetFameMultiplier(GetLevel(fameXp));
+
         /// <summary>"1,200 / 3,400 XP" progress string, or "MAX" at level 100.</summary>
         public static string FormatProgress(long totalXp)
         {
             if (GetLevel(totalXp) >= MaxLevel) return "MAX";
             return $"{XpInCurrentLevel(totalXp):N0} / {XpForCurrentLevel(totalXp):N0} XP";
         }
+
+        /// <summary>
+        /// Multiplier applied to gathered amounts (Gathering jobs) or crafted item stats (Crafting jobs).
+        /// Scales linearly from x1.0 at level 1 to x3.0 at level 100.
+        /// </summary>
+        public static double GetSkillMultiplier(int level)
+        {
+            int clamped = Math.Clamp(level, 1, MaxLevel);
+            return 1.0 + (clamped - 1) * (2.0 / (MaxLevel - 1));
+        }
+
+        /// <summary>Skill multiplier derived from accumulated XP rather than a precomputed level.</summary>
+        public static double GetSkillMultiplierFromXp(long totalXp)
+            => GetSkillMultiplier(GetLevel(totalXp));
     }
 }

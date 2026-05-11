@@ -1,5 +1,6 @@
 ﻿using MyriaLib.Utils;
 using MyriaLib.Entities.Items;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 
@@ -348,7 +349,7 @@ namespace MyriaLib.Entities.Players
             if (item.StackSize < quantity)
                 return false;
 
-            int coinsReceived = item.SellValue * quantity;
+            int coinsReceived = JobManager.GetSellValue(item, player) * quantity;
 
             // Snapshot item data before any mutation
             Item soldCopy = item.CloneOne();

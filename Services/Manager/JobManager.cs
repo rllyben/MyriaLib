@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Jobs;
 using MyriaLib.Entities.Players;
 
@@ -19,15 +20,19 @@ namespace MyriaLib.Services.Manager
 
         public static IReadOnlyList<Job> GetAll() => _allJobs;
 
+        public static readonly TimeSpan JobChangeCooldown = TimeSpan.FromDays(7);
+
         // ── XP grants ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Skill XP — earned by performing the job's main task (crafting/gathering)
-        /// regardless of whether this is the player's active job.
+        /// Skill XP — earned by performing the job's main task (crafting/gathering).
+        /// Grants a 50 % bonus when this is the player's active job.
         /// </summary>
         public static void GrantSkillXp(Player player, string jobId, long amount)
         {
             if (amount <= 0) return;
+            if (player.ActiveJobId == jobId)
+                amount += amount / 2;   // +50 % active-job bonus
             GetOrAdd(player, jobId).SkillXp += amount;
         }
 
@@ -50,9 +55,57 @@ namespace MyriaLib.Services.Manager
 
         // ── Active job ───────────────────────────────────────────────────────────
 
-        /// <summary>Sets the player's active job. Pass null to stop working.</summary>
-        public static void SetActiveJob(Player player, string? jobId)
-            => player.ActiveJobId = jobId;
+        /// <summary>
+        /// Switches the player's active job.
+        /// Clearing the job (null) is always free.
+        /// Switching to a new non-null job requires <see cref="JobChangeCooldown"/> since the
+        /// last switch; returns false and leaves the job unchanged if the cooldown has not elapsed.
+        /// </summary>
+        public static bool SetActiveJob(Player player, string? jobId)
+        {
+            if (jobId == player.ActiveJobId) return true;
+
+            if (jobId != null)
+            {
+                if (!CanChangeJob(player)) return false;
+                player.LastJobChanged = DateTime.UtcNow;
+            }
+
+            player.ActiveJobId = jobId;
+            return true;
+        }
+
+        /// <summary>Returns true when the player is allowed to switch to a new job.</summary>
+        public static bool CanChangeJob(Player player)
+            => GetCooldownRemaining(player) <= TimeSpan.Zero;
+
+        /// <summary>How long until the player may switch jobs again; zero or negative means ready.</summary>
+        public static TimeSpan GetCooldownRemaining(Player player)
+            => player.LastJobChanged == DateTime.MinValue
+                ? TimeSpan.Zero
+                : player.LastJobChanged + JobChangeCooldown - DateTime.UtcNow;
+
+        // ── Selling ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the sell value of <paramref name="item"/> for <paramref name="player"/>,
+        /// applying the Fame bonus when the player is actively working the item's job.
+        /// Equipment items without an explicit JobId fall back to their UpgradeCategory.
+        /// </summary>
+        public static int GetSellValue(Item item, Player player)
+        {
+            int baseSell = item.SellValue;
+
+            string? jobId = item.JobId
+                ?? (item is EquipmentItem eq ? eq.UpgradeCategory : null);
+
+            if (jobId == null || jobId != player.ActiveJobId)
+                return baseSell;
+
+            var entry = GetOrAdd(player, jobId);
+            double multiplier = JobXpService.GetFameMultiplierFromXp(entry.FameXp);
+            return (int)(baseSell * multiplier);
+        }
 
         // ── Helpers ──────────────────────────────────────────────────────────────
 
