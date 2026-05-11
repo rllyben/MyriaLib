@@ -133,15 +133,17 @@ namespace MyriaLib.Services.Builder
 
             return new EquipmentItem
             {
-                Id          = def.Id,
-                Name        = def.Name,
-                Description = def.Description,
-                BuyPrice    = def.BuyPrice,
-                SlotType    = def.SlotType,
-                ToolType    = def.ToolType,
-                AllowedClasses = ParseClasses(def.AllowedClasses),
-                BaseStats   = baseStats,
-                Bonuses     = baseStats,    // starts equal to base; scales on upgrade
+                Id               = def.Id,
+                Name             = def.Name,
+                Description      = def.Description,
+                BuyPrice         = def.BuyPrice,
+                SlotType         = def.SlotType,
+                ToolType         = def.ToolType,
+                IsTool           = def.ToolType.HasValue,
+                UpgradeCategory  = def.UpgradeCategory,
+                AllowedClasses   = ParseClasses(def.AllowedClasses),
+                BaseStats        = baseStats,
+                Bonuses          = baseStats,    // starts equal to base; scales on upgrade
             };
         }
 

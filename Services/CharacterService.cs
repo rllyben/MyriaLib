@@ -41,6 +41,7 @@ namespace MyriaLib.Services
 
             var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
             Player player = jsonHero;
+            player.Inventory.Items.RemoveAll(i => i == null);
             try
             {
                 int roomId = player.CurrentRoomId;
@@ -50,7 +51,7 @@ namespace MyriaLib.Services
             {
                 // Log error or handle gracefully
             }
-            
+
             // Recalculate unused points for imported/loaded characters
             player.RecalculateUnusedPoints();
             player.ValidateQuestStatuses();
@@ -75,6 +76,7 @@ namespace MyriaLib.Services
 
                 var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
                 Player player = jsonHero;
+                player.Inventory.Items.RemoveAll(i => i == null);
                 try
                 {
                     int roomId = player.CurrentRoomId;

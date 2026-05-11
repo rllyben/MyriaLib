@@ -23,15 +23,23 @@ namespace MyriaLib.Systems
 
             var item = ItemFactory.CreateItem(id, stackSize);
             if (item == null)
-                throw new JsonException($"Save data references item '{id}' which no longer exists in item definitions.");
-
-            // Re-apply upgrade level so upgraded gear isn't reset on load
-            if (item is EquipmentItem equipment
-                && root.TryGetProperty("UpgradeLevel", out var upgradeProp))
             {
-                int savedLevel = upgradeProp.GetInt32();
-                for (int i = 0; i < savedLevel; i++)
-                    equipment.TryUpgrade_Internal();
+                LoadWarnings.Track(id);
+                return null!; // caller must strip nulls from any List<Item> after deserialization
+            }
+
+            // Re-apply craft quality and upgrade level so upgraded/crafted gear isn't reset on load
+            if (item is EquipmentItem equipment)
+            {
+                if (root.TryGetProperty("CraftQuality", out var qualityProp))
+                    equipment.CraftQuality = qualityProp.GetSingle();
+
+                if (root.TryGetProperty("UpgradeLevel", out var upgradeProp))
+                {
+                    int savedLevel = upgradeProp.GetInt32();
+                    for (int i = 0; i < savedLevel; i++)
+                        equipment.TryUpgrade_Internal();
+                }
             }
 
             return item;

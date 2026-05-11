@@ -10,16 +10,25 @@ namespace MyriaLib.Entities
         public int CurrentHealth { get; set; }
         public int CurrentMana { get; set; }
 
-        // Full stat totals — class base + player investment + gear bonuses
-        public int TotalSTR => Stats.TotalStrength + GetBonusFromGear(g => g.Bonuses.STR);
-        public int TotalDEX => Stats.TotalDexterity + GetBonusFromGear(g => g.Bonuses.DEX);
-        public int TotalEND => Stats.TotalEndurance + GetBonusFromGear(g => g.Bonuses.END);
-        public int TotalINT => Stats.TotalIntelligence + GetBonusFromGear(g => g.Bonuses.INT);
-        public int TotalSPR => Stats.TotalSpirit + GetBonusFromGear(g => g.Bonuses.SPR);
+        // Override in subclasses to inject class-level stat bonuses
+        protected virtual int ExtraSTR => 0;
+        protected virtual int ExtraDEX => 0;
+        protected virtual int ExtraEND => 0;
+        protected virtual int ExtraINT => 0;
+        protected virtual int ExtraSPR => 0;
+        protected virtual int ExtraBaseHealth => 0;
+        protected virtual int ExtraBaseMana   => 0;
+
+        // Full stat totals — race base + player investment + class bonus + gear bonuses
+        public int TotalSTR => Stats.TotalStrength + ExtraSTR + GetBonusFromGear(g => g.Bonuses.STR);
+        public int TotalDEX => Stats.TotalDexterity + ExtraDEX + GetBonusFromGear(g => g.Bonuses.DEX);
+        public int TotalEND => Stats.TotalEndurance + ExtraEND + GetBonusFromGear(g => g.Bonuses.END);
+        public int TotalINT => Stats.TotalIntelligence + ExtraINT + GetBonusFromGear(g => g.Bonuses.INT);
+        public int TotalSPR => Stats.TotalSpirit + ExtraSPR + GetBonusFromGear(g => g.Bonuses.SPR);
 
         // MaxHealth/MaxMana live here so gear HP/MP bonuses are included
-        public int MaxHealth => Stats.BaseHealth + TotalEND * 5 + GetBonusFromGear(g => g.Bonuses.HP);
-        public int MaxMana   => Stats.BaseMana   + TotalSPR * 5 + GetBonusFromGear(g => g.Bonuses.MP);
+        public int MaxHealth => Stats.BaseHealth + ExtraBaseHealth + TotalEND * 5 + GetBonusFromGear(g => g.Bonuses.HP);
+        public int MaxMana   => Stats.BaseMana   + ExtraBaseMana   + TotalSPR * 5 + GetBonusFromGear(g => g.Bonuses.MP);
 
         public bool IsAlive => CurrentHealth > 0;
 

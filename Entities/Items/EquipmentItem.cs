@@ -15,6 +15,14 @@ namespace MyriaLib.Entities.Items
         public EquipmentBonuses Bonuses { get; set; }
 
         public int UpgradeLevel { get; set; } = 0;
+        public string? UpgradeCategory { get; set; }
+
+        /// <summary>
+        /// Quality multiplier baked in at craft/upgrade time from the blacksmith's skill level.
+        /// Applied on top of the upgrade scaling so higher-skill work produces permanently stronger items.
+        /// Default 1.0 for items that were not player-crafted (shops, loot).
+        /// </summary>
+        public float CraftQuality { get; set; } = 1f;
 
         // Convenience properties — delegate to Bonuses struct so existing UI code keeps working
         public int BonusHP      => Bonuses.HP;
@@ -44,16 +52,6 @@ namespace MyriaLib.Entities.Items
         public bool TryUpgrade(Player player)
         {
             if (UpgradeLevel >= 9) return false;
-
-            string requiredItemId = "upgrade_stone";
-            var material = player.Inventory.Items.FirstOrDefault(i => i.Id == requiredItemId);
-            if (material == null) return false;
-
-            if (material.StackSize < 2)
-                player.Inventory.RemoveItem(material);
-            else
-                material.StackSize--;
-
             TryUpgrade_Internal();
             return true;
         }
@@ -68,7 +66,7 @@ namespace MyriaLib.Entities.Items
             float multiplier = UpgradeLevel < 4  ? 1 + (UpgradeLevel * 0.1f)
                              : UpgradeLevel < 7  ? 1 + (UpgradeLevel * 0.3f)
                                                  : 1 + (UpgradeLevel * 0.7f);
-            Bonuses = BaseStats.Scale(multiplier);
+            Bonuses = BaseStats.Scale(multiplier * CraftQuality);
         }
     }
 }

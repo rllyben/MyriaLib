@@ -1,10 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 using MyriaLib.Entities.Items;
+using MyriaLib.Entities.Jobs;
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models.BaseModel;
 using MyriaLib.Services.Builder;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 using MyriaLib.Utils;
@@ -92,6 +94,29 @@ namespace MyriaLib.Entities.Players
             >= 3  => 2,
             _     => 1
         };
+
+        // ── Race ─────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// False for characters created before the race-selection UI existed.
+        /// The loading path uses this to trigger a one-time migration.
+        /// </summary>
+        public bool RaceSelected { get; set; } = false;
+
+        // ── Class XP ─────────────────────────────────────────────────────────────
+        public Dictionary<PlayerClass, long> ClassXp { get; set; } = new();
+        public DateTime LastClassPenaltyApplied { get; set; } = DateTime.MinValue;
+
+        protected override int ExtraSTR => ClassManager.GetClassBonusForStat(this, "STR");
+        protected override int ExtraDEX => ClassManager.GetClassBonusForStat(this, "DEX");
+        protected override int ExtraEND => ClassManager.GetClassBonusForStat(this, "END");
+        protected override int ExtraINT => ClassManager.GetClassBonusForStat(this, "INT");
+        protected override int ExtraSPR => ClassManager.GetClassBonusForStat(this, "SPR");
+        protected override int ExtraBaseHealth => ClassManager.GetClassHpBonus(this);
+        protected override int ExtraBaseMana   => ClassManager.GetClassManaBonus(this);
+
+        // ── Jobs ─────────────────────────────────────────────────────────────────
+        public string? ActiveJobId { get; set; }
+        public List<PlayerJob> Jobs { get; set; } = new();
 
         // ── Runic Magic (WPF / Unity — magic classes) ────────────────────────────
         /// <summary>All runes the player knows, including those gained via word combinations.</summary>

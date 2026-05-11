@@ -15,6 +15,7 @@ namespace MyriaLib.Models.BaseModel
         public int MaxStackSize { get; set; } = 1;
         public GatheringType? ToolType { get; set; } = null;
         public List<string> AllowedClasses { get; set; } = new();
+        public string? UpgradeCategory { get; set; }
 
         // Consumable fields
         public int HealAmount { get; set; }

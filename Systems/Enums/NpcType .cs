@@ -6,7 +6,11 @@
         Shop,
         Smith,
         SkillMaster,
-        Villager
+        Villager,
+        Leathersmith,
+        Tailor,
+        Artificer,
+        Enchanter
     }
 
 }

@@ -13,10 +13,12 @@ namespace MyriaLib.Entities.NPCs
         public string NameKey { get; set; } = "";        // e.g. "game.npc.healer.name"
         public string DescriptionKey { get; set; } = ""; // e.g. "game.npc.healer.desc"
 
-        public NpcType Type { get; set; }                // Healer, Shop, QuestGiver, etc.
-        public List<string> Services { get; set; } = new(); // optional: "heal", "shop", "quests"
+        public NpcType Type { get; set; }
+        public List<string> Services { get; set; } = new();
         public List<string> ItemNames { get; set; } = new();
         public List<Item> ItemRefs { get; set; } = new();
+        public string? MasterJobId { get; set; }         // job this NPC teaches ("blacksmith", "tailor", …)
+        public string? UpgradeCategory { get; set; }     // filters what items appear in the upgrade panel
         public override string ToString()
         {
             return Localization.T(NameKey);

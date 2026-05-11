@@ -41,6 +41,7 @@ namespace MyriaLib.Repositories
             var player = JsonSerializer.Deserialize<Player>(File.ReadAllText(path), _opts);
             if (player is null) return Task.FromResult<Player?>(null);
 
+            player.Inventory.Items.RemoveAll(i => i == null);
             player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == player.CurrentRoomId);
             player.RecalculateUnusedPoints();
             player.ValidateQuestStatuses();

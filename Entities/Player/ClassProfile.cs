@@ -164,6 +164,20 @@ namespace MyriaLib.Entities.Players
                 },
                 HpPerLevel = 12,
                 ManaPerLevel = 8
+            },
+            [PlayerClass.RunicMage] = new ClassProfile
+            {
+                Class = PlayerClass.RunicMage,
+                StatGrowth = new()
+                {
+                    ["STR"] = 1,
+                    ["DEX"] = 2,
+                    ["END"] = 2,
+                    ["INT"] = 5,
+                    ["SPR"] = 5
+                },
+                HpPerLevel = 7,
+                ManaPerLevel = 11
             }
 
         };

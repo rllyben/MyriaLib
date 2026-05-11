@@ -12,7 +12,8 @@
         ElementalMage,
         ArcanMage,
         Druid,
-        SoulsKnight
+        SoulsKnight,
+        RunicMage
     }
 
 }
