@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Players;
+using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Services.Manager
 {
@@ -58,6 +59,18 @@ namespace MyriaLib.Services.Manager
 
         public static Quest? GetQuestById(string id) =>
             _allQuests.FirstOrDefault(q => q.Id == id);
+
+        /// <summary>Quests this NPC can give that the player is currently eligible to accept.</summary>
+        public static List<Quest> GetAcceptableForNpc(Player player, string npcId)
+            => _allQuests
+                .Where(q => q.GiverNpcId == npcId && player.Level >= q.RequiredLevel && CanAccept(q, player))
+                .ToList();
+
+        /// <summary>Active completed quests the player can return to this NPC.</summary>
+        public static List<Quest> GetReturnableForNpc(Player player, string npcId)
+            => player.ActiveQuests
+                .Where(q => q.Status == QuestStatus.Completed && q.ReturnNpcIdResolved == npcId)
+                .ToList();
     }
 
 }

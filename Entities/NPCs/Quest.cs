@@ -10,7 +10,16 @@ namespace MyriaLib.Entities.NPCs
         public string Name { get; set; }
         public string Description { get; set; }
 
-        public string GiverNpc { get; set; }
+        public string GiverNpcId  { get; set; } = "";
+        /// <summary>NPC to return the quest to. Null means same as <see cref="GiverNpcId"/>.</summary>
+        public string? ReturnNpcId { get; set; }
+        public string ReturnNpcIdResolved => string.IsNullOrEmpty(ReturnNpcId) ? GiverNpcId : ReturnNpcId;
+
+        /// <summary>Dialog shown when the player first accepts this quest (read through to confirm accept).</summary>
+        public List<DialogLine> AcceptDialog { get; set; } = new();
+        /// <summary>Dialog shown when the player returns a completed quest.</summary>
+        public List<DialogLine> ReturnDialog { get; set; } = new();
+
         public int RequiredLevel { get; set; } = 1;
         public QuestStatus Status { get; set; } = QuestStatus.NotStarted;
 
@@ -36,7 +45,10 @@ namespace MyriaLib.Entities.NPCs
             Id = Id,
             Name = Name,
             Description = Description,
-            GiverNpc = GiverNpc,
+            GiverNpcId  = GiverNpcId,
+            ReturnNpcId = ReturnNpcId,
+            AcceptDialog = AcceptDialog,  // read-only game data; shared reference is fine
+            ReturnDialog = ReturnDialog,
             RequiredLevel = RequiredLevel,
             Status = QuestStatus.NotStarted,
             RequiredKills = new Dictionary<int, int>(RequiredKills),

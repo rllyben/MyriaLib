@@ -74,6 +74,9 @@ namespace MyriaLib.Services
             DayCycleManager.Initialize();
             Report("day_cycle");
 
+            CraftingService.LoadRecipes();
+            Report("recipes");
+
             QuestManager.LoadQuests();
             Report("quests");
 
