@@ -85,6 +85,23 @@ namespace MyriaLib.Systems
             return true;
         }
 
+        /// <summary>
+        /// Use a consumable item in combat. Consumes the item immediately;
+        /// the enemy gets one free attack in the recovery turn before the player can act again.
+        /// </summary>
+        public bool PlayerUseItem(ConsumableItem item)
+        {
+            if (Phase != CombatPhase.PlayerTurn) return false;
+
+            item.Use(Player);
+            Player.Inventory.RemoveItem(item);
+            Log.Add(new CombatLogEntry("pg.fight.log.usedItem", Player.Name, item.Name));
+
+            RecoveryTurnsRemaining = 1;
+            EndPlayerAction();
+            return true;
+        }
+
         public void Tick() // advances time by 1 "round"
         {
             if (Phase == CombatPhase.Finished) return;
