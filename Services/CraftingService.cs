@@ -1,7 +1,9 @@
 namespace MyriaLib.Services
 {
     public record RecipeIngredient(string ItemId, int Amount);
-    public record CraftingRecipe(string OutputId, long XpReward, RecipeIngredient[] Ingredients);
+
+    /// <param name="RequiredKnowledgeLevel">Minimum knowledge level for the NPC's job needed to unlock this recipe.</param>
+    public record CraftingRecipe(string OutputId, long XpReward, int RequiredKnowledgeLevel, RecipeIngredient[] Ingredients);
 
     /// <summary>
     /// Authoritative recipe registry. Single source of truth used by both
@@ -14,22 +16,22 @@ namespace MyriaLib.Services
             {
                 ["smith_default"] =
                 [
-                    new("iron_ingot",  5,  [new("iron_ore",   2)]),
-                    new("iron_sword",  30, [new("iron_ingot", 3)]),
-                    new("chain_armor", 50, [new("iron_ingot", 5)]),
+                    new("iron_ingot",   5,  1,  [new("iron_ore",   2)]),
+                    new("iron_sword",   30, 5,  [new("iron_ingot", 3)]),
+                    new("chain_armor",  50, 10, [new("iron_ingot", 5)]),
                 ],
                 ["leathersmith_default"] =
                 [
-                    new("cured_leather", 3,  [new("feral_leather", 2)]),
-                    new("leather_vest",  20, [new("cured_leather", 4)]),
+                    new("cured_leather", 3,  1, [new("feral_leather", 2)]),
+                    new("leather_vest",  20, 5, [new("cured_leather", 4)]),
                 ],
                 ["tailor_default"] =
                 [
-                    new("linen_robe", 20, [new("bolt_of_cloth", 4)]),
+                    new("linen_robe", 20, 5, [new("bolt_of_cloth", 4)]),
                 ],
                 ["artificer_default"] =
                 [
-                    new("imbued_ring", 30, [new("iron_ingot", 2), new("earth_essence", 2)]),
+                    new("imbued_ring", 30, 10, [new("iron_ingot", 2), new("earth_essence", 2)]),
                 ],
             };
 

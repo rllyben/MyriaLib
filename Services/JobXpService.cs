@@ -82,5 +82,39 @@ namespace MyriaLib.Services
         /// <summary>Skill multiplier derived from accumulated XP rather than a precomputed level.</summary>
         public static double GetSkillMultiplierFromXp(long totalXp)
             => GetSkillMultiplier(GetLevel(totalXp));
+
+        /// <summary>
+        /// Converts the skill multiplier into a concrete gathered integer amount using
+        /// probabilistic rounding so progression feels smooth at every level.
+        /// E.g. multiplier 1.7 → 70 % chance of 2, 30 % chance of 1.
+        /// </summary>
+        public static int ApplyGatherMultiplier(long skillXp)
+        {
+            double mult  = GetSkillMultiplierFromXp(skillXp);
+            int    floor = (int)mult;
+            return Random.Shared.NextDouble() < (mult - floor) ? floor + 1 : floor;
+        }
+
+        /// <summary>
+        /// Extra daily gather charges from knowledge level.
+        /// +1 from level 10, +2 from level 30, +3 from level 60, +4 from level 100.
+        /// </summary>
+        public static int GetGatherLimitBonus(int knowledgeLevel) =>
+            knowledgeLevel >= 100 ? 4
+          : knowledgeLevel >= 60  ? 3
+          : knowledgeLevel >= 30  ? 2
+          : knowledgeLevel >= 10  ? 1
+          :                         0;
+
+        /// <summary>
+        /// Maximum equipment upgrade level unlocked by the given knowledge level.
+        /// Gates: +2 (level 1), +4 (level 10), +6 (level 30), +8 (level 60), +10 (level 100).
+        /// </summary>
+        public static int GetMaxUpgradeLevel(int knowledgeLevel) =>
+            knowledgeLevel >= 100 ? 10
+          : knowledgeLevel >= 60  ? 8
+          : knowledgeLevel >= 30  ? 6
+          : knowledgeLevel >= 10  ? 4
+          :                         2;
     }
 }

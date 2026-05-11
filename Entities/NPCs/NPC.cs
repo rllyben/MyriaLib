@@ -93,14 +93,12 @@ namespace MyriaLib.Entities.NPCs
             return NpcActionResult.Ok("npc.action.sell.ok", amount, item.Id, totalGain);
         }
         // --- Upgrade (Smith) ---
-        public NpcActionResult UpgradeItem(Player player, Item item)
+        public NpcActionResult UpgradeItem(Player player, Item item, int maxUpgradeLevel = 10)
         {
             if (item is not EquipmentItem eq)
                 return NpcActionResult.Fail("npc.action.upgrade.notEquipment");
 
-            // You have TryUpgrade in console version on EquipmentItem :contentReference[oaicite:6]{index=6}
-            // If MyriaLib EquipmentItem also has TryUpgrade(player), use it:
-            if (eq.TryUpgrade(player))
+            if (eq.TryUpgrade(player, maxUpgradeLevel))
                 return NpcActionResult.Ok("npc.action.upgrade.ok", eq.Id, eq.UpgradeLevel);
 
             return NpcActionResult.Fail("npc.action.upgrade.fail", eq.Id);

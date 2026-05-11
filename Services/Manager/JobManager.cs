@@ -107,6 +107,29 @@ namespace MyriaLib.Services.Manager
             return (int)(baseSell * multiplier);
         }
 
+        // ── Gather ───────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Extra daily gather charges for a player, based on their highest gathering-job knowledge level.
+        /// </summary>
+        public static int GetGatherKnowledgeBonus(Player player)
+        {
+            int maxLevel = new[] { "miner", "woodcutter", "herbalist" }
+                .Select(id => JobXpService.GetLevel(GetOrAdd(player, id).KnowledgeXp))
+                .Max();
+            return JobXpService.GetGatherLimitBonus(maxLevel);
+        }
+
+        /// <summary>
+        /// Items gathered per action for the given job, derived from knowledge level.
+        /// Uses the same tier thresholds as the daily gather limit bonus (1 base + 0/1/2/3/4 bonus).
+        /// </summary>
+        public static int GetGatherAmount(Player player, string jobId)
+        {
+            int skillLevel = JobXpService.GetLevel(GetOrAdd(player, jobId).SkillXp);
+            return 1 + JobXpService.GetGatherLimitBonus(skillLevel);
+        }
+
         // ── Helpers ──────────────────────────────────────────────────────────────
 
         /// <summary>Returns the player's progress record for a job, creating one if needed.</summary>

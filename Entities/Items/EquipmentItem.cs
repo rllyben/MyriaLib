@@ -49,9 +49,9 @@ namespace MyriaLib.Entities.Items
         /// Applies one upgrade level, scaling Bonuses from BaseStats.
         /// Called both from the UI upgrade flow and from save-file reload (ItemConverter).
         /// </summary>
-        public bool TryUpgrade(Player player)
+        public bool TryUpgrade(Player player, int maxUpgradeLevel = 10)
         {
-            if (UpgradeLevel >= 9) return false;
+            if (UpgradeLevel >= maxUpgradeLevel) return false;
             TryUpgrade_Internal();
             return true;
         }
@@ -63,9 +63,11 @@ namespace MyriaLib.Entities.Items
         public void TryUpgrade_Internal()
         {
             UpgradeLevel++;
-            float multiplier = UpgradeLevel < 4  ? 1 + (UpgradeLevel * 0.1f)
-                             : UpgradeLevel < 7  ? 1 + (UpgradeLevel * 0.3f)
-                                                 : 1 + (UpgradeLevel * 0.7f);
+            float multiplier = UpgradeLevel <= 2 ? 1 + (UpgradeLevel * 0.1f)
+                             : UpgradeLevel <= 4 ? 1 + (UpgradeLevel * 0.2f)
+                             : UpgradeLevel <= 6 ? 1 + (UpgradeLevel * 0.35f)
+                             : UpgradeLevel <= 8 ? 1 + (UpgradeLevel * 0.6f)
+                                                 : 1 + (UpgradeLevel * 1.0f);
             Bonuses = BaseStats.Scale(multiplier * CraftQuality);
         }
     }
