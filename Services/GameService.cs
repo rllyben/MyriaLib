@@ -77,6 +77,9 @@ namespace MyriaLib.Services
             CraftingService.LoadRecipes();
             Report("recipes");
 
+            JobManager.LoadJobs();
+            Report("jobs");
+
             QuestManager.LoadQuests();
             Report("quests");
 
