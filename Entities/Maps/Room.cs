@@ -62,6 +62,12 @@ namespace MyriaLib.Entities.Maps
             GathersRemaining = DailyGatherLimit;
         }
 
+        /// <summary>Adds extra gather charges on top of the rolled daily limit (J18 — knowledge bonus).</summary>
+        public void AddGatherBonus(int bonus)
+        {
+            if (bonus > 0) GathersRemaining += bonus;
+        }
+
         /// <summary>
         /// Spawns fresh monster instances into <see cref="CurrentMonsters"/> from the room's
         /// <see cref="Monsters"/> templates. Call this when the player enters a dungeon room.

@@ -1,5 +1,6 @@
 ﻿using MyriaLib.Entities.Players;
 using MyriaLib.Services.Builder;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Entities.NPCs
@@ -23,6 +24,9 @@ namespace MyriaLib.Entities.NPCs
         public int RequiredLevel { get; set; } = 1;
         public QuestStatus Status { get; set; } = QuestStatus.NotStarted;
 
+        /// <summary>True when the quest has no kill or item objectives; auto-completes on accept.</summary>
+        public bool IsTalkOnly => RequiredKills.Count == 0 && RequiredItems.Count == 0;
+
         public List<string> PrerequisiteQuestIds { get; set; } = new(); // quest IDs that must be completed first
 
         // Repeatable config (defined in JSON, read-only after load)
@@ -35,9 +39,44 @@ namespace MyriaLib.Entities.NPCs
         public Dictionary<string, int> RequiredItems { get; set; } = new();   // itemId => amount
         public Dictionary<string, int> ItemProgress { get; set; } = new();    // itemId => how many the player has
 
+        /// <summary>Items added to the player's inventory immediately on quest accept.</summary>
+        public List<string> AcceptItems { get; set; } = new();
+
         public int RewardXp { get; set; }
         public int RewardGold { get; set; }
         public List<string> RewardItems { get; set; } = new();
+
+        // ── Class / Race requirements (Q12, Q13) ────────────────────────────────
+        /// <summary>Player must be this class to see or accept this quest. Null = no restriction.</summary>
+        public PlayerClass? RequiredClass { get; set; }
+        /// <summary>Player must be this race to see or accept this quest. Null = no restriction.</summary>
+        public PlayerRace? RequiredRace { get; set; }
+
+        // ── Job aspect level requirements (Q11) ─────────────────────────────────
+        /// <summary>Which job's aspect levels are checked. Null = no restriction.</summary>
+        public string? RequiredAspectJobId    { get; set; }
+        /// <summary>Minimum Skill level required in <see cref="RequiredAspectJobId"/>. 0 = no requirement.</summary>
+        public int     RequiredSkillLevel     { get; set; } = 0;
+        /// <summary>Minimum Knowledge level required in <see cref="RequiredAspectJobId"/>. 0 = no requirement.</summary>
+        public int     RequiredKnowledgeLevel { get; set; } = 0;
+        /// <summary>Minimum Fame level required in <see cref="RequiredAspectJobId"/>. 0 = no requirement.</summary>
+        public int     RequiredFameLevel      { get; set; } = 0;
+
+        // ── Party gating (Q10) ───────────────────────────────────────────────────
+        /// <summary>When true the player must be in a party to accept this quest.</summary>
+        public bool RequiresParty { get; set; } = false;
+        /// <summary>Minimum party size required. 0 = any party size is fine (just must be in one).</summary>
+        public int RequiredPartySize { get; set; } = 0;
+
+        // ── Job gating (J7) ──────────────────────────────────────────────────────
+        /// <summary>Player must have this job active to see or accept this quest. Null = no restriction.</summary>
+        public string? RequiredActiveJobId { get; set; }
+
+        // ── Job aspect rewards on return (J9, J10) ───────────────────────────────
+        public string? JobKnowledgeRewardJobId  { get; set; }
+        public long    JobKnowledgeRewardAmount  { get; set; }
+        public string? JobFameRewardJobId        { get; set; }
+        public long    JobFameRewardAmount       { get; set; }
 
         /// <summary>Returns a fresh copy of the quest template ready to be accepted.</summary>
         public Quest Clone() => new Quest
@@ -55,6 +94,7 @@ namespace MyriaLib.Entities.NPCs
             KillProgress = new Dictionary<int, int>(),
             RequiredItems = new Dictionary<string, int>(RequiredItems),
             ItemProgress = new Dictionary<string, int>(),
+            AcceptItems = new List<string>(AcceptItems),
             RewardXp = RewardXp,
             RewardGold = RewardGold,
             RewardItems = new List<string>(RewardItems),
@@ -62,27 +102,48 @@ namespace MyriaLib.Entities.NPCs
             IsRepeatable = IsRepeatable,
             RepeatMaxLevel = RepeatMaxLevel,
             RepeatDailyLimit = RepeatDailyLimit,
-            RepeatTotalLimit = RepeatTotalLimit
+            RepeatTotalLimit = RepeatTotalLimit,
+            RequiredClass            = RequiredClass,
+            RequiredRace             = RequiredRace,
+            RequiredAspectJobId      = RequiredAspectJobId,
+            RequiredSkillLevel       = RequiredSkillLevel,
+            RequiredKnowledgeLevel   = RequiredKnowledgeLevel,
+            RequiredFameLevel        = RequiredFameLevel,
+            RequiresParty            = RequiresParty,
+            RequiredPartySize        = RequiredPartySize,
+            RequiredActiveJobId      = RequiredActiveJobId,
+            JobKnowledgeRewardJobId  = JobKnowledgeRewardJobId,
+            JobKnowledgeRewardAmount = JobKnowledgeRewardAmount,
+            JobFameRewardJobId       = JobFameRewardJobId,
+            JobFameRewardAmount      = JobFameRewardAmount,
         };
+
+        /// <summary>Grants any items listed in <see cref="AcceptItems"/> to the player's inventory.</summary>
+        public void GrantAcceptItems(Player player)
+        {
+            foreach (var itemId in AcceptItems)
+                if (ItemFactory.TryCreateItem(itemId, out var item))
+                    player.Inventory.AddItem(item, player);
+        }
 
         public void GrantRewards(Player player)
         {
             player.GainXp(RewardXp);
 
             if (RewardGold > 0)
-            {
                 player.Money.TryAdd(RewardGold);
-            }
 
             foreach (var itemId in RewardItems)
-            {
                 if (ItemFactory.TryCreateItem(itemId, out var item))
-                {
                     player.Inventory.AddItem(item, player);
-                }
 
-            }
+            // J9: Knowledge XP reward
+            if (!string.IsNullOrEmpty(JobKnowledgeRewardJobId) && JobKnowledgeRewardAmount > 0)
+                JobManager.GrantKnowledgeXp(player, JobKnowledgeRewardJobId, JobKnowledgeRewardAmount);
 
+            // J10: Fame XP reward (GrantFameXp enforces active-job requirement internally)
+            if (!string.IsNullOrEmpty(JobFameRewardJobId) && JobFameRewardAmount > 0)
+                JobManager.GrantFameXp(player, JobFameRewardJobId, JobFameRewardAmount);
         }
 
     }

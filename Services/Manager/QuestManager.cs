@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Players;
+using MyriaLib.Services;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Services.Manager
@@ -14,17 +15,44 @@ namespace MyriaLib.Services.Manager
             var json = File.ReadAllText(path);
             _allQuests = JsonSerializer.Deserialize<List<Quest>>(json)!;
         }
-        public static List<Quest> GetAvailableForPlayer(Player player)
+        public static List<Quest> GetAvailableForPlayer(Player player, int partySize = 1)
         {
             return _allQuests
-                .Where(q => player.Level >= q.RequiredLevel && CanAccept(q, player))
+                .Where(q => player.Level >= q.RequiredLevel && CanAccept(q, player, partySize))
                 .ToList();
         }
 
-        private static bool CanAccept(Quest q, Player player)
+        private static bool CanAccept(Quest q, Player player, int partySize = 1)
         {
             // Already accepted and in progress
             if (player.ActiveQuests.Any(aq => aq.Id == q.Id))
+                return false;
+
+            // Q10: Party requirement
+            if (q.RequiresParty && partySize < 2)
+                return false;
+            if (q.RequiredPartySize > 0 && partySize < q.RequiredPartySize)
+                return false;
+
+            // Q12: Class requirement
+            if (q.RequiredClass.HasValue && player.Class != q.RequiredClass.Value)
+                return false;
+
+            // Q13: Race requirement
+            if (q.RequiredRace.HasValue && player.Race != q.RequiredRace.Value)
+                return false;
+
+            // Q11: Job aspect level requirements
+            if (!string.IsNullOrEmpty(q.RequiredAspectJobId))
+            {
+                var entry = JobManager.GetOrAdd(player, q.RequiredAspectJobId);
+                if (q.RequiredSkillLevel     > 0 && JobXpService.GetLevel(entry.SkillXp)     < q.RequiredSkillLevel)     return false;
+                if (q.RequiredKnowledgeLevel > 0 && JobXpService.GetLevel(entry.KnowledgeXp) < q.RequiredKnowledgeLevel) return false;
+                if (q.RequiredFameLevel      > 0 && JobXpService.GetLevel(entry.FameXp)      < q.RequiredFameLevel)      return false;
+            }
+
+            // J8: Require a specific active job
+            if (!string.IsNullOrEmpty(q.RequiredActiveJobId) && player.ActiveJobId != q.RequiredActiveJobId)
                 return false;
 
             // All prerequisite quests must have been completed at least once
@@ -61,9 +89,9 @@ namespace MyriaLib.Services.Manager
             _allQuests.FirstOrDefault(q => q.Id == id);
 
         /// <summary>Quests this NPC can give that the player is currently eligible to accept.</summary>
-        public static List<Quest> GetAcceptableForNpc(Player player, string npcId)
+        public static List<Quest> GetAcceptableForNpc(Player player, string npcId, int partySize = 1)
             => _allQuests
-                .Where(q => q.GiverNpcId == npcId && player.Level >= q.RequiredLevel && CanAccept(q, player))
+                .Where(q => q.GiverNpcId == npcId && player.Level >= q.RequiredLevel && CanAccept(q, player, partySize))
                 .ToList();
 
         /// <summary>Active completed quests the player can return to this NPC.</summary>

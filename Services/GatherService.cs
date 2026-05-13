@@ -30,6 +30,21 @@ namespace MyriaLib.Services
             if (!ItemFactory.TryCreateItem(spot.GatheredItemId, out var item))
                 return GatherResult.Success; // spot has no item defined — treated as empty gather
 
+            // J17: Apply Skill multiplier to gathered stack size
+            string jobId = spot.Type switch
+            {
+                GatheringType.Ore  => "miner",
+                GatheringType.Tree => "woodcutter",
+                GatheringType.Herb => "herbalist",
+                _                  => ""
+            };
+            if (!string.IsNullOrEmpty(jobId))
+            {
+                long skillXp = Manager.JobManager.GetOrAdd(player, jobId).SkillXp;
+                item.StackSize = JobXpService.ApplyGatherMultiplier(skillXp);
+                Manager.JobManager.GrantSkillXp(player, jobId, 10);
+            }
+
             if (!player.Inventory.AddItem(item, player, "gather"))
                 return GatherResult.InventoryFull;
 

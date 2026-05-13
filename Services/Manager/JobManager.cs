@@ -27,13 +27,16 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// Skill XP — earned by performing the job's main task (crafting/gathering).
         /// Grants a 50 % bonus when this is the player's active job.
+        /// Also stamps <see cref="PlayerJob.LastSkillUsedDay"/> so Skill decay (J12) is suppressed today.
         /// </summary>
         public static void GrantSkillXp(Player player, string jobId, long amount)
         {
             if (amount <= 0) return;
             if (player.ActiveJobId == jobId)
                 amount += amount / 2;   // +50 % active-job bonus
-            GetOrAdd(player, jobId).SkillXp += amount;
+            var entry = GetOrAdd(player, jobId);
+            entry.SkillXp += amount;
+            entry.LastSkillUsedDay = DayCycleManager.GameDay; // J12: mark skill as used today
         }
 
         /// <summary>Knowledge XP — earned from job-master NPC quests.</summary>
@@ -107,6 +110,21 @@ namespace MyriaLib.Services.Manager
             return (int)(baseSell * multiplier);
         }
 
+        /// <summary>
+        /// Returns the amount the <paramref name="seller"/> receives from a player-to-player sale
+        /// where the buyer pays <paramref name="agreedPrice"/>.
+        /// The seller's active-job Fame level is applied on top of the agreed price;
+        /// the buyer is never charged more than <paramref name="agreedPrice"/>.
+        /// Returns <paramref name="agreedPrice"/> unchanged when the seller has no active job.
+        /// </summary>
+        public static int GetPlayerSellReceipt(Player seller, int agreedPrice)
+        {
+            if (agreedPrice <= 0 || seller.ActiveJobId == null) return agreedPrice;
+            var entry = GetOrAdd(seller, seller.ActiveJobId);
+            double multiplier = JobXpService.GetFameMultiplierFromXp(entry.FameXp);
+            return (int)(agreedPrice * multiplier);
+        }
+
         // ── Gather ───────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -128,6 +146,51 @@ namespace MyriaLib.Services.Manager
         {
             int skillLevel = JobXpService.GetLevel(GetOrAdd(player, jobId).SkillXp);
             return 1 + JobXpService.GetGatherLimitBonus(skillLevel);
+        }
+
+        // ── Daily ticks (J11–J14) ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Applies all per-day job progression changes for the current player.
+        /// Call once per game-day (subscribe to <see cref="DayCycleManager.DayAdvanced"/>).
+        /// </summary>
+        public static void ApplyDailyTicks(Player player, int gameDay)
+        {
+            foreach (var job in player.Jobs)
+            {
+                bool isActive = job.JobId == player.ActiveJobId;
+
+                // J11: Passive daily Fame tick — active job only, once per game day
+                if (isActive && job.LastFameTickDay < gameDay)
+                {
+                    job.FameXp += 5;
+                    job.LastFameTickDay = gameDay;
+                }
+
+                // J12: Skill decay — small loss each day the skill was not used
+                if (job.LastSkillUsedDay < gameDay && job.SkillXp > 0)
+                {
+                    int  level = JobXpService.GetLevel(job.SkillXp);
+                    long floor = JobXpService.TotalXpToReach(level);
+                    long decay = Math.Min(job.SkillXp - floor, 50L); // up to 50 XP, never below level floor
+                    job.SkillXp -= decay;
+                }
+
+                // J13: Knowledge decay — progress toward next level resets to 0 daily
+                // (levels already earned are preserved; only the partial-level progress drains)
+                if (job.KnowledgeXp > 0)
+                {
+                    int  level = JobXpService.GetLevel(job.KnowledgeXp);
+                    job.KnowledgeXp = JobXpService.TotalXpToReach(level);
+                }
+
+                // J14: Fame decay — XP (and levels) decay when this is not the active job
+                if (!isActive && job.FameXp > 0)
+                {
+                    long decay = Math.Max(1L, job.FameXp / 200); // ~0.5 % per day, min 1 XP
+                    job.FameXp = Math.Max(0L, job.FameXp - decay);
+                }
+            }
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────

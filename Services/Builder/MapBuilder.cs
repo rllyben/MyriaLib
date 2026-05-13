@@ -23,7 +23,7 @@ namespace MyriaLib.Services.Builder
                 var (room, x, y) = queue.Dequeue();
                 if (!visited.Add(room)) continue;
 
-                foreach (var exit in room.ExitIds)
+                foreach (var exit in room.ExitIds.OrderBy(e => e.Key.ToLower() switch { "north" => 0, "east" => 1, "south" => 2, "west" => 3, _ => 4 }))
                 {
                     int dx = 0, dy = 0;
                     switch (exit.Key.ToLower())

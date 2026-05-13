@@ -10,7 +10,12 @@
         Leathersmith,
         Tailor,
         Artificer,
-        Enchanter
+        Enchanter,
+        Woodcutter,
+        Miner,
+        Herbalist,
+        Alchemist,
+        Cook
     }
 
 }

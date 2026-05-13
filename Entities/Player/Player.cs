@@ -49,6 +49,9 @@ namespace MyriaLib.Entities.Players
         /// </summary>
         public List<string> ActiveCompositeSkillIds { get; set; } = new();
 
+        /// <summary>Composite skills stashed per class; restored when the player switches back.</summary>
+        public Dictionary<PlayerClass, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new();
+
         /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
         [JsonIgnore]
         public int FusionSlotCount => Level switch
@@ -68,6 +71,9 @@ namespace MyriaLib.Entities.Players
         // ── Skill Combination (combining 2–5 learned base skills) ─────────────────
         /// <summary>All combined skills the player has created by pairing their learned skills.</summary>
         public List<CombinedSkill> CombinedSkills { get; set; } = new();
+
+        /// <summary>Combined skills stashed per class; restored when the player switches back.</summary>
+        public Dictionary<PlayerClass, List<CombinedSkill>> StashedCombinedSkills { get; set; } = new();
 
         // ── Combat Skill Slots ────────────────────────────────────────────────────
         /// <summary>
@@ -105,6 +111,8 @@ namespace MyriaLib.Entities.Players
         // ── Class XP ─────────────────────────────────────────────────────────────
         public Dictionary<PlayerClass, long> ClassXp { get; set; } = new();
         public DateTime LastClassPenaltyApplied { get; set; } = DateTime.MinValue;
+        /// <summary>UTC timestamp of the last class switch; DateTime.MinValue = never switched (no cooldown).</summary>
+        public DateTime LastClassChanged { get; set; } = DateTime.MinValue;
 
         protected override int ExtraSTR => ClassManager.GetClassBonusForStat(this, "STR");
         protected override int ExtraDEX => ClassManager.GetClassBonusForStat(this, "DEX");
