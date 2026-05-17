@@ -5,7 +5,7 @@ using MyriaLib.Systems.Interfaces;
 namespace MyriaLib.Entities.Skills
 {
     public enum SkillType { Physical, Magical }
-    public enum SkillTarget { SingleEnemy, AllEnemies, Self }
+    public enum SkillTarget { SingleEnemy, AllEnemies, Self, SingleAlly }
 
     public class Skill
     {

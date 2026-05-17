@@ -144,9 +144,12 @@ namespace MyriaLib.Systems
                     break;
 
                 case SkillTarget.AllEnemies:
-                    // Current combat is 1v1; hitting the single enemy covers the intent.
-                    // When group combat is added, iterate all enemies here instead.
                     ExecuteSkillOnEnemy(skill, Enemy);
+                    break;
+
+                case SkillTarget.SingleAlly:
+                    // In solo combat, SingleAlly targets the only ally: the player themselves
+                    ExecuteSkillOnSelf(skill);
                     break;
 
                 case SkillTarget.SingleEnemy:

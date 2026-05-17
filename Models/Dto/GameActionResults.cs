@@ -15,4 +15,19 @@ namespace MyriaLib.Models.Dto
         bool PlayerWon,
         long XpGained,
         List<string> LootItemIds);
+
+    public record GroupCombatantState(string Name, int Hp, int MaxHp, bool IsAlive);
+    public record StartGroupCombatResult(
+        bool Success,
+        string? Reason,
+        List<GroupCombatantState> Players,
+        List<GroupCombatantState> Monsters,
+        string CurrentTurnPlayerName);
+    public record GroupCombatSnapshot(
+        List<GroupCombatantState> Players,
+        List<GroupCombatantState> Monsters,
+        string CurrentTurnPlayerName,
+        bool Finished,
+        bool PlayersWon,
+        List<CombatLogMessage> LogEntries);
 }
