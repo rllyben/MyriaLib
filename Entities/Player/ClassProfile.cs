@@ -16,69 +16,69 @@ namespace MyriaLib.Entities.Players
                 Class = PlayerClass.Archer,
                 StatGrowth = new()
                 {
-                    ["STR"] = 5,
-                    ["DEX"] = 4,
-                    ["END"] = 2,
+                    ["STR"] = 3,
+                    ["DEX"] = 3,
+                    ["END"] = 1,
                     ["INT"] = 1,
-                    ["SPR"] = 2
+                    ["SPR"] = 1
                 },
-                HpPerLevel = 8,
-                ManaPerLevel = 6
+                HpPerLevel = 7,
+                ManaPerLevel = 5
             },
             [PlayerClass.Hunter] = new ClassProfile
             {
                 Class = PlayerClass.Hunter,
                 StatGrowth = new()
                 {
-                    ["STR"] = 4,
-                    ["DEX"] = 6,
+                    ["STR"] = 3,
+                    ["DEX"] = 4,
                     ["END"] = 1,
                     ["INT"] = 1,
-                    ["SPR"] = 2
+                    ["SPR"] = 1
                 },
-                HpPerLevel = 7,
-                ManaPerLevel = 7
+                HpPerLevel = 6,
+                ManaPerLevel = 6
             },
             [PlayerClass.Knight] = new ClassProfile
             {
                 Class = PlayerClass.Knight,
                 StatGrowth = new()
                 {
-                    ["STR"] = 2,
-                    ["DEX"] = 3,
-                    ["END"] = 7,
+                    ["STR"] = 1,
+                    ["DEX"] = 2,
+                    ["END"] = 5,
                     ["INT"] = 1,
-                    ["SPR"] = 3
+                    ["SPR"] = 2
                 },
-                HpPerLevel = 14,
-                ManaPerLevel = 4
+                HpPerLevel = 11,
+                ManaPerLevel = 3
             },
             [PlayerClass.Fighter] = new ClassProfile
             {
                 Class = PlayerClass.Fighter,
                 StatGrowth = new()
                 {
-                    ["STR"] = 5,
-                    ["DEX"] = 3,
-                    ["END"] = 3,
+                    ["STR"] = 4,
+                    ["DEX"] = 2,
+                    ["END"] = 2,
                     ["INT"] = 1,
-                    ["SPR"] = 3
+                    ["SPR"] = 2
                 },
-                HpPerLevel = 10,
-                ManaPerLevel = 6
+                HpPerLevel = 8,
+                ManaPerLevel = 5
             },
             [PlayerClass.Barbarian] = new ClassProfile
             {
                 Class = PlayerClass.Barbarian,
                 StatGrowth = new()
                 {
-                    ["STR"] = 8,
-                    ["DEX"] = 2,
-                    ["END"] = 3,
+                    ["STR"] = 6,
+                    ["DEX"] = 1,
+                    ["END"] = 2,
                     ["INT"] = 0,
                     ["SPR"] = 1
                 },
-                HpPerLevel = 12,
+                HpPerLevel = 10,
                 ManaPerLevel = 2
             },
             [PlayerClass.Cleric] = new ClassProfile
@@ -86,27 +86,27 @@ namespace MyriaLib.Entities.Players
                 Class = PlayerClass.Cleric,
                 StatGrowth = new()
                 {
-                    ["STR"] = 2,
-                    ["DEX"] = 2,
-                    ["END"] = 5,
+                    ["STR"] = 1,
+                    ["DEX"] = 1,
+                    ["END"] = 4,
                     ["INT"] = 1,
-                    ["SPR"] = 5
+                    ["SPR"] = 4
                 },
-                HpPerLevel = 12,
-                ManaPerLevel = 8
+                HpPerLevel = 10,
+                ManaPerLevel = 7
             },
             [PlayerClass.Rogue] = new ClassProfile
             {
                 Class = PlayerClass.Rogue,
                 StatGrowth = new()
                 {
-                    ["STR"] = 5,
-                    ["DEX"] = 9,
+                    ["STR"] = 3,
+                    ["DEX"] = 6,
                     ["END"] = 1,
                     ["INT"] = 1,
                     ["SPR"] = 1
                 },
-                HpPerLevel = 8,
+                HpPerLevel = 7,
                 ManaPerLevel = 4
             },
             [PlayerClass.ElementalMage] = new ClassProfile
@@ -115,13 +115,13 @@ namespace MyriaLib.Entities.Players
                 StatGrowth = new()
                 {
                     ["STR"] = 1,
-                    ["DEX"] = 3,
+                    ["DEX"] = 2,
                     ["END"] = 1,
-                    ["INT"] = 6,
-                    ["SPR"] = 4
+                    ["INT"] = 5,
+                    ["SPR"] = 3
                 },
-                HpPerLevel = 8,
-                ManaPerLevel = 10
+                HpPerLevel = 7,
+                ManaPerLevel = 9
             },
             [PlayerClass.ArcanMage] = new ClassProfile
             {
@@ -129,13 +129,13 @@ namespace MyriaLib.Entities.Players
                 StatGrowth = new()
                 {
                     ["STR"] = 0,
-                    ["DEX"] = 3,
+                    ["DEX"] = 2,
                     ["END"] = 1,
-                    ["INT"] = 8,
-                    ["SPR"] = 3
+                    ["INT"] = 6,
+                    ["SPR"] = 2
                 },
-                HpPerLevel = 6,
-                ManaPerLevel = 12
+                HpPerLevel = 5,
+                ManaPerLevel = 11
             },
             [PlayerClass.Druid] = new ClassProfile
             {
@@ -143,13 +143,13 @@ namespace MyriaLib.Entities.Players
                 StatGrowth = new()
                 {
                     ["STR"] = 1,
-                    ["DEX"] = 5,
+                    ["DEX"] = 3,
                     ["END"] = 2,
-                    ["INT"] = 3,
-                    ["SPR"] = 4
+                    ["INT"] = 2,
+                    ["SPR"] = 3
                 },
-                HpPerLevel = 8,
-                ManaPerLevel = 10
+                HpPerLevel = 7,
+                ManaPerLevel = 9
             },
             [PlayerClass.SoulsKnight] = new ClassProfile
             {
@@ -157,13 +157,13 @@ namespace MyriaLib.Entities.Players
                 StatGrowth = new()
                 {
                     ["STR"] = 2,
-                    ["DEX"] = 2,
-                    ["END"] = 5,
-                    ["INT"] = 3,
-                    ["SPR"] = 5
+                    ["DEX"] = 1,
+                    ["END"] = 4,
+                    ["INT"] = 2,
+                    ["SPR"] = 4
                 },
-                HpPerLevel = 12,
-                ManaPerLevel = 8
+                HpPerLevel = 10,
+                ManaPerLevel = 7
             },
             [PlayerClass.RunicMage] = new ClassProfile
             {
@@ -171,13 +171,13 @@ namespace MyriaLib.Entities.Players
                 StatGrowth = new()
                 {
                     ["STR"] = 1,
-                    ["DEX"] = 2,
-                    ["END"] = 2,
-                    ["INT"] = 5,
-                    ["SPR"] = 5
+                    ["DEX"] = 1,
+                    ["END"] = 1,
+                    ["INT"] = 4,
+                    ["SPR"] = 4
                 },
-                HpPerLevel = 7,
-                ManaPerLevel = 11
+                HpPerLevel = 6,
+                ManaPerLevel = 10
             }
 
         };

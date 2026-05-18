@@ -8,6 +8,7 @@ namespace MyriaLib.Entities.Monsters
         public int Id { get; set; }
         public string Description { get; set; }
         public MonsterType Type { get; set; }
+        public int Level { get; set; } = 1;
         public long Exp { get; set; }
         public int MinLoot { get; set; } = 25;
         public int MaxLoot { get; set; } = 75;
@@ -37,6 +38,7 @@ namespace MyriaLib.Entities.Monsters
         /// </summary>
         public Monster Clone() => new Monster(Id, Name, Stats.Clone(), Description, Exp)
         {
+            Level            = Level,
             Type             = Type,
             MinLoot          = MinLoot,
             MaxLoot          = MaxLoot,

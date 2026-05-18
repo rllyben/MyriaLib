@@ -123,7 +123,11 @@ namespace MyriaLib.Systems
         {
             if (skill.IsHealing) return;
             int baseStat = ResolveBaseStat(skill, caster);
-            int dmg      = (int)(baseStat * skill.ScalingFactor);
+            float raw = baseStat * skill.ScalingFactor;
+            float def = skill.Type == SkillType.Physical
+                ? target.TotalPhysicalDefense
+                : target.TotalMagicDefense;
+            int dmg = Math.Max(1, (int)(raw * (raw / (raw + def))));
             target.TakeDamage(dmg);
             Log.Add(new CombatLogEntry("pg.fight.log.skillHit", caster.Name, skill.Name, dmg));
         }
@@ -136,9 +140,9 @@ namespace MyriaLib.Systems
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(monster.Id));
             UpdateQuestProgress(monster.Id);
 
-            // XP to all living players
+            // XP to all living players, scaled down if the monster is below the player's level
             foreach (var p in Players.Where(p => p.IsAlive))
-                p.GainXp(monster.Exp);
+                p.GainXp(ScaleXp(monster.Exp, p.Level, monster.Level));
 
             // Loot to first living player
             var recipient = Players.FirstOrDefault(p => p.IsAlive);
@@ -235,6 +239,13 @@ namespace MyriaLib.Systems
                         quest.Status = QuestStatus.Completed;
                 }
             }
+        }
+
+        private static long ScaleXp(long baseXp, int playerLevel, int monsterLevel)
+        {
+            if (playerLevel <= monsterLevel) return baseXp;
+            double ratio = (double)monsterLevel / playerLevel;
+            return Math.Max(1L, (long)(baseXp * ratio * ratio));
         }
 
         private bool IsThisPlayersTurn(string playerName) =>

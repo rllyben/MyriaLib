@@ -177,10 +177,14 @@ namespace MyriaLib.Systems
 
         private void ExecuteSkillOnEnemy(Skill skill, ICombatant target)
         {
-            if (skill.IsHealing) return; // healing a target-enemy would be a design mistake; skip
+            if (skill.IsHealing) return;
 
             int baseStat = ResolveSkillBaseStat(skill);
-            int dmg = (int)(baseStat * skill.ScalingFactor);
+            float raw = baseStat * skill.ScalingFactor;
+            float def = skill.Type == SkillType.Physical
+                ? target.TotalPhysicalDefense
+                : target.TotalMagicDefense;
+            int dmg = Math.Max(1, (int)(raw * (raw / (raw + def))));
             target.TakeDamage(dmg);
             Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Player.Name, skill.Name, dmg));
         }
@@ -243,10 +247,17 @@ namespace MyriaLib.Systems
         {
             return _dropnumbers;
         }
+        private static long ScaleXp(long baseXp, int playerLevel, int monsterLevel)
+        {
+            if (playerLevel <= monsterLevel) return baseXp;
+            double ratio = (double)monsterLevel / playerLevel;
+            return Math.Max(1L, (long)(baseXp * ratio * ratio));
+        }
+
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
-            Player.GainXp(Enemy.Exp);
+            Player.GainXp(ScaleXp(Enemy.Exp, Player.Level, Enemy.Level));
             SkillFactory.UpdateSkills(Player);
 
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(Enemy.Id));

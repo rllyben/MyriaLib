@@ -268,25 +268,7 @@ namespace MyriaLib.Entities.Players
         public bool AddItem(Item item, Player player, string? source = null)
         {
             int stackSize = item.StackSize;
-            foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-            {
-                foreach (var itemReq in quest.RequiredItems)
-                {
-                    int owned = player.Inventory.Items.Count(i => i.Id == itemReq.Key);
-                    quest.ItemProgress[itemReq.Key] = Math.Min(owned, itemReq.Value);
-                }
 
-                bool allKillsDone = quest.RequiredKills.All(rk =>
-                    quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
-                bool allItemsDone = quest.RequiredItems.All(ri =>
-                    quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
-
-                if (allKillsDone && allItemsDone)
-                {
-                    quest.Status = QuestStatus.Completed;
-                }
-
-            }
             // First try to stack
             foreach (var existing in Items)
             {
@@ -302,12 +284,11 @@ namespace MyriaLib.Entities.Players
 
                     if (item.StackSize == 0)
                     {
+                        UpdateQuestItemProgress(player);
                         ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                         return true;
                     }
-                        
                 }
-
             }
 
             // Add remaining as new stack
@@ -315,11 +296,32 @@ namespace MyriaLib.Entities.Players
             {
                 Items.Add(item);
                 Restack();
+                UpdateQuestItemProgress(player);
                 ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                 return true;
             }
 
             return false; // inventory full
+        }
+
+        private void UpdateQuestItemProgress(Player player)
+        {
+            foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            {
+                foreach (var itemReq in quest.RequiredItems)
+                {
+                    int owned = Items.Where(i => i.Id == itemReq.Key).Sum(i => i.StackSize);
+                    quest.ItemProgress[itemReq.Key] = Math.Min(owned, itemReq.Value);
+                }
+
+                bool allKillsDone = quest.RequiredKills.All(rk =>
+                    quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
+                bool allItemsDone = quest.RequiredItems.All(ri =>
+                    quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
+
+                if (allKillsDone && allItemsDone)
+                    quest.Status = QuestStatus.Completed;
+            }
         }
         /// <summary>
         /// removes an item from the inventory
