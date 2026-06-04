@@ -52,6 +52,27 @@ namespace MyriaLib.Services
             return eligible[^1];
         }
 
+        /// <summary>
+        /// Picks up to <paramref name="max"/> monsters for a group fight.
+        /// Dungeon rooms use their spawned <paramref name="currentMonsters"/> instances (capped at max).
+        /// Overworld rooms always fill up to max slots by weighted-random selection from templates.
+        /// </summary>
+        public static List<Monster> PickMonstersForGroupFight(
+            List<Monster> templates,
+            Dictionary<int, float> chances,
+            List<Monster> currentMonsters,
+            bool isDungeonRoom,
+            int max = 5)
+        {
+            if (isDungeonRoom && currentMonsters.Count > 0)
+                return currentMonsters.Take(max).ToList();
+
+            var result = new List<Monster>();
+            for (int i = 0; i < max; i++)
+                result.Add(PickMonsterForFight(templates, chances).Clone());
+            return result;
+        }
+
     }
 
 }

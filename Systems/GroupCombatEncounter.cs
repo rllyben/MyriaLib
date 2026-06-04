@@ -28,10 +28,19 @@ namespace MyriaLib.Systems
 
         public GroupCombatEncounter(IEnumerable<Player> players, IEnumerable<Monster> enemies)
         {
-            Players  = new List<Player>(players);
+            var rng = Random.Shared;
+            Players = players
+                .Select(p => (player: p, tieBreak: rng.Next()))
+                .OrderByDescending(x => x.player.TotalDEX)
+                .ThenBy(x => x.tieBreak)
+                .Select(x => x.player)
+                .ToList();
+
             Monsters = enemies.Select(m => { m.ResetHealth(); return m; }).ToList();
             Log.Add(new CombatLogEntry("pg.fight.log.start",
                 string.Join(", ", Monsters.Select(m => m.Name))));
+            Log.Add(new CombatLogEntry("pg.fight.log.order",
+                string.Join(", ", Players.Select(p => p.Name))));
             SkipDeadPlayers();
         }
 
