@@ -9,14 +9,14 @@ namespace MyriaLib.Entities.Players
     /// </summary>
     public readonly struct Money : IComparable<Money>, IEquatable<Money>, IFormattable
     {
-        public const long BRONZE_PER_SILVER   = 1_000;
-        public const long SILVER_PER_GOLD     = 1_000;
-        public const long GOLD_PER_PLATINUM   = 100;
-        public const long PLATINUM_PER_CRYSTAL = 100;
+        public static long BRONZE_PER_SILVER    = 1_000;
+        public static long SILVER_PER_GOLD     = 1_000;
+        public static long GOLD_PER_PLATINUM   = 100;
+        public static long PLATINUM_PER_CRYSTAL = 100;
 
-        public const long BRONZE_PER_GOLD     = BRONZE_PER_SILVER * SILVER_PER_GOLD;           // 1,000,000 Bronze
-        public const long BRONZE_PER_PLATINUM = BRONZE_PER_GOLD * GOLD_PER_PLATINUM;           // 100,000,000 Bronze
-        public const long BRONZE_PER_CRYSTAL  = BRONZE_PER_PLATINUM * PLATINUM_PER_CRYSTAL;    // 10,000,000,000 Bronze
+        public static long BRONZE_PER_GOLD     => BRONZE_PER_SILVER * SILVER_PER_GOLD;
+        public static long BRONZE_PER_PLATINUM => BRONZE_PER_GOLD * GOLD_PER_PLATINUM;
+        public static long BRONZE_PER_CRYSTAL  => BRONZE_PER_PLATINUM * PLATINUM_PER_CRYSTAL;
 
         public long BronzeTotal { get; }
 

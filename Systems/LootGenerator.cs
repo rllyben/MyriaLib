@@ -1,5 +1,7 @@
+using System.Text.Json;
 using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Monsters;
+using MyriaLib.Models;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems.Enums;
 
@@ -7,19 +9,26 @@ namespace MyriaLib.Systems
 {
     public static class LootGenerator
     {
-        // ── Item IDs ─────────────────────────────────────────────────────────────
-        private const string SpiritDust     = "spirit_dust";
-        private const string ShadowRemnant  = "shadow_remnant";
-        private const string EarthEssence   = "earth_essence";
-        private const string StoneFragment  = "stone_fragment";
-        private const string FireAsh        = "fire_ash";
-        private const string WindWhisper    = "wind_whisper";
-        private const string WaterBead      = "water_bead";
-        private const string BeastFlesh     = "beast_flesh";
-        private const string FeralLeather   = "feral_leather";
-        private const string BeastFang      = "beast_fang";
+        private static Dictionary<MonsterType, List<UniqueLootEntry>> _typeLoot = new();
 
-        // ─────────────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Loads type-based loot tables from JSON. Call once at startup.
+        /// Expected format: array of { "monsterType": "Beast", "drops": [{ "itemId": "beast_flesh", "dropChance": 0.6 }] }
+        /// </summary>
+        public static void Load(string path = "Data/common/loot_tables.json")
+        {
+            if (!File.Exists(path)) return;
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var tables  = JsonSerializer.Deserialize<List<MonsterLootTable>>(File.ReadAllText(path), options);
+            if (tables == null) return;
+
+            _typeLoot.Clear();
+            foreach (var table in tables)
+            {
+                if (Enum.TryParse<MonsterType>(table.MonsterType, true, out var type))
+                    _typeLoot[type] = table.Drops;
+            }
+        }
 
         public static List<Item> GetLootFor(Monster monster)
         {
@@ -48,41 +57,14 @@ namespace MyriaLib.Systems
         private static List<Item> GetTypeBasedLoot(MonsterType monsterType)
         {
             var loot = new List<Item>();
+            if (!_typeLoot.TryGetValue(monsterType, out var drops)) return loot;
 
-            switch (monsterType)
-            {
-                case MonsterType.Spirit:
-                    TryDrop(loot, SpiritDust, 0.7);
-                    break;
-
-                case MonsterType.Shadow:
-                    TryDrop(loot, ShadowRemnant, 0.7);
-                    break;
-
-                case MonsterType.Elemental:
-                    TryDrop(loot, EarthEssence,  0.3);
-                    TryDrop(loot, StoneFragment,  0.3);
-                    TryDrop(loot, FireAsh,        0.3);
-                    TryDrop(loot, WindWhisper,    0.3);
-                    TryDrop(loot, WaterBead,      0.3);
-                    break;
-
-                case MonsterType.Beast:
-                    TryDrop(loot, BeastFlesh,    0.6);
-                    TryDrop(loot, FeralLeather,  0.4);
-                    TryDrop(loot, BeastFang,     0.2);
-                    break;
-
-                case MonsterType.Humanoid:
-                    // Placeholder until a proper humanoid drop item exists.
-                    TryDrop(loot, BeastFlesh, 0.7);
-                    break;
-            }
+            foreach (var drop in drops)
+                TryDrop(loot, drop.ItemId, drop.DropChance);
 
             return loot;
         }
 
-        /// <summary>Rolls a drop chance and adds the item to <paramref name="loot"/> if successful.</summary>
         private static void TryDrop(List<Item> loot, string itemId, double chance)
         {
             if (Random.Shared.NextDouble() < chance && ItemFactory.TryCreateItem(itemId, out var item))

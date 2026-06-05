@@ -2,26 +2,65 @@ namespace MyriaLib.Services
 {
     /// <summary>
     /// XP and level calculations for job aspects (Skill, Knowledge, Fame).
-    /// Levelling cost: XpForLevel(n) = n * 1000  (linear, max level 100).
-    /// Cumulative XP to reach level L = 1000 * (L-1) * L / 2.
+    /// Levelling cost: XpForLevel(n) = n × XpCostBase (default linear, max level 100).
+    /// Cumulative XP to reach level L = XpCostBase × (L-1) × L / 2.
     /// </summary>
     public static class JobXpService
     {
-        public const int MaxLevel = 100;
+        public static int    MaxLevel      { get; set; } = 100;
+        public static long   XpCostBase    { get; set; } = 1_000;
+
+        /// <summary>
+        /// Added to 1.0 to produce the max Fame sell multiplier.
+        /// Default 1.5 → multiplier scales from ×1.0 to ×2.5.
+        /// </summary>
+        public static double MaxFameBonus  { get; set; } = 1.5;
+
+        /// <summary>
+        /// Added to 1.0 to produce the max Skill gather/craft multiplier.
+        /// Default 2.0 → multiplier scales from ×1.0 to ×3.0.
+        /// </summary>
+        public static double MaxSkillBonus { get; set; } = 2.0;
+
+        /// <summary>
+        /// Knowledge-level thresholds granting extra daily gather charges.
+        /// Must be sorted ascending by Level. Default: (10,+1),(30,+2),(60,+3),(100,+4).
+        /// </summary>
+        public static (int Level, int Bonus)[] GatherBonusThresholds { get; set; } =
+        {
+            (10, 1), (30, 2), (60, 3), (100, 4)
+        };
+
+        /// <summary>
+        /// Baseline max upgrade level when no gate threshold is met.
+        /// Default: 2.
+        /// </summary>
+        public static int DefaultMaxUpgrade { get; set; } = 2;
+
+        /// <summary>
+        /// Knowledge-level gates controlling maximum equipment upgrade levels.
+        /// Must be sorted ascending by Level. Default: (10,4),(30,6),(60,8),(100,10).
+        /// </summary>
+        public static (int Level, int MaxUpgrade)[] UpgradeGates { get; set; } =
+        {
+            (10, 4), (30, 6), (60, 8), (100, 10)
+        };
+
+        // ── XP calculations ───────────────────────────────────────────────────────
 
         /// <summary>XP required to advance from level <paramref name="level"/> to the next.</summary>
         public static long XpForLevel(int level)
-            => level >= MaxLevel ? long.MaxValue : level * 1000L;
+            => level >= MaxLevel ? long.MaxValue : level * XpCostBase;
 
         /// <summary>Cumulative XP required to reach exactly level <paramref name="level"/>.</summary>
         public static long TotalXpToReach(int level)
         {
             if (level <= 1) return 0;
             long n = level - 1;
-            return 1000L * n * (n + 1) / 2;
+            return XpCostBase * n * (n + 1) / 2;
         }
 
-        /// <summary>Current level (1–100) derived from total accumulated XP.</summary>
+        /// <summary>Current level (1–MaxLevel) derived from total accumulated XP.</summary>
         public static int GetLevel(long totalXp)
         {
             int level = 1;
@@ -48,35 +87,37 @@ namespace MyriaLib.Services
             return (double)XpInCurrentLevel(totalXp) / XpForCurrentLevel(totalXp);
         }
 
-        /// <summary>
-        /// Sell-value multiplier from Fame level.
-        /// Scales linearly from x1.0 (level 1, +0%) to x2.5 (level 100, +150%).
-        /// </summary>
-        public static double GetFameMultiplier(int level)
-        {
-            int clamped = Math.Clamp(level, 1, MaxLevel);
-            return 1.0 + (clamped - 1) * (1.5 / (MaxLevel - 1));
-        }
-
-        /// <summary>Fame sell multiplier derived from accumulated Fame XP.</summary>
-        public static double GetFameMultiplierFromXp(long fameXp)
-            => GetFameMultiplier(GetLevel(fameXp));
-
-        /// <summary>"1,200 / 3,400 XP" progress string, or "MAX" at level 100.</summary>
+        /// <summary>"1,200 / 3,400 XP" progress string, or "MAX" at max level.</summary>
         public static string FormatProgress(long totalXp)
         {
             if (GetLevel(totalXp) >= MaxLevel) return "MAX";
             return $"{XpInCurrentLevel(totalXp):N0} / {XpForCurrentLevel(totalXp):N0} XP";
         }
 
+        // ── Multipliers ───────────────────────────────────────────────────────────
+
         /// <summary>
-        /// Multiplier applied to gathered amounts (Gathering jobs) or crafted item stats (Crafting jobs).
-        /// Scales linearly from x1.0 at level 1 to x3.0 at level 100.
+        /// Sell-value multiplier from Fame level.
+        /// Scales linearly from ×1.0 (level 1) to ×(1.0 + MaxFameBonus) (max level).
+        /// </summary>
+        public static double GetFameMultiplier(int level)
+        {
+            int clamped = Math.Clamp(level, 1, MaxLevel);
+            return 1.0 + (clamped - 1) * (MaxFameBonus / (MaxLevel - 1));
+        }
+
+        /// <summary>Fame sell multiplier derived from accumulated Fame XP.</summary>
+        public static double GetFameMultiplierFromXp(long fameXp)
+            => GetFameMultiplier(GetLevel(fameXp));
+
+        /// <summary>
+        /// Multiplier applied to gathered amounts or crafted item stats.
+        /// Scales linearly from ×1.0 (level 1) to ×(1.0 + MaxSkillBonus) (max level).
         /// </summary>
         public static double GetSkillMultiplier(int level)
         {
             int clamped = Math.Clamp(level, 1, MaxLevel);
-            return 1.0 + (clamped - 1) * (2.0 / (MaxLevel - 1));
+            return 1.0 + (clamped - 1) * (MaxSkillBonus / (MaxLevel - 1));
         }
 
         /// <summary>Skill multiplier derived from accumulated XP rather than a precomputed level.</summary>
@@ -86,7 +127,7 @@ namespace MyriaLib.Services
         /// <summary>
         /// Converts the skill multiplier into a concrete gathered integer amount using
         /// probabilistic rounding so progression feels smooth at every level.
-        /// E.g. multiplier 1.7 → 70 % chance of 2, 30 % chance of 1.
+        /// E.g. multiplier 1.7 → 70% chance of 2, 30% chance of 1.
         /// </summary>
         public static int ApplyGatherMultiplier(long skillXp)
         {
@@ -95,26 +136,30 @@ namespace MyriaLib.Services
             return Random.Shared.NextDouble() < (mult - floor) ? floor + 1 : floor;
         }
 
+        // ── Threshold lookups ─────────────────────────────────────────────────────
+
         /// <summary>
         /// Extra daily gather charges from knowledge level.
-        /// +1 from level 10, +2 from level 30, +3 from level 60, +4 from level 100.
+        /// Determined by <see cref="GatherBonusThresholds"/>.
         /// </summary>
-        public static int GetGatherLimitBonus(int knowledgeLevel) =>
-            knowledgeLevel >= 100 ? 4
-          : knowledgeLevel >= 60  ? 3
-          : knowledgeLevel >= 30  ? 2
-          : knowledgeLevel >= 10  ? 1
-          :                         0;
+        public static int GetGatherLimitBonus(int knowledgeLevel)
+        {
+            int bonus = 0;
+            foreach (var (level, b) in GatherBonusThresholds)
+                if (knowledgeLevel >= level) bonus = b;
+            return bonus;
+        }
 
         /// <summary>
         /// Maximum equipment upgrade level unlocked by the given knowledge level.
-        /// Gates: +2 (level 1), +4 (level 10), +6 (level 30), +8 (level 60), +10 (level 100).
+        /// Determined by <see cref="UpgradeGates"/> and <see cref="DefaultMaxUpgrade"/>.
         /// </summary>
-        public static int GetMaxUpgradeLevel(int knowledgeLevel) =>
-            knowledgeLevel >= 100 ? 10
-          : knowledgeLevel >= 60  ? 8
-          : knowledgeLevel >= 30  ? 6
-          : knowledgeLevel >= 10  ? 4
-          :                         2;
+        public static int GetMaxUpgradeLevel(int knowledgeLevel)
+        {
+            int max = DefaultMaxUpgrade;
+            foreach (var (level, upgrade) in UpgradeGates)
+                if (knowledgeLevel >= level) max = upgrade;
+            return max;
+        }
     }
 }

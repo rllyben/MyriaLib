@@ -5,6 +5,7 @@ using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
 using MyriaLib.Services.Regestries;
 using MyriaLib.Systems;
+using MyriaLib.Systems.Mods;
 using MyriaLib.Services;
 
 namespace MyriaLib.Services
@@ -52,16 +53,21 @@ namespace MyriaLib.Services
             Game = GameStatusService.Load();
             Report("game_status");
 
-            ItemFactory.LoadItems();
+            RaceProfile.Load(ModLoader.ResolvePath("Data/common/races.json"));
+            ClassProfile.Load(ModLoader.ResolvePath("Data/common/classes.json"));
+            LootGenerator.Load(ModLoader.ResolvePath("Data/common/loot_tables.json"));
+            Report("profiles");
+
+            ItemFactory.LoadItems(ModLoader.ResolvePath("Data/common/items.json"));
             Report("items");
 
-            _monsters = MonsterService.LoadMonsters();
+            _monsters = MonsterService.LoadMonsters(ModLoader.ResolvePath("Data/common/monsters.json"));
             Report("monsters");
 
-            NpcService.LoadNpcs();
+            NpcService.LoadNpcs(ModLoader.ResolvePath("Data/common/npcs.json"));
             Report("npcs");
 
-            _rooms = RoomService.LoadRooms();
+            _rooms = RoomService.LoadRooms(ModLoader.ResolvePath("Data/common/rooms.json"));
             if (_rooms.Count == 0)
                 throw new Exception("Failed to load rooms — check rooms.json for syntax errors.");
             Report("rooms");
@@ -70,34 +76,35 @@ namespace MyriaLib.Services
             NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
             Report("connections");
 
-            // Restores saved day/time/tick state and rolls daily gather limits.
             DayCycleManager.Initialize();
             Report("day_cycle");
 
-            CraftingService.LoadRecipes();
+            CraftingService.LoadRecipes(ModLoader.ResolvePath("Data/common/recipes.json"));
             Report("recipes");
 
-            JobManager.LoadJobs();
+            JobManager.LoadJobs(ModLoader.ResolvePath("Data/common/jobs.json"));
             Report("jobs");
 
-            QuestManager.LoadQuests();
+            QuestManager.LoadQuests(ModLoader.ResolvePath("Data/common/quests.json"));
             Report("quests");
 
-            SkillFactory.LoadSkills();
+            SkillFactory.LoadSkills(ModLoader.ResolvePath("Data/common/skills.json"));
             Report("skills");
 
-            DungeonRegistry.Load();
-            CaveRegistry.Load();
-            CityRegistry.Load();
-            ForestRegistry.Load();
+            DungeonRegistry.Load(ModLoader.ResolvePath("Data/common/dungeons.json"));
+            CaveRegistry.Load(ModLoader.ResolvePath("Data/common/caves.json"));
+            CityRegistry.Load(ModLoader.ResolvePath("Data/common/cities.json"));
+            ForestRegistry.Load(ModLoader.ResolvePath("Data/common/forests.json"));
             Report("registries");
 
-            // ── New skill systems (WPF / Unity only — console ignores these) ──────
-            RuneWordService.Load();
-            BaseRuneService.Load();
-            BaseSkillLoader.Load();
-            FusionRecipeService.Load();
-            SkillCombinationService.Load();
+            RuneWordService.Load(
+                ModLoader.ResolvePath("Data/common/rune_words.json"),
+                ModLoader.ResolvePath("Data/common/rune_families.json"),
+                ModLoader.ResolvePath("Data/common/rune_word_pairs.json"));
+            BaseRuneService.Load(ModLoader.ResolvePath("Data/common/base_runes.json"));
+            BaseSkillLoader.Load(ModLoader.ResolvePath("Data/common/base_skills.json"));
+            FusionRecipeService.Load(ModLoader.ResolvePath("Data/common/fusion_recipes.json"));
+            SkillCombinationService.Load(ModLoader.ResolvePath("Data/common/skill_combinations.json"));
             Report("skill_systems");
 
             return true;

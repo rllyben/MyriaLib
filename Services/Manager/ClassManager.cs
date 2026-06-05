@@ -8,8 +8,8 @@ namespace MyriaLib.Services.Manager
 {
     public static class ClassManager
     {
-        private const long PenaltyPerDay = 500L;
-        public static readonly TimeSpan ClassChangeCooldown = TimeSpan.FromDays(7);
+        public static long     PenaltyPerDay        { get; set; } = 500L;
+        public static TimeSpan ClassChangeCooldown  { get; set; } = TimeSpan.FromDays(7);
 
         public static IEnumerable<PlayerClass> GetAllowedClasses(PlayerRace race)
         {

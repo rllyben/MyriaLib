@@ -8,8 +8,6 @@ namespace MyriaLib.Services
     public static class NpcService
     {
         private static readonly Dictionary<string, Npc> _npcs = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly string _filePath = "Data/common/npcs.json";
-
         public static List<Npc> AllNpcs { get; private set; } = new();
 
         public static Npc Get(string id) => _npcs[id];
@@ -24,16 +22,16 @@ namespace MyriaLib.Services
         /// Loads all NPCs from Data/common/npcs.json and fills the lookup dictionary.
         /// Call once at program start.
         /// </summary>
-        public static List<Npc> LoadNpcs()
+        public static List<Npc> LoadNpcs(string path = "Data/common/npcs.json")
         {
-            if (!File.Exists(_filePath))
+            if (!File.Exists(path))
             {
                 AllNpcs = new();
                 _npcs.Clear();
                 return AllNpcs;
             }
 
-            string json = File.ReadAllText(_filePath);
+            string json = File.ReadAllText(path);
 
             JsonSerializerOptions options = new JsonSerializerOptions
             {

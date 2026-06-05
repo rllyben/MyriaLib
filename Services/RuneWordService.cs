@@ -13,9 +13,6 @@ namespace MyriaLib.Services
     /// </summary>
     public static class RuneWordService
     {
-        private static readonly string _wordsPath    = "Data/common/rune_words.json";
-        private static readonly string _familiesPath = "Data/common/rune_families.json";
-        private static readonly string _pairsPath    = "Data/common/rune_word_pairs.json";
 
         private static Dictionary<string, RuneWord>        _words    = new(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, WordFamily>      _families = new(StringComparer.OrdinalIgnoreCase);
@@ -30,11 +27,14 @@ namespace MyriaLib.Services
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
 
-        public static void Load()
+        public static void Load(
+            string wordsPath    = "Data/common/rune_words.json",
+            string familiesPath = "Data/common/rune_families.json",
+            string pairsPath    = "Data/common/rune_word_pairs.json")
         {
-            _words    = LoadWords();
-            _families = LoadFamilies();
-            _pairs    = LoadPairs();
+            _words    = LoadWords(wordsPath);
+            _families = LoadFamilies(familiesPath);
+            _pairs    = LoadPairs(pairsPath);
         }
 
         /// <summary>Returns a word by ID, or <c>null</c> if not found.</summary>
@@ -98,38 +98,38 @@ namespace MyriaLib.Services
             return string.CompareOrdinal(a, b) <= 0 ? $"{a}:{b}" : $"{b}:{a}";
         }
 
-        private static Dictionary<string, RuneWord> LoadWords()
+        private static Dictionary<string, RuneWord> LoadWords(string path)
         {
-            if (!File.Exists(_wordsPath))
+            if (!File.Exists(path))
             {
-                GameLog.Error($"Rune words file not found at '{_wordsPath}'.");
+                GameLog.Error($"Rune words file not found at '{path}'.");
                 return new(StringComparer.OrdinalIgnoreCase);
             }
-            var list = JsonSerializer.Deserialize<List<RuneWord>>(File.ReadAllText(_wordsPath), _opts)
+            var list = JsonSerializer.Deserialize<List<RuneWord>>(File.ReadAllText(path), _opts)
                        ?? new();
             return list.ToDictionary(w => w.Id, w => w, StringComparer.OrdinalIgnoreCase);
         }
 
-        private static Dictionary<string, WordFamily> LoadFamilies()
+        private static Dictionary<string, WordFamily> LoadFamilies(string path)
         {
-            if (!File.Exists(_familiesPath))
+            if (!File.Exists(path))
             {
-                GameLog.Error($"Rune families file not found at '{_familiesPath}'.");
+                GameLog.Error($"Rune families file not found at '{path}'.");
                 return new(StringComparer.OrdinalIgnoreCase);
             }
-            var list = JsonSerializer.Deserialize<List<WordFamily>>(File.ReadAllText(_familiesPath), _opts)
+            var list = JsonSerializer.Deserialize<List<WordFamily>>(File.ReadAllText(path), _opts)
                        ?? new();
             return list.ToDictionary(f => f.Id, f => f, StringComparer.OrdinalIgnoreCase);
         }
 
-        private static Dictionary<string, WordPairRelation> LoadPairs()
+        private static Dictionary<string, WordPairRelation> LoadPairs(string path)
         {
-            if (!File.Exists(_pairsPath))
+            if (!File.Exists(path))
             {
                 // Not an error — an empty pairs file just means family rules cover everything.
                 return new(StringComparer.OrdinalIgnoreCase);
             }
-            var list = JsonSerializer.Deserialize<List<WordPairRelation>>(File.ReadAllText(_pairsPath), _opts)
+            var list = JsonSerializer.Deserialize<List<WordPairRelation>>(File.ReadAllText(path), _opts)
                        ?? new();
             return list.ToDictionary(
                 p => MakePairKey(p.WordIdA, p.WordIdB),

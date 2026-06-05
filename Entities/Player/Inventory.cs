@@ -12,8 +12,8 @@ namespace MyriaLib.Entities.Players
         public event EventHandler<ItemReceivedEventArgs>? ItemRemoved;
         public event EventHandler<ItemReceivedEventArgs>? ItemSold;
 
-        /// <summary>Fixed size of one inventory page — matches the 7×7 UI grid.</summary>
-        public const int PageSize = 49;
+        /// <summary>Slot count per inventory page. Defaults to 49 (7×7 UI grid); override via <see cref="MyriaLib.Systems.GameConfig"/>.</summary>
+        public static int PageSize { get; set; } = 49;
 
         /// <summary>Number of unlocked pages. Starts at 1; increased by purchasing inventory expansions.</summary>
         public int Pages { get; set; } = 1;

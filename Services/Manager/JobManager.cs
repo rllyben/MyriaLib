@@ -20,7 +20,11 @@ namespace MyriaLib.Services.Manager
 
         public static IReadOnlyList<Job> GetAll() => _allJobs;
 
-        public static readonly TimeSpan JobChangeCooldown = TimeSpan.FromDays(7);
+        public static TimeSpan JobChangeCooldown         { get; set; } = TimeSpan.FromDays(7);
+        public static long     FameTickPerDay            { get; set; } = 5;
+        public static long     SkillDecayCap             { get; set; } = 50;
+        public static long     FameDecayDivisor          { get; set; } = 200;
+        public static double   ActiveJobBonusFraction    { get; set; } = 0.5;
 
         // ── XP grants ────────────────────────────────────────────────────────────
 
@@ -33,7 +37,7 @@ namespace MyriaLib.Services.Manager
         {
             if (amount <= 0) return;
             if (player.ActiveJobId == jobId)
-                amount += amount / 2;   // +50 % active-job bonus
+                amount += (long)(amount * ActiveJobBonusFraction);
             var entry = GetOrAdd(player, jobId);
             entry.SkillXp += amount;
             entry.LastSkillUsedDay = DayCycleManager.GameDay; // J12: mark skill as used today
@@ -163,7 +167,7 @@ namespace MyriaLib.Services.Manager
                 // J11: Passive daily Fame tick — active job only, once per game day
                 if (isActive && job.LastFameTickDay < gameDay)
                 {
-                    job.FameXp += 5;
+                    job.FameXp += FameTickPerDay;
                     job.LastFameTickDay = gameDay;
                 }
 
@@ -172,7 +176,7 @@ namespace MyriaLib.Services.Manager
                 {
                     int  level = JobXpService.GetLevel(job.SkillXp);
                     long floor = JobXpService.TotalXpToReach(level);
-                    long decay = Math.Min(job.SkillXp - floor, 50L); // up to 50 XP, never below level floor
+                    long decay = Math.Min(job.SkillXp - floor, SkillDecayCap);
                     job.SkillXp -= decay;
                 }
 
@@ -187,7 +191,7 @@ namespace MyriaLib.Services.Manager
                 // J14: Fame decay — XP (and levels) decay when this is not the active job
                 if (!isActive && job.FameXp > 0)
                 {
-                    long decay = Math.Max(1L, job.FameXp / 200); // ~0.5 % per day, min 1 XP
+                    long decay = Math.Max(1L, job.FameXp / FameDecayDivisor);
                     job.FameXp = Math.Max(0L, job.FameXp - decay);
                 }
             }

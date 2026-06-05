@@ -2,26 +2,27 @@ namespace MyriaLib.Services
 {
     /// <summary>
     /// XP and level calculations for class levels.
-    /// Levelling cost: XpForLevel(n) = n × 5000 (5× steeper than job aspects, max level 50).
-    /// Cumulative XP to reach level L = 5000 × (L-1) × L / 2.
+    /// Levelling cost: XpForLevel(n) = n × XpCostBase (default 5× steeper than job aspects, max level 50).
+    /// Cumulative XP to reach level L = XpCostBase × (L-1) × L / 2.
     /// </summary>
     public static class ClassXpService
     {
-        public const int MaxLevel = 50;
+        public static int  MaxLevel   { get; set; } = 50;
+        public static long XpCostBase { get; set; } = 5_000;
 
         /// <summary>XP required to advance from <paramref name="level"/> to the next.</summary>
         public static long XpForLevel(int level)
-            => level >= MaxLevel ? long.MaxValue : level * 5000L;
+            => level >= MaxLevel ? long.MaxValue : level * XpCostBase;
 
         /// <summary>Cumulative XP required to reach exactly level <paramref name="level"/>.</summary>
         public static long TotalXpToReach(int level)
         {
             if (level <= 1) return 0;
             long n = level - 1;
-            return 5000L * n * (n + 1) / 2;
+            return XpCostBase * n * (n + 1) / 2;
         }
 
-        /// <summary>Current class level (1–50) derived from total accumulated XP.</summary>
+        /// <summary>Current class level (1–MaxLevel) derived from total accumulated XP.</summary>
         public static int GetLevel(long totalXp)
         {
             int level = 1;
@@ -48,7 +49,7 @@ namespace MyriaLib.Services
             return (double)XpInCurrentLevel(totalXp) / XpForCurrentLevel(totalXp);
         }
 
-        /// <summary>"1,200 / 5,000 XP" progress string, or "MAX" at level 50.</summary>
+        /// <summary>"1,200 / 5,000 XP" progress string, or "MAX" at max level.</summary>
         public static string FormatProgress(long totalXp)
         {
             if (GetLevel(totalXp) >= MaxLevel) return "MAX";
