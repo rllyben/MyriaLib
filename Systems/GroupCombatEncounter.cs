@@ -2,6 +2,7 @@ using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.Players;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
+using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 using MyriaLib.Systems.Interfaces;
@@ -151,7 +152,11 @@ namespace MyriaLib.Systems
 
             // XP to all living players, scaled down if the monster is below the player's level
             foreach (var p in Players.Where(p => p.IsAlive))
-                p.GainXp(ScaleXp(monster.Exp, p.Level, monster.Level));
+            {
+                long xpGained = ScaleXp(monster.Exp, p.Level, monster.Level);
+                p.GainXp(xpGained);
+                ClassManager.GrantClassXp(p, xpGained);
+            }
 
             // Loot to first living player
             var recipient = Players.FirstOrDefault(p => p.IsAlive);

@@ -74,6 +74,8 @@ namespace MyriaLib.Services.Builder
                 player.LearnSkill(skill);
             }
 
+            if (player.Class == PlayerClass.RunicMage)
+                BaseRuneService.GrantBaseRunes(player);
         }
 
     }

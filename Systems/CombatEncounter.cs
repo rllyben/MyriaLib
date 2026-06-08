@@ -257,7 +257,9 @@ namespace MyriaLib.Systems
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
-            Player.GainXp(ScaleXp(Enemy.Exp, Player.Level, Enemy.Level));
+            long xpGained = ScaleXp(Enemy.Exp, Player.Level, Enemy.Level);
+            Player.GainXp(xpGained);
+            ClassManager.GrantClassXp(Player, xpGained);
             SkillFactory.UpdateSkills(Player);
 
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(Enemy.Id));

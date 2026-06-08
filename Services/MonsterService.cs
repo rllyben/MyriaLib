@@ -33,14 +33,12 @@ namespace MyriaLib.Services
         }
         public static Monster PickMonsterForFight(List<Monster> monsters, Dictionary<int, float> chances)
         {
-            // Only consider monsters that have a defined encounter weight
             var eligible = monsters.Where(m => chances.ContainsKey(m.Id)).ToList();
             if (eligible.Count == 0)
-                return monsters[0];
+                return monsters[Random.Shared.Next(monsters.Count)];
 
-            Random rnd = new Random();
             float totalWeight = eligible.Sum(m => chances[m.Id]);
-            float roll = rnd.NextSingle() * totalWeight;
+            float roll = Random.Shared.NextSingle() * totalWeight;
 
             float cumulative = 0;
             foreach (Monster monster in eligible)
