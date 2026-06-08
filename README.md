@@ -1,4 +1,4 @@
-# MyriaLib — Developer Documentation
+# MyriaLib - Game Library
 
 A C# game-logic library for text-based or hybrid RPG games. Handles all back-end systems — combat, progression, quests, jobs, inventory, world navigation — so the consuming application only needs to build the UI layer on top.
 
