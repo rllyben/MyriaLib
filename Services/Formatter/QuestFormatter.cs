@@ -7,6 +7,11 @@ namespace MyriaLib.Services.Formatter
 {
     public class QuestFormatter
     {
+        private static string LocalizeMonsterName(string value)
+            => value.StartsWith("monster.", StringComparison.OrdinalIgnoreCase)
+                ? Localization.T(value)
+                : value;
+
         public static string BuildProgressText(Quest quest)
         {
             var parts = new List<string>();
@@ -76,7 +81,7 @@ namespace MyriaLib.Services.Formatter
                     return $"[#{monsterId}] {current}/{required}";
                 }
 
-                return $"{monster.Name} {current}/{required}";
+                return $"{LocalizeMonsterName(monster.Name)} {current}/{required}";
             });
 
             return "Kills: " + string.Join(", ", segments);
@@ -99,7 +104,7 @@ namespace MyriaLib.Services.Formatter
             foreach (int mobId in quest.RequiredKills.Keys)
             {
                 Monster? mob = MonsterService.GetMonsterById(mobId);
-                string mobName = mob?.Name ?? $"[#{mobId}]"; // GetMonsterById already logged if null
+                string mobName = mob != null ? LocalizeMonsterName(mob.Name) : $"[#{mobId}]"; // GetMonsterById already logged if null
 
                 int killProgress = quest.KillProgress.GetValueOrDefault(mobId, 0);
                 lines.Add($"{mobName}: {killProgress}/{quest.RequiredKills[mobId]}");
