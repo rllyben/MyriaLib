@@ -16,7 +16,7 @@ namespace MyriaLib.Models.Dto
         long XpGained,
         List<string> LootItemIds);
 
-    public record GroupCombatantState(string Name, int Hp, int MaxHp, bool IsAlive);
+    public record GroupCombatantState(string Name, int Hp, int MaxHp, bool IsAlive, int Level = 0);
     public record StartGroupCombatResult(
         bool Success,
         string? Reason,

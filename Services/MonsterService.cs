@@ -71,6 +71,30 @@ namespace MyriaLib.Services
             return result;
         }
 
+        /// <summary>
+        /// Picks a group of <paramref name="count"/> monsters using the "same + one variant" rule:
+        /// one primary monster is rolled, all slots are filled with clones of it, then exactly one
+        /// additional slot is re-rolled and may resolve to a different species.
+        /// </summary>
+        public static List<Monster> PickGroupWithOneVariant(
+            List<Monster> templates,
+            Dictionary<int, float> chances,
+            int count = 3)
+        {
+            if (templates.Count == 0) return new List<Monster>();
+
+            var primary = PickMonsterForFight(templates, chances);
+            var result  = new List<Monster>();
+
+            for (int i = 0; i < count; i++)
+                result.Add(primary.Clone());
+
+            if (count >= 2)
+                result[^1] = PickMonsterForFight(templates, chances).Clone();
+
+            return result;
+        }
+
     }
 
 }

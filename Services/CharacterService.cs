@@ -22,7 +22,7 @@ namespace MyriaLib.Services
             {
                 PropertyNameCaseInsensitive = true,
                 WriteIndented = true,
-                Converters = { new ItemConverter() }
+                Converters = { new ItemConverter(), new MoneyConverter() }
             };
             var json = JsonSerializer.Serialize(player, options);
             File.WriteAllText(path, json);
@@ -36,7 +36,7 @@ namespace MyriaLib.Services
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new ItemConverter() }
+                Converters = { new ItemConverter(), new MoneyConverter() }
             };
 
             var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
@@ -66,7 +66,7 @@ namespace MyriaLib.Services
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new ItemConverter() }
+                Converters = { new ItemConverter(), new MoneyConverter() }
             };
 
             foreach (string characterName in account.CharacterNames)
