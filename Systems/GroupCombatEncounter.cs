@@ -1,5 +1,5 @@
 using MyriaLib.Entities.Monsters;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
@@ -11,47 +11,47 @@ namespace MyriaLib.Systems
 {
     public sealed class GroupCombatEncounter
     {
-        public IReadOnlyList<Player>  Players  { get; }
+        public IReadOnlyList<Character>  Characters  { get; }
         public List<Monster>          Monsters { get; }
 
         public bool IsFinished  { get; private set; }
-        public bool PlayersWon  { get; private set; }
+        public bool CharactersWon  { get; private set; }
         public List<CombatLogEntry> Log { get; } = new();
 
         private int _currentPlayerIndex;
 
         public string CurrentTurnPlayerName =>
-            IsFinished || _currentPlayerIndex >= Players.Count
+            IsFinished || _currentPlayerIndex >= Characters.Count
                 ? ""
-                : Players[_currentPlayerIndex].Name;
+                : Characters[_currentPlayerIndex].Name;
 
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
-        public GroupCombatEncounter(IEnumerable<Player> players, IEnumerable<Monster> enemies)
+        public GroupCombatEncounter(IEnumerable<Character> characters, IEnumerable<Monster> enemies)
         {
             var rng = Random.Shared;
-            Players = players
-                .Select(p => (player: p, tieBreak: rng.Next()))
-                .OrderByDescending(x => x.player.TotalDEX)
+            Characters = characters
+                .Select(p => (character: p, tieBreak: rng.Next()))
+                .OrderByDescending(x => x.character.TotalDEX)
                 .ThenBy(x => x.tieBreak)
-                .Select(x => x.player)
+                .Select(x => x.character)
                 .ToList();
 
             Monsters = enemies.Select(m => { m.ResetHealth(); return m; }).ToList();
             Log.Add(new CombatLogEntry("pg.fight.log.start",
                 string.Join(", ", Monsters.Select(m => m.Name))));
             Log.Add(new CombatLogEntry("pg.fight.log.order",
-                string.Join(", ", Players.Select(p => p.Name))));
-            SkipDeadPlayers();
+                string.Join(", ", Characters.Select(p => p.Name))));
+            SkipDeadCharacters();
         }
 
         // ── Actions ───────────────────────────────────────────────────────────
 
         public bool PlayerAttack(string playerName, int targetMonsterIndex)
         {
-            if (IsFinished || !IsThisPlayersTurn(playerName)) return false;
+            if (IsFinished || !IsThisCharactersTurn(playerName)) return false;
 
-            var attacker = Players[_currentPlayerIndex];
+            var attacker = Characters[_currentPlayerIndex];
             var target   = GetMonster(targetMonsterIndex);
             if (target == null || !target.IsAlive) return false;
 
@@ -71,9 +71,9 @@ namespace MyriaLib.Systems
 
         public bool PlayerCastSkill(string playerName, Skill skill, int targetIndex)
         {
-            if (IsFinished || !IsThisPlayersTurn(playerName)) return false;
+            if (IsFinished || !IsThisCharactersTurn(playerName)) return false;
 
-            var caster = Players[_currentPlayerIndex];
+            var caster = Characters[_currentPlayerIndex];
             if (caster.CurrentMana < skill.ManaCost)
             {
                 Log.Add(new CombatLogEntry("pg.fight.log.nomana"));
@@ -89,7 +89,7 @@ namespace MyriaLib.Systems
                     break;
 
                 case SkillTarget.SingleAlly:
-                    var ally = GetPlayer(targetIndex);
+                    var ally = GetCharacter(targetIndex);
                     if (ally == null || !ally.IsAlive) { caster.SpendMana(-skill.ManaCost); return false; }
                     ExecuteSkillOnPlayer(skill, caster, ally);
                     break;
@@ -119,7 +119,7 @@ namespace MyriaLib.Systems
 
         // ── Internal helpers ──────────────────────────────────────────────────
 
-        private void ExecuteSkillOnPlayer(Skill skill, Player caster, Player target)
+        private void ExecuteSkillOnPlayer(Skill skill, Character caster, Character target)
         {
             if (!skill.IsHealing) return;
             int baseStat = ResolveBaseStat(skill, caster);
@@ -129,7 +129,7 @@ namespace MyriaLib.Systems
             Log.Add(new CombatLogEntry("pg.fight.log.heal", caster.Name, healed));
         }
 
-        private void ExecuteSkillOnMonster(Skill skill, Player caster, ICombatant target)
+        private void ExecuteSkillOnMonster(Skill skill, Character caster, ICombatant target)
         {
             if (skill.IsHealing) return;
             int baseStat = ResolveBaseStat(skill, caster);
@@ -151,7 +151,7 @@ namespace MyriaLib.Systems
             UpdateQuestProgress(monster.Id);
 
             // XP to all living players, scaled down if the monster is below the player's level
-            foreach (var p in Players.Where(p => p.IsAlive))
+            foreach (var p in Characters.Where(p => p.IsAlive))
             {
                 long xpGained = ScaleXp(monster.Exp, p.Level, monster.Level);
                 p.GainXp(xpGained);
@@ -159,7 +159,7 @@ namespace MyriaLib.Systems
             }
 
             // Loot to first living player
-            var recipient = Players.FirstOrDefault(p => p.IsAlive);
+            var recipient = Characters.FirstOrDefault(p => p.IsAlive);
             if (recipient != null)
             {
                 var drops = LootGenerator.GetLootFor(monster);
@@ -171,20 +171,20 @@ namespace MyriaLib.Systems
             }
 
             if (Monsters.All(m => !m.IsAlive))
-                FinishPlayersWon();
+                FinishCharactersWon();
         }
 
         private void AdvanceAfterPlayerAction()
         {
             int next = _currentPlayerIndex + 1;
-            while (next < Players.Count && !Players[next].IsAlive) next++;
+            while (next < Characters.Count && !Characters[next].IsAlive) next++;
 
-            if (next >= Players.Count)
+            if (next >= Characters.Count)
             {
                 // All living players have acted — monsters' turn
                 MonstersTurn();
                 if (!IsFinished)
-                    SkipDeadPlayers(); // restart from first living player
+                    SkipDeadCharacters(); // restart from first living player
             }
             else
             {
@@ -192,18 +192,18 @@ namespace MyriaLib.Systems
             }
         }
 
-        private void SkipDeadPlayers()
+        private void SkipDeadCharacters()
         {
             int idx = 0;
-            while (idx < Players.Count && !Players[idx].IsAlive) idx++;
+            while (idx < Characters.Count && !Characters[idx].IsAlive) idx++;
             _currentPlayerIndex = idx;
-            if (_currentPlayerIndex >= Players.Count) FinishPlayersLost();
+            if (_currentPlayerIndex >= Characters.Count) FinishCharactersLost();
         }
 
         private void MonstersTurn()
         {
-            var living = Players.Where(p => p.IsAlive).ToList();
-            if (living.Count == 0) { FinishPlayersLost(); return; }
+            var living = Characters.Where(p => p.IsAlive).ToList();
+            if (living.Count == 0) { FinishCharactersLost(); return; }
 
             var rng = Random.Shared;
             foreach (var monster in Monsters.Where(m => m.IsAlive).ToList())
@@ -219,27 +219,27 @@ namespace MyriaLib.Systems
                 }
             }
 
-            if (!Players.Any(p => p.IsAlive)) FinishPlayersLost();
+            if (!Characters.Any(p => p.IsAlive)) FinishCharactersLost();
         }
 
-        private void FinishPlayersWon()
+        private void FinishCharactersWon()
         {
             IsFinished = true;
-            PlayersWon = true;
-            foreach (var p in Players)
+            CharactersWon = true;
+            foreach (var p in Characters)
                 SkillFactory.UpdateSkills(p);
         }
 
-        private void FinishPlayersLost()
+        private void FinishCharactersLost()
         {
             IsFinished = true;
-            PlayersWon = false;
+            CharactersWon = false;
             Log.Add(new CombatLogEntry("pg.fight.log.lose"));
         }
 
         private void UpdateQuestProgress(int monsterId)
         {
-            foreach (var player in Players)
+            foreach (var player in Characters)
             {
                 foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
                 {
@@ -262,29 +262,29 @@ namespace MyriaLib.Systems
             return Math.Max(1L, (long)(baseXp * ratio * ratio));
         }
 
-        private bool IsThisPlayersTurn(string playerName) =>
-            _currentPlayerIndex < Players.Count &&
-            string.Equals(Players[_currentPlayerIndex].Name, playerName, StringComparison.OrdinalIgnoreCase);
+        private bool IsThisCharactersTurn(string playerName) =>
+            _currentPlayerIndex < Characters.Count &&
+            string.Equals(Characters[_currentPlayerIndex].Name, playerName, StringComparison.OrdinalIgnoreCase);
 
         private Monster? GetMonster(int index) =>
             index >= 0 && index < Monsters.Count ? Monsters[index] : null;
 
-        private Player? GetPlayer(int index) =>
-            index >= 0 && index < Players.Count ? Players[index] : null;
+        private Character? GetCharacter(int index) =>
+            index >= 0 && index < Characters.Count ? Characters[index] : null;
 
-        private static int ResolveBaseStat(Skill skill, Player player) =>
+        private static int ResolveBaseStat(Skill skill, Character character) =>
             skill.StatToScaleFrom.ToUpper() switch
             {
-                "ATK"  => player.TotalPhysicalAttack,
-                "MATK" => player.TotalMagicAttack,
-                "SPR"  => player.TotalSPR,
-                "INT"  => player.TotalINT,
-                "DEX"  => player.TotalDEX,
-                "AIM"  => player.TotalAim * 2,
-                "EVA"  => player.TotalEvasion * 2,
-                "END"  => player.TotalEND,
-                "STR"  => player.TotalSTR,
-                _      => player.TotalPhysicalAttack
+                "ATK"  => character.TotalPhysicalAttack,
+                "MATK" => character.TotalMagicAttack,
+                "SPR"  => character.TotalSPR,
+                "INT"  => character.TotalINT,
+                "DEX"  => character.TotalDEX,
+                "AIM"  => character.TotalAim * 2,
+                "EVA"  => character.TotalEvasion * 2,
+                "END"  => character.TotalEND,
+                "STR"  => character.TotalSTR,
+                _      => character.TotalPhysicalAttack
             };
     }
 }

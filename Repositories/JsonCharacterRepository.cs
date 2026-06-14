@@ -1,5 +1,5 @@
 using System.Text.Json;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Services;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems;
@@ -32,30 +32,30 @@ namespace MyriaLib.Repositories
             return Task.FromResult(names);
         }
 
-        public Task<Player?> LoadAsync(string username, string characterName)
+        public Task<Character?> LoadAsync(string username, string characterName)
         {
             var path = SavePath(username, characterName);
             if (!File.Exists(path))
-                return Task.FromResult<Player?>(null);
+                return Task.FromResult<Character?>(null);
 
-            var player = JsonSerializer.Deserialize<Player>(File.ReadAllText(path), _opts);
-            if (player is null) return Task.FromResult<Player?>(null);
+            var character = JsonSerializer.Deserialize<Character>(File.ReadAllText(path), _opts);
+            if (character is null) return Task.FromResult<Character?>(null);
 
-            player.Inventory.Items.RemoveAll(i => i == null);
-            player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == player.CurrentRoomId);
-            player.RecalculateUnusedPoints();
-            player.ValidateQuestStatuses();
-            SkillFactory.UpdateSkills(player);
+            character.Inventory.Items.RemoveAll(i => i == null);
+            character.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == character.CurrentRoomId);
+            character.RecalculateUnusedPoints();
+            character.ValidateQuestStatuses();
+            SkillFactory.UpdateSkills(character);
 
-            return Task.FromResult<Player?>(player);
+            return Task.FromResult<Character?>(character);
         }
 
-        public Task SaveAsync(string username, Player player)
+        public Task SaveAsync(string username, Character character)
         {
-            var path = SavePath(username, player.Name);
+            var path = SavePath(username, character.Name);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            player.CurrentRoomId = player.CurrentRoom?.Id ?? player.CurrentRoomId;
-            File.WriteAllText(path, JsonSerializer.Serialize(player, _opts));
+            character.CurrentRoomId = character.CurrentRoom?.Id ?? character.CurrentRoomId;
+            File.WriteAllText(path, JsonSerializer.Serialize(character, _opts));
             return Task.CompletedTask;
         }
 

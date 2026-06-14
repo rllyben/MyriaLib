@@ -11,6 +11,9 @@ namespace MyriaLib.Entities.Maps
         public List<int> RoomIds { get; set; } = new();
         public int AnchorRoomId { get; set; } = 0;
         public string? MapFile { get; set; }
+        public bool ExpandOnWorldMap { get; set; } = false;
+        public bool ExpandWorldMapWidth { get; set; } = false;
+        public bool ExpandWorldMapHeight { get; set; } = false;
 
         public bool ContainsRoom(Room room) => RoomIds.Contains(room.Id);
     }

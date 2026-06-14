@@ -1,7 +1,7 @@
 using System.Globalization;
 using MyriaLib.Services.Formatter;
 
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
     /// <summary>
     /// Immutable money amount stored in base units (Bronze).

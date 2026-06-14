@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Models.BaseModel;
@@ -34,7 +34,7 @@ namespace MyriaLib.Services.Manager
         /// <paramref name="newRunes"/> (empty list if none).
         /// </summary>
         public static AddWordResult AddWord(
-            Player player,
+            Character character,
             CompositeRune rune,
             string wordId,
             out List<CompositeRune> newRunes)
@@ -67,7 +67,7 @@ namespace MyriaLib.Services.Manager
 
             foreach (string newRuneId in RuneEvaluator.FindTransforms(allWordIds))
             {
-                if (player.KnownRunes.Any(r => r.BaseRuneId == newRuneId && r.AddedWordIds.Count == 0))
+                if (character.KnownRunes.Any(r => r.BaseRuneId == newRuneId && r.AddedWordIds.Count == 0))
                     continue; // already unlocked
 
                 var newRuneDef = BaseRuneService.Get(newRuneId);
@@ -79,11 +79,11 @@ namespace MyriaLib.Services.Manager
 
                 var newComposite = new CompositeRune { BaseRuneId = newRuneId };
                 newComposite.ResolvedSkill = RuneEvaluator.Evaluate(newRuneDef, Array.Empty<RuneWord>());
-                player.KnownRunes.Add(newComposite);
+                character.KnownRunes.Add(newComposite);
                 newRunes.Add(newComposite);
             }
 
-            EnsureWordInDictionary(player, wordId);
+            EnsureWordInDictionary(character, wordId);
             return AddWordResult.Success;
         }
 
@@ -91,7 +91,7 @@ namespace MyriaLib.Services.Manager
         /// Removes a word from a rune and re-evaluates.
         /// Returns false if the word was not on the rune.
         /// </summary>
-        public static bool RemoveWord(Player player, CompositeRune rune, string wordId)
+        public static bool RemoveWord(Character character, CompositeRune rune, string wordId)
         {
             if (!rune.AddedWordIds.Remove(wordId))
                 return false;
@@ -109,9 +109,9 @@ namespace MyriaLib.Services.Manager
         /// Sets the player's personal label for a runic word (their own translation guess).
         /// Creates the dictionary entry if it doesn't exist yet.
         /// </summary>
-        public static void SetPlayerLabel(Player player, string wordId, string label)
+        public static void SetPlayerLabel(Character character, string wordId, string label)
         {
-            var entry = GetOrCreateEntry(player, wordId);
+            var entry = GetOrCreateEntry(character, wordId);
             entry.PlayerLabel = string.IsNullOrWhiteSpace(label) ? null : label.Trim();
         }
 
@@ -119,19 +119,19 @@ namespace MyriaLib.Services.Manager
         /// Marks a word as officially learned (e.g. taught by an NPC or found in a lore item).
         /// The official English name will be shown to the player from this point on.
         /// </summary>
-        public static void LearnWord(Player player, string wordId)
+        public static void LearnWord(Character character, string wordId)
         {
-            EnsureWordInDictionary(player, wordId);
-            GetOrCreateEntry(player, wordId).IsOfficiallyLearned = true;
+            EnsureWordInDictionary(character, wordId);
+            GetOrCreateEntry(character, wordId).IsOfficiallyLearned = true;
         }
 
         /// <summary>
         /// Returns the display string for a runic word as the player currently sees it.
         /// Priority: officially learned → player label (in brackets) → runic script.
         /// </summary>
-        public static string GetDisplayName(Player player, RuneWord word)
+        public static string GetDisplayName(Character character, RuneWord word)
         {
-            var entry = player.RuneDictionary.FirstOrDefault(e => e.WordId == word.Id);
+            var entry = character.RuneDictionary.FirstOrDefault(e => e.WordId == word.Id);
 
             if (entry?.IsOfficiallyLearned == true)
                 return word.EnglishName;
@@ -150,19 +150,19 @@ namespace MyriaLib.Services.Manager
                .Select(w => w!)
                .ToList();
 
-        private static void EnsureWordInDictionary(Player player, string wordId)
+        private static void EnsureWordInDictionary(Character character, string wordId)
         {
-            if (!player.RuneDictionary.Any(e => e.WordId == wordId))
-                player.RuneDictionary.Add(new PlayerRuneWordEntry { WordId = wordId });
+            if (!character.RuneDictionary.Any(e => e.WordId == wordId))
+                character.RuneDictionary.Add(new CharacterRuneWordEntry { WordId = wordId });
         }
 
-        private static PlayerRuneWordEntry GetOrCreateEntry(Player player, string wordId)
+        private static CharacterRuneWordEntry GetOrCreateEntry(Character character, string wordId)
         {
-            var entry = player.RuneDictionary.FirstOrDefault(e => e.WordId == wordId);
+            var entry = character.RuneDictionary.FirstOrDefault(e => e.WordId == wordId);
             if (entry == null)
             {
-                entry = new PlayerRuneWordEntry { WordId = wordId };
-                player.RuneDictionary.Add(entry);
+                entry = new CharacterRuneWordEntry { WordId = wordId };
+                character.RuneDictionary.Add(entry);
             }
             return entry;
         }

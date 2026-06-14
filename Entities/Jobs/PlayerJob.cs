@@ -1,7 +1,7 @@
 namespace MyriaLib.Entities.Jobs
 {
-    /// <summary>Tracks a player's progress across the three aspects of a single job.</summary>
-    public class PlayerJob
+    /// <summary>Tracks a character's progress across the three aspects of a single job.</summary>
+    public class CharacterJob
     {
         public string JobId       { get; set; } = "";
         public long   SkillXp     { get; set; }

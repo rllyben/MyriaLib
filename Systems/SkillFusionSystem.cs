@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Models.BaseModel;
@@ -88,9 +88,9 @@ namespace MyriaLib.Systems
         /// if they have a free slot. Returns the new composite, or <c>null</c> if the slot cap is reached
         /// or fusion produced no result.
         /// </summary>
-        public static CompositeSkill? TryCreateForPlayer(Player player, IReadOnlyList<BaseSkillData> components)
+        public static CompositeSkill? TryCreateForCharacter(Character character, IReadOnlyList<BaseSkillData> components)
         {
-            if (player.ActiveCompositeSkillIds.Count >= player.FusionSlotCount)
+            if (character.ActiveCompositeSkillIds.Count >= character.FusionSlotCount)
                 return null;
 
             var resolved = Fuse(components);
@@ -102,18 +102,18 @@ namespace MyriaLib.Systems
                 ResolvedSkill = resolved
             };
 
-            player.CompositeSkills.Add(composite);
-            player.ActiveCompositeSkillIds.Add(composite.Id);
+            character.CompositeSkills.Add(composite);
+            character.ActiveCompositeSkillIds.Add(composite.Id);
             return composite;
         }
 
         /// <summary>
-        /// Re-resolves all <see cref="CompositeSkill"/> entries for a player after loading from save.
-        /// Call once after deserializing a player — populates <see cref="CompositeSkill.ResolvedSkill"/>.
+        /// Re-resolves all <see cref="CompositeSkill"/> entries for a character after loading from save.
+        /// Call once after deserializing a character — populates <see cref="CompositeSkill.ResolvedSkill"/>.
         /// </summary>
-        public static void ResolveCompositeSkills(Player player)
+        public static void ResolveCompositeSkills(Character character)
         {
-            foreach (var composite in player.CompositeSkills)
+            foreach (var composite in character.CompositeSkills)
             {
                 var components = composite.ComponentIds
                     .Select(id => BaseSkillLoader.Get(id))
@@ -123,7 +123,7 @@ namespace MyriaLib.Systems
 
                 if (components.Count == 0)
                 {
-                    GameLog.Error($"Player '{player.Name}': composite skill '{composite.Id}' has no resolvable components.");
+                    GameLog.Error($"Character '{character.Name}': composite skill '{composite.Id}' has no resolvable components.");
                     continue;
                 }
 

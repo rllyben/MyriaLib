@@ -1,6 +1,6 @@
 ﻿namespace MyriaLib.Systems.Enums
 {
-    public enum PlayerClass
+    public enum CharacterClass
     {
         Archer,
         Hunter,

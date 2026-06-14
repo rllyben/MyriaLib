@@ -10,19 +10,17 @@ using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 using MyriaLib.Utils;
-using MyriaLib.Entities.Players;
-
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
-    public class Player : CombatEntity
+    public class Character : CombatEntity
     {
         public event EventHandler<SkillLearnedEventArgs>? SkillLearned;
         public event EventHandler<XpGainedEventArgs>? XpGained;
         public event EventHandler<LevelUpEventArgs>? LeveledUp;
         public event EventHandler<HealthChangedEventArgs>? HealthChanged;
         public event EventHandler<ManaChangedEventArgs>? ManaChanged;
-        public PlayerClass Class { get; set; } = PlayerClass.Fighter;
-        public PlayerRace Race { get; set; } = PlayerRace.Myralu;
+        public CharacterClass Class { get; set; } = CharacterClass.Fighter;
+        public CharacterRace Race { get; set; } = CharacterRace.Myralu;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;
         public long ExpForNextLvl { get; set; }
@@ -50,7 +48,7 @@ namespace MyriaLib.Entities.Players
         public List<string> ActiveCompositeSkillIds { get; set; } = new();
 
         /// <summary>Composite skills stashed per class; restored when the player switches back.</summary>
-        public Dictionary<PlayerClass, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new();
+        public Dictionary<CharacterClass, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new();
 
         /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
         [JsonIgnore]
@@ -73,7 +71,7 @@ namespace MyriaLib.Entities.Players
         public List<CombinedSkill> CombinedSkills { get; set; } = new();
 
         /// <summary>Combined skills stashed per class; restored when the player switches back.</summary>
-        public Dictionary<PlayerClass, List<CombinedSkill>> StashedCombinedSkills { get; set; } = new();
+        public Dictionary<CharacterClass, List<CombinedSkill>> StashedCombinedSkills { get; set; } = new();
 
         // ── Combat Skill Slots ────────────────────────────────────────────────────
         /// <summary>
@@ -109,7 +107,7 @@ namespace MyriaLib.Entities.Players
         public bool RaceSelected { get; set; } = false;
 
         // ── Class XP ─────────────────────────────────────────────────────────────
-        public Dictionary<PlayerClass, long> ClassXp { get; set; } = new();
+        public Dictionary<CharacterClass, long> ClassXp { get; set; } = new();
         public DateTime LastClassPenaltyApplied { get; set; } = DateTime.MinValue;
         /// <summary>UTC timestamp of the last class switch; DateTime.MinValue = never switched (no cooldown).</summary>
         public DateTime LastClassChanged { get; set; } = DateTime.MinValue;
@@ -124,7 +122,7 @@ namespace MyriaLib.Entities.Players
 
         // ── Jobs ─────────────────────────────────────────────────────────────────
         public string? ActiveJobId { get; set; }
-        public List<PlayerJob> Jobs { get; set; } = new();
+        public List<CharacterJob> Jobs { get; set; } = new();
         /// <summary>UTC timestamp of the last time the player switched to a new active job.</summary>
         public DateTime LastJobChanged { get; set; } = DateTime.MinValue;
 
@@ -133,10 +131,10 @@ namespace MyriaLib.Entities.Players
         public List<CompositeRune> KnownRunes { get; set; } = new();
 
         /// <summary>The player's runic word discovery and translation state.</summary>
-        public List<PlayerRuneWordEntry> RuneDictionary { get; set; } = new();
+        public List<CharacterRuneWordEntry> RuneDictionary { get; set; } = new();
 
         // Add inventory, experience, commands, etc.
-        public Player(string name, Stats stats)
+        public Character(string name, Stats stats)
         {
             Name = name;
             Stats = stats;

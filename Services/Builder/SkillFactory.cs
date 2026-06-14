@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Systems;
@@ -39,7 +39,7 @@ namespace MyriaLib.Services.Builder
                 Id              = d.Id,
                 Name            = d.Name,
                 Description     = d.Description,
-                Class           = Enum.Parse<PlayerClass>(d.Class),
+                Class           = Enum.Parse<CharacterClass>(d.Class),
                 ManaCost        = d.ManaCost,
                 Type            = Enum.Parse<SkillType>(d.Type),
                 Target          = Enum.Parse<SkillTarget>(d.Target),
@@ -56,26 +56,26 @@ namespace MyriaLib.Services.Builder
         public static Skill? GetSkill(string id) =>
             _skillsById.TryGetValue(id, out var skill) ? skill : null;
 
-        public static List<Skill> GetSkillsFor(Player player)
+        public static List<Skill> GetSkillsFor(Character character)
         {
-            return _skills.Where(s => s.Class == player.Class && s.MinLevel <= player.Level).ToList();
+            return _skills.Where(s => s.Class == character.Class && s.MinLevel <= character.Level).ToList();
         }
-        //public static List<BaseSkill> GetBaseSkillsFor(Player player)
+        //public static List<BaseSkill> GetBaseSkillsFor(Character character)
         //{
         //    return _baseSkills
-        //        .Where(bs => bs.Class == player.Class && bs.RequiredLevel <= player.Level)
+        //        .Where(bs => bs.Class == character.Class && bs.RequiredLevel <= character.Level)
         //        .ToList();
         //}
-        public static void UpdateSkills(Player player)
+        public static void UpdateSkills(Character character)
         {
-            var unlocked = GetSkillsFor(player);
+            var unlocked = GetSkillsFor(character);
             foreach (var skill in unlocked)
             {
-                player.LearnSkill(skill);
+                character.LearnSkill(skill);
             }
 
-            if (player.Class == PlayerClass.RunicMage)
-                BaseRuneService.GrantBaseRunes(player);
+            if (character.Class == CharacterClass.RunicMage)
+                BaseRuneService.GrantBaseRunes(character);
         }
 
     }

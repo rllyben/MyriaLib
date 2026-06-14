@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Services;
 using MyriaLib.Services.Manager;
 using MyriaLib.Services.Regestries;

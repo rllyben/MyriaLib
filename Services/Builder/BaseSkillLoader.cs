@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Models.BaseModel;
 using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
@@ -40,7 +40,7 @@ namespace MyriaLib.Services.Builder
             _skills.TryGetValue(id, out var s) ? s : null;
 
         /// <summary>Returns all base skill definitions available to a specific player class.</summary>
-        public static List<BaseSkillData> GetForClass(PlayerClass playerClass)
+        public static List<BaseSkillData> GetForClass(CharacterClass playerClass)
         {
             string className = playerClass.ToString();
             return _skills.Values

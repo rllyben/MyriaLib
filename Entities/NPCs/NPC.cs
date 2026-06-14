@@ -1,5 +1,5 @@
 ﻿using MyriaLib.Entities.Items;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Services;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
@@ -25,23 +25,23 @@ namespace MyriaLib.Entities.NPCs
             return Localization.T(NameKey);
         }
         // --- Healing (Healer) ---
-        public NpcActionResult HealingAction(Player player)
+        public NpcActionResult HealingAction(Character character)
         {
             // Use your new HP/MP event-friendly methods
-            player.Heal(int.MaxValue, ToString());
-            player.RestoreMana(int.MaxValue, ToString());
+            character.Heal(int.MaxValue, ToString());
+            character.RestoreMana(int.MaxValue, ToString());
 
             return NpcActionResult.Ok("npc.action.heal.ok");
         }
         // --- Buy (Smith/Trader/Healer potions etc.) ---
-        public NpcActionResult BuyItem(Player player, Item item, int amount = 1)
+        public NpcActionResult BuyItem(Character character, Item item, int amount = 1)
         {
             if (amount <= 0) return NpcActionResult.Fail("npc.action.amount.invalid");
             if (item == null) return NpcActionResult.Fail("npc.action.item.null");
 
             int totalCost = item.BuyPrice * amount;
 
-            if (!player.Money.TrySpend(totalCost))
+            if (!character.Money.TrySpend(totalCost))
                 return NpcActionResult.Fail("npc.action.buy.notEnoughMoney", totalCost);
 
             var toAdd = ItemFactory.CreateItem(item.Id, amount);
@@ -52,14 +52,14 @@ namespace MyriaLib.Entities.NPCs
             if (toAdd is InventoryExpansion expansion)
             {
                 for (int i = 0; i < amount; i++)
-                    expansion.Use(player);
-                return NpcActionResult.Ok("npc.action.buy.expansion.ok", player.Inventory.Pages);
+                    expansion.Use(character);
+                return NpcActionResult.Ok("npc.action.buy.expansion.ok", character.Inventory.Pages);
             }
 
-            bool ok = player.Inventory.AddItem(toAdd, player);
+            bool ok = character.Inventory.AddItem(toAdd, character);
             if (!ok)
             {
-                player.Money.TryAdd(totalCost);
+                character.Money.TryAdd(totalCost);
                 return NpcActionResult.Fail("npc.action.buy.inventoryFull");
             }
 
@@ -67,44 +67,44 @@ namespace MyriaLib.Entities.NPCs
         }
 
         // --- Sell (Trader/Healer) ---
-        public NpcActionResult SellItem(Player player, Item item, int amount = 1)
+        public NpcActionResult SellItem(Character character, Item item, int amount = 1)
         {
             if (amount <= 0) return NpcActionResult.Fail("npc.action.amount.invalid");
             if (item == null) return NpcActionResult.Fail("npc.action.item.null");
 
             // Find matching inventory item (by Id)
-            var invItem = player.Inventory.Items.FirstOrDefault(i => i.Id == item.Id);
+            var invItem = character.Inventory.Items.FirstOrDefault(i => i.Id == item.Id);
             if (invItem == null)
                 return NpcActionResult.Fail("npc.action.sell.notOwned", item.Id);
 
             if (invItem.StackSize < amount)
                 return NpcActionResult.Fail("npc.action.sell.notEnoughAmount", amount);
 
-            int totalGain = JobManager.GetSellValue(invItem, player) * amount;
+            int totalGain = JobManager.GetSellValue(invItem, character) * amount;
 
             // reduce stack / remove item
             if (invItem.StackSize == amount)
-                player.Inventory.RemoveItem(invItem);
+                character.Inventory.RemoveItem(invItem);
             else
                 invItem.StackSize -= amount;
 
-            player.Money.TryAdd(totalGain); // placeholder API
+            character.Money.TryAdd(totalGain); // placeholder API
 
             return NpcActionResult.Ok("npc.action.sell.ok", amount, item.Id, totalGain);
         }
         // --- Upgrade (Smith) ---
-        public NpcActionResult UpgradeItem(Player player, Item item, int maxUpgradeLevel = 10)
+        public NpcActionResult UpgradeItem(Character character, Item item, int maxUpgradeLevel = 10)
         {
             if (item is not EquipmentItem eq)
                 return NpcActionResult.Fail("npc.action.upgrade.notEquipment");
 
-            if (eq.TryUpgrade(player, maxUpgradeLevel))
+            if (eq.TryUpgrade(character, maxUpgradeLevel))
                 return NpcActionResult.Ok("npc.action.upgrade.ok", eq.Id, eq.UpgradeLevel);
 
             return NpcActionResult.Fail("npc.action.upgrade.fail", eq.Id);
         }
         // --- Craft (Smith) ---
-        public NpcActionResult CraftItem(Player player, Item item)
+        public NpcActionResult CraftItem(Character character, Item item)
         {
 
             // Crafting rules differ per game. The console version crafts upgrade_stone from iron_ore :contentReference[oaicite:7]{index=7}.

@@ -1,6 +1,6 @@
 namespace MyriaLib.Systems.Enums
 {
-    public enum PlayerRace
+    public enum CharacterRace
     {
         Rotuka,
         Iymva,

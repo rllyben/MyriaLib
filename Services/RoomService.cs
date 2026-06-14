@@ -1,6 +1,6 @@
 using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.Monsters;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Systems.Enums;
 using System.Diagnostics;
 using System.Text.Json;
@@ -78,7 +78,7 @@ namespace MyriaLib.Services
             }
 
         }
-        public static bool CanEnterRoom(Room room, Player player)
+        public static bool CanEnterRoom(Room room, Character character)
         {
             if (room.IsDungeonRoom && room.CurrentMonsters.Count > 0)
                 return false;
@@ -88,13 +88,13 @@ namespace MyriaLib.Services
                 case RoomRequirementType.None:
                     return true;
                 case RoomRequirementType.Level:
-                    return player.Level >= room.AccessLevel;
+                    return character.Level >= room.AccessLevel;
                 case RoomRequirementType.Quest:
                     return !string.IsNullOrEmpty(room.RequiredQuestId)
-                        && player.CompletedQuests.Any(q => q.Id == room.RequiredQuestId);
+                        && character.CompletedQuests.Any(q => q.Id == room.RequiredQuestId);
                 case RoomRequirementType.Party:
-                    // TODO: enforce party check once multiplayer is implemented.
-                    // In singleplayer there are no parties, so this gate is a no-op for now.
+                    // TODO: enforce party check once multicharacter is implemented.
+                    // In singlecharacter there are no parties, so this gate is a no-op for now.
                     return true;
             }
             return true;

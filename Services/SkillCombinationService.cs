@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Systems;
@@ -128,25 +128,25 @@ namespace MyriaLib.Services
         }
 
         /// <summary>
-        /// Creates a combined skill for the player from the given skill IDs (2–5, duplicates allowed).
+        /// Creates a combined skill for the character from the given skill IDs (2–5, duplicates allowed).
         /// Returns the new <see cref="CombinedSkill"/> on success, or null on failure.
         /// Does NOT prevent using the same skill ID more than once in the input list.
         /// </summary>
-        public static CombinedSkill? TryCreateForPlayer(Player player, List<string> skillIds)
+        public static CombinedSkill? TryCreateForCharacter(Character character, List<string> skillIds)
         {
             if (skillIds == null || skillIds.Count < 2 || skillIds.Count > 5)
                 return null;
 
-            // Verify all referenced skills exist in the player's learned skills
+            // Verify all referenced skills exist in the character's learned skills
             foreach (var id in skillIds)
             {
-                if (!player.Skills.Any(s => s.Id == id))
+                if (!character.Skills.Any(s => s.Id == id))
                     return null;
             }
 
             // Block exact duplicate combinations (same multiset already created)
             var key = MakeKey(skillIds);
-            if (player.CombinedSkills.Any(c => MakeKey(c.SkillIds) == key))
+            if (character.CombinedSkills.Any(c => MakeKey(c.SkillIds) == key))
                 return null;
 
             var resolved = Combine(skillIds);
@@ -158,7 +158,7 @@ namespace MyriaLib.Services
                 ResolvedSkill = resolved
             };
 
-            player.CombinedSkills.Add(combined);
+            character.CombinedSkills.Add(combined);
             return combined;
         }
 
@@ -166,9 +166,9 @@ namespace MyriaLib.Services
         /// Re-populates <see cref="CombinedSkill.ResolvedSkill"/> for all entries after a save load.
         /// Must be called before <c>SkillSlotService.ResolveSlots</c>.
         /// </summary>
-        public static void ResolveCombinedSkills(Player player)
+        public static void ResolveCombinedSkills(Character character)
         {
-            foreach (var combined in player.CombinedSkills)
+            foreach (var combined in character.CombinedSkills)
                 combined.ResolvedSkill = Combine(combined.SkillIds);
         }
     }

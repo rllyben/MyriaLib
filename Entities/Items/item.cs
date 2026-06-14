@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Entities.Maps;
 
@@ -7,7 +7,7 @@ namespace MyriaLib.Entities.Items
 {
     public abstract class Item
     {
-        public List<PlayerClass> AllowedClasses { get; set; } = new();
+        public List<CharacterClass> AllowedClasses { get; set; } = new();
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
@@ -27,7 +27,7 @@ namespace MyriaLib.Entities.Items
         /// </summary>
         public virtual string? JobId { get; set; }
 
-        public abstract void Use(Player player); // base method for using an item
+        public abstract void Use(Character character); // base method for using an item
 
         public virtual bool CanStackWith(Item other)
         {

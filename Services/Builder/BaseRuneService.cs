@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Models.BaseModel;
@@ -51,7 +51,7 @@ namespace MyriaLib.Services.Builder
         public static IReadOnlyList<BaseRuneData> GetAll() => _runes;
 
         /// <summary>Returns all base runes available to a specific player class.</summary>
-        public static List<BaseRuneData> GetForClass(PlayerClass playerClass)
+        public static List<BaseRuneData> GetForClass(CharacterClass playerClass)
         {
             string className = playerClass.ToString();
             return _runes
@@ -64,19 +64,19 @@ namespace MyriaLib.Services.Builder
         /// (no added words) and resolves each to a Skill.
         /// Skips runes the player already has.
         /// </summary>
-        public static void GrantBaseRunes(Player player)
+        public static void GrantBaseRunes(Character character)
         {
-            var baseRunes = GetForClass(player.Class);
+            var baseRunes = GetForClass(character.Class);
             foreach (var def in baseRunes)
             {
-                SeedWordDictionary(player, def);
+                SeedWordDictionary(character, def);
 
-                if (player.KnownRunes.Any(r => r.BaseRuneId == def.Id && r.AddedWordIds.Count == 0))
+                if (character.KnownRunes.Any(r => r.BaseRuneId == def.Id && r.AddedWordIds.Count == 0))
                     continue;
 
                 var composite = new CompositeRune { BaseRuneId = def.Id };
                 composite.ResolvedSkill = RuneEvaluator.Evaluate(def, Array.Empty<RuneWord>());
-                player.KnownRunes.Add(composite);
+                character.KnownRunes.Add(composite);
             }
         }
 
@@ -84,19 +84,19 @@ namespace MyriaLib.Services.Builder
         /// Grants a single base rune by ID to the player if they don't already have it (no added words).
         /// Does nothing if the ID is not found or the player already has that rune.
         /// </summary>
-        public static void GrantBaseRune(Player player, string runeId)
+        public static void GrantBaseRune(Character character, string runeId)
         {
             var def = Get(runeId);
             if (def is null) return;
 
-            SeedWordDictionary(player, def);
+            SeedWordDictionary(character, def);
 
-            if (player.KnownRunes.Any(r => r.BaseRuneId == def.Id && r.AddedWordIds.Count == 0))
+            if (character.KnownRunes.Any(r => r.BaseRuneId == def.Id && r.AddedWordIds.Count == 0))
                 return;
 
             var composite = new CompositeRune { BaseRuneId = def.Id };
             composite.ResolvedSkill = RuneEvaluator.Evaluate(def, Array.Empty<RuneWord>());
-            player.KnownRunes.Add(composite);
+            character.KnownRunes.Add(composite);
         }
 
         /// <summary>
@@ -104,14 +104,14 @@ namespace MyriaLib.Services.Builder
         /// Call this once after deserializing a player — populates <see cref="CompositeRune.ResolvedSkill"/>.
         /// Also seeds lexica entries for each rune's core word if not yet present.
         /// </summary>
-        public static void ResolveRunes(Player player)
+        public static void ResolveRunes(Character character)
         {
-            foreach (var composite in player.KnownRunes)
+            foreach (var composite in character.KnownRunes)
             {
                 var def = Get(composite.BaseRuneId);
                 if (def == null)
                 {
-                    GameLog.Error($"Player '{player.Name}': base rune '{composite.BaseRuneId}' not found in data.");
+                    GameLog.Error($"Player '{character.Name}': base rune '{composite.BaseRuneId}' not found in data.");
                     continue;
                 }
 
@@ -122,7 +122,7 @@ namespace MyriaLib.Services.Builder
                     .ToList();
 
                 composite.ResolvedSkill = RuneEvaluator.Evaluate(def, addedWords);
-                SeedWordDictionary(player, def);
+                SeedWordDictionary(character, def);
             }
         }
 
@@ -130,11 +130,11 @@ namespace MyriaLib.Services.Builder
         /// Adds the core word of a base rune to the player's lexica with the rune description as the
         /// initial note. No-op if the word is already in the dictionary (existing notes are never overwritten).
         /// </summary>
-        private static void SeedWordDictionary(Player player, BaseRuneData def)
+        private static void SeedWordDictionary(Character character, BaseRuneData def)
         {
             if (string.IsNullOrEmpty(def.CoreWordId)) return;
-            if (player.RuneDictionary.Any(e => e.WordId == def.CoreWordId)) return;
-            player.RuneDictionary.Add(new PlayerRuneWordEntry
+            if (character.RuneDictionary.Any(e => e.WordId == def.CoreWordId)) return;
+            character.RuneDictionary.Add(new CharacterRuneWordEntry
             {
                 WordId     = def.CoreWordId,
                 PlayerLabel = def.Description

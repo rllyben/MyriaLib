@@ -1,6 +1,6 @@
 using System.Text.Json;
 using MyriaLib.Entities.Items;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Models.BaseModel;
 using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
@@ -68,20 +68,20 @@ namespace MyriaLib.Services.Builder
             return item != null;
         }
 
-        public static List<Item> GetAllItemsFor(Player player)
+        public static List<Item> GetAllItemsFor(Character character)
         {
             return _itemDefs.Values
                 .Where(def => def.Type == "equipment"
-                    && (def.AllowedClasses.Count == 0 || def.AllowedClasses.Contains(player.Class.ToString())))
+                    && (def.AllowedClasses.Count == 0 || def.AllowedClasses.Contains(character.Class.ToString())))
                 .Select(def => CreateItem(def.Id)!)   // def.Id is from the dictionary, always found
                 .ToList();
         }
 
-        public static List<Item> GetSmithItemsFor(Player player)
+        public static List<Item> GetSmithItemsFor(Character character)
         {
             return _itemDefs.Values
                 .Where(def => def.Type == "equipment"
-                    && def.AllowedClasses.Contains(player.Class.ToString())
+                    && def.AllowedClasses.Contains(character.Class.ToString())
                     && def.Rarity == "Common")
                 .Select(def => CreateItem(def.Id)!)   // def.Id is from the dictionary, always found
                 .ToList();
@@ -156,7 +156,7 @@ namespace MyriaLib.Services.Builder
             AllowedClasses = ParseClasses(def.AllowedClasses),
         };
 
-        private static List<PlayerClass> ParseClasses(List<string> classes) =>
-            classes?.Select(c => Enum.Parse<PlayerClass>(c)).ToList() ?? new();
+        private static List<CharacterClass> ParseClasses(List<string> classes) =>
+            classes?.Select(c => Enum.Parse<CharacterClass>(c)).ToList() ?? new();
     }
 }

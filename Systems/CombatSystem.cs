@@ -1,5 +1,5 @@
 ﻿using MyriaLib.Entities.Monsters;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Systems.Interfaces;
 namespace MyriaLib.Systems

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Systems
 {

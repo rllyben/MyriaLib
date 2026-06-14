@@ -1,6 +1,6 @@
 ﻿using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Monsters;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
@@ -12,7 +12,7 @@ namespace MyriaLib.Systems
 {
     public sealed class CombatEncounter
     {
-        public Player Player { get; }
+        public Character Character { get; }
         public Monster Enemy { get; }
 
         public CombatPhase Phase { get; private set; } = CombatPhase.PlayerTurn;
@@ -28,9 +28,9 @@ namespace MyriaLib.Systems
         public bool InventoryFull { get; set; } = false;
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
-        public CombatEncounter(Player player, Monster enemy)
+        public CombatEncounter(Character character, Monster enemy)
         {
-            Player = player;
+            Character = character;
             Enemy = enemy;
             Enemy.ResetHealth(); // if you do that elsewhere, remove
             Log.Add(new CombatLogEntry("pg.fight.log.start", enemy.Name));
@@ -41,13 +41,13 @@ namespace MyriaLib.Systems
         {
             if (Phase != CombatPhase.PlayerTurn) return;
 
-            int dmg = CombatSystem.CalculateDamage(Player, Enemy);
+            int dmg = CombatSystem.CalculateDamage(Character, Enemy);
             if (dmg <= 0)
-                Log.Add(new CombatLogEntry("pg.fight.log.miss", Player.Name));
+                Log.Add(new CombatLogEntry("pg.fight.log.miss", Character.Name));
             else
             {
                 Enemy.TakeDamage(dmg);
-                Log.Add(new CombatLogEntry("pg.fight.log.hit", Player.Name, dmg));
+                Log.Add(new CombatLogEntry("pg.fight.log.hit", Character.Name, dmg));
             }
 
             EndPlayerAction();
@@ -56,7 +56,7 @@ namespace MyriaLib.Systems
         public bool PlayerBeginCast(Skill skill)
         {
             if (Phase != CombatPhase.PlayerTurn) return false;
-            if (Player.CurrentMana < skill.ManaCost)
+            if (Character.CurrentMana < skill.ManaCost)
             {
                 Log.Add(new CombatLogEntry("pg.fight.log.nomana"));
                 return false;
@@ -73,7 +73,7 @@ namespace MyriaLib.Systems
                     RecoveryTurnsRemaining = skill.RecoveryTime;
                 };
 
-                Log.Add(new CombatLogEntry("pg.fight.log.beginCast", Player.Name, skill.Name));
+                Log.Add(new CombatLogEntry("pg.fight.log.beginCast", Character.Name, skill.Name));
             }
             else
             {
@@ -93,9 +93,9 @@ namespace MyriaLib.Systems
         {
             if (Phase != CombatPhase.PlayerTurn) return false;
 
-            item.Use(Player);
-            Player.Inventory.RemoveItem(item);
-            Log.Add(new CombatLogEntry("pg.fight.log.usedItem", Player.Name, item.Name));
+            item.Use(Character);
+            Character.Inventory.RemoveItem(item);
+            Log.Add(new CombatLogEntry("pg.fight.log.usedItem", Character.Name, item.Name));
 
             RecoveryTurnsRemaining = 1;
             EndPlayerAction();
@@ -135,7 +135,7 @@ namespace MyriaLib.Systems
 
         private void ExecuteSkill(Skill skill)
         {
-            Player.SpendMana(skill.ManaCost);
+            Character.SpendMana(skill.ManaCost);
 
             switch (skill.Target)
             {
@@ -159,7 +159,7 @@ namespace MyriaLib.Systems
             }
 
             // Invoke optional code-defined effect last (buffs, status effects, etc.)
-            skill.Effect?.Invoke(Player, Enemy);
+            skill.Effect?.Invoke(Character, Enemy);
         }
 
         private void ExecuteSkillOnSelf(Skill skill)
@@ -168,9 +168,9 @@ namespace MyriaLib.Systems
             {
                 int baseStat = ResolveSkillBaseStat(skill);
                 int heal = (int)(baseStat * skill.ScalingFactor);
-                int healed = Math.Min(heal, Player.MaxHealth - Player.CurrentHealth);
-                Player.Heal(healed);
-                Log.Add(new CombatLogEntry("pg.fight.log.heal", Player.Name, healed));
+                int healed = Math.Min(heal, Character.MaxHealth - Character.CurrentHealth);
+                Character.Heal(healed);
+                Log.Add(new CombatLogEntry("pg.fight.log.heal", Character.Name, healed));
             }
             // Non-healing Self skills (buffs) rely entirely on skill.Effect invoked after this.
         }
@@ -186,7 +186,7 @@ namespace MyriaLib.Systems
                 : target.TotalMagicDefense;
             int dmg = Math.Max(1, (int)(raw * (raw / (raw + def))));
             target.TakeDamage(dmg);
-            Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Player.Name, skill.Name, dmg));
+            Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Character.Name, skill.Name, dmg));
         }
 
         private int ResolveSkillBaseStat(Skill skill)
@@ -194,16 +194,16 @@ namespace MyriaLib.Systems
             // same mapping you already have :contentReference[oaicite:4]{index=4}
             return skill.StatToScaleFrom.ToUpper() switch
             {
-                "ATK" => Player.TotalPhysicalAttack,
-                "MATK" => Player.TotalMagicAttack,
-                "SPR" => Player.TotalSPR,
-                "INT" => Player.TotalINT,
-                "DEX" => Player.TotalDEX,
-                "AIM" => Player.TotalAim * 2,
-                "EVA" => Player.TotalEvasion * 2,
-                "END" => Player.TotalEND,
-                "STR" => Player.TotalSTR,
-                _ => Player.TotalPhysicalAttack
+                "ATK" => Character.TotalPhysicalAttack,
+                "MATK" => Character.TotalMagicAttack,
+                "SPR" => Character.TotalSPR,
+                "INT" => Character.TotalINT,
+                "DEX" => Character.TotalDEX,
+                "AIM" => Character.TotalAim * 2,
+                "EVA" => Character.TotalEvasion * 2,
+                "END" => Character.TotalEND,
+                "STR" => Character.TotalSTR,
+                _ => Character.TotalPhysicalAttack
             };
 
         }
@@ -229,18 +229,18 @@ namespace MyriaLib.Systems
         private void EnemyTurn()
         {
             if (!Enemy.IsAlive) { FinishPlayerWon(); return; }
-            if (!Player.IsAlive) { FinishPlayerLost(); return; }
+            if (!Character.IsAlive) { FinishPlayerLost(); return; }
 
-            int dmg = CombatSystem.CalculateDamage(Enemy, Player);
+            int dmg = CombatSystem.CalculateDamage(Enemy, Character);
             if (dmg <= 0)
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyMiss", Enemy.Name));
             else
             {
-                Player.ApplyDamage(dmg);
+                Character.ApplyDamage(dmg);
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyHit", Enemy.Name, dmg));
             }
 
-            if (!Player.IsAlive) FinishPlayerLost();
+            if (!Character.IsAlive) FinishPlayerLost();
             else Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.PlayerTurn;
         }
         public Dictionary<string, int> GetDropNames()
@@ -257,10 +257,10 @@ namespace MyriaLib.Systems
         private void FinishPlayerWon()
         {
             Phase = CombatPhase.Finished;
-            long xpGained = ScaleXp(Enemy.Exp, Player.Level, Enemy.Level);
-            Player.GainXp(xpGained);
-            ClassManager.GrantClassXp(Player, xpGained);
-            SkillFactory.UpdateSkills(Player);
+            long xpGained = ScaleXp(Enemy.Exp, Character.Level, Enemy.Level);
+            Character.GainXp(xpGained);
+            ClassManager.GrantClassXp(Character, xpGained);
+            SkillFactory.UpdateSkills(Character);
 
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(Enemy.Id));
 
@@ -274,14 +274,14 @@ namespace MyriaLib.Systems
             {
                 if (drop.StackSize == 0)
                     drop.StackSize = 1;
-                if (!Player.Inventory.AddItem(drop, Player))
+                if (!Character.Inventory.AddItem(drop, Character))
                     InventoryFull = true;
             }
-            if (Player.CurrentRoom.IsDungeonRoom)
+            if (Character.CurrentRoom.IsDungeonRoom)
             {
-                Player.CurrentRoom.CurrentMonsters.Remove(Enemy);
-                if (Player.CurrentRoom.CurrentMonsters.Count == 0)
-                    Player.CurrentRoom.IsCleared = true;
+                Character.CurrentRoom.CurrentMonsters.Remove(Enemy);
+                if (Character.CurrentRoom.CurrentMonsters.Count == 0)
+                    Character.CurrentRoom.IsCleared = true;
             }
 
             DayCycleManager.AddTicks(GameTick.CombatVictory);
@@ -290,7 +290,7 @@ namespace MyriaLib.Systems
 
         private void UpdateQuestProgress(object? sender, MonsterKilledEventArgs e)
         {
-            foreach (var quest in Player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            foreach (var quest in Character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
             {
                 if (!quest.RequiredKills.TryGetValue(e.MonsterId, out int required))
                     continue;

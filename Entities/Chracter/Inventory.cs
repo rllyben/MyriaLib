@@ -4,7 +4,7 @@ using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
     public class Inventory
     {
@@ -49,11 +49,11 @@ namespace MyriaLib.Entities.Players
         /// <summary>How many pages currently contain at least one item (always ≥ 1).</summary>
         public int UsedPages => Math.Max(1, (int)Math.Ceiling((double)Items.Count / PageSize));
 
-        public bool SwapEquipment(string itemId, Player player)
+        public bool SwapEquipment(string itemId, Character character)
         {
             System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment called for: {itemId}");
             
-            var match = InventoryUtils.ResolveInventoryItem(itemId, player);
+            var match = InventoryUtils.ResolveInventoryItem(itemId, character);
             System.Diagnostics.Debug.WriteLine($"[Inventory] Resolved item: {match?.Name ?? "NULL"}");
             
             if (match is not EquipmentItem equipment)
@@ -64,7 +64,7 @@ namespace MyriaLib.Entities.Players
 
             System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment found: {equipment.Name}, SlotType: {equipment.SlotType}");
             
-            if (!equipment.IsUsableBy(player))
+            if (!equipment.IsUsableBy(character))
             {
                 System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment not usable by player");
                 return false;
@@ -76,23 +76,23 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Weapon slot");
                         
-                        if (player.WeaponSlot != null)
+                        if (character.WeaponSlot != null)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot occupied, swapping out: {player.WeaponSlot.Name}");
-                            EquipmentItem we = player.WeaponSlot;
-                            player.WeaponSlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot occupied, swapping out: {character.WeaponSlot.Name}");
+                            EquipmentItem we = character.WeaponSlot;
+                            character.WeaponSlot = equipment;
                             System.Diagnostics.Debug.WriteLine($"[Inventory] New weapon equipped: {equipment.Name}");
                             
                             RemoveItem(equipment);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
                             
-                            AddItem(we, player);
+                            AddItem(we, character);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped weapon to inventory: {we.Name}");
                             return true;
                         }
                         
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot empty, equipping: {equipment.Name}");
-                        player.WeaponSlot = equipment;
+                        character.WeaponSlot = equipment;
                         RemoveItem(equipment);
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon equipped successfully");
                         return true;
@@ -101,23 +101,23 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Armor slot");
                         
-                        if (player.ArmorSlot != null)
+                        if (character.ArmorSlot != null)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot occupied, swapping out: {player.ArmorSlot.Name}");
-                            EquipmentItem arm = player.ArmorSlot;
-                            player.ArmorSlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot occupied, swapping out: {character.ArmorSlot.Name}");
+                            EquipmentItem arm = character.ArmorSlot;
+                            character.ArmorSlot = equipment;
                             System.Diagnostics.Debug.WriteLine($"[Inventory] New armor equipped: {equipment.Name}");
                             
                             RemoveItem(equipment);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
                             
-                            AddItem(arm, player);
+                            AddItem(arm, character);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped armor to inventory: {arm.Name}");
                             return true;
                         }
                         
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot empty, equipping: {equipment.Name}");
-                        player.ArmorSlot = equipment;
+                        character.ArmorSlot = equipment;
                         RemoveItem(equipment);
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Armor equipped successfully");
                         return true;
@@ -126,23 +126,23 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Accessory slot");
                         
-                        if (player.AccessorySlot != null)
+                        if (character.AccessorySlot != null)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot occupied, swapping out: {player.AccessorySlot.Name}");
-                            EquipmentItem acce = player.AccessorySlot;
-                            player.AccessorySlot = equipment;
+                            System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot occupied, swapping out: {character.AccessorySlot.Name}");
+                            EquipmentItem acce = character.AccessorySlot;
+                            character.AccessorySlot = equipment;
                             System.Diagnostics.Debug.WriteLine($"[Inventory] New accessory equipped: {equipment.Name}");
                             
                             RemoveItem(equipment);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
                             
-                            AddItem(acce, player);
+                            AddItem(acce, character);
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped accessory to inventory: {acce.Name}");
                             return true;
                         }
                         
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot empty, equipping: {equipment.Name}");
-                        player.AccessorySlot = equipment;
+                        character.AccessorySlot = equipment;
                         RemoveItem(equipment);
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory equipped successfully");
                         return true;
@@ -152,11 +152,11 @@ namespace MyriaLib.Entities.Players
             System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment failed - unknown slot type");
             return false;
         }
-        public bool UnequipItem(string itemname, Player player)
+        public bool UnequipItem(string itemname, Character character)
         {
             System.Diagnostics.Debug.WriteLine($"[Inventory] UnequipItem called for: {itemname}");
             
-            var match = InventoryUtils.ResolveInventoryItem(itemname, player);
+            var match = InventoryUtils.ResolveInventoryItem(itemname, character);
             System.Diagnostics.Debug.WriteLine($"[Inventory] Resolved item: {match?.Name ?? "NULL"}");
             
             if (match is not EquipmentItem equipment)
@@ -165,7 +165,7 @@ namespace MyriaLib.Entities.Players
                 return false;
             }
             
-            if (equipment.IsUsableBy(player))
+            if (equipment.IsUsableBy(character))
             {
                 System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment IS usable by player (should be false for this check)");
                 return false;
@@ -179,19 +179,19 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Weapon slot");
                         
-                        if (player.WeaponSlot == null)
+                        if (character.WeaponSlot == null)
                         {
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot is empty");
                             return false;
                         }
                         
-                        EquipmentItem we = player.WeaponSlot;
+                        EquipmentItem we = character.WeaponSlot;
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped weapon to inventory: {we.Name}");
                         
-                        if (AddItem(we, player))
+                        if (AddItem(we, character))
                         {
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing weapon slot");
-                            player.WeaponSlot = null;
+                            character.WeaponSlot = null;
                             return true;
                         }
                         
@@ -202,19 +202,19 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Armor slot");
                         
-                        if (player.ArmorSlot == null)
+                        if (character.ArmorSlot == null)
                         {
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot is empty");
                             return false;
                         }
                         
-                        EquipmentItem arm = player.ArmorSlot;
+                        EquipmentItem arm = character.ArmorSlot;
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped armor to inventory: {arm.Name}");
                         
-                        if (AddItem(arm, player))
+                        if (AddItem(arm, character))
                         { 
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing armor slot");
-                            player.ArmorSlot = null;
+                            character.ArmorSlot = null;
                             return true;
                         }
                         
@@ -225,19 +225,19 @@ namespace MyriaLib.Entities.Players
                     {
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Unequipping from Accessory slot");
                         
-                        if (player.AccessorySlot == null)
+                        if (character.AccessorySlot == null)
                         {
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot is empty");
                             return false;
                         }
                         
-                        EquipmentItem accs = player.AccessorySlot;
+                        EquipmentItem accs = character.AccessorySlot;
                         System.Diagnostics.Debug.WriteLine($"[Inventory] Adding unequipped accessory to inventory: {accs.Name}");
                         
-                        if (AddItem(accs, player))
+                        if (AddItem(accs, character))
                         {
                             System.Diagnostics.Debug.WriteLine($"[Inventory] Item added successfully, clearing accessory slot");
-                            player.AccessorySlot = null;
+                            character.AccessorySlot = null;
                             return true;
                         }
                         
@@ -249,13 +249,13 @@ namespace MyriaLib.Entities.Players
             System.Diagnostics.Debug.WriteLine($"[Inventory] UnequipItem failed - unknown slot type");
             return false;
         }
-        public bool UseItem(string itemname, Player player)
+        public bool UseItem(string itemname, Character character)
         {
-            var item = InventoryUtils.ResolveInventoryItem(itemname, player);
+            var item = InventoryUtils.ResolveInventoryItem(itemname, character);
             if (item == null || item is not ConsumableItem consumable) 
                 return false;
 
-            consumable.Use(player);
+            consumable.Use(character);
             RemoveItem(item);
             return true;
         }
@@ -265,7 +265,7 @@ namespace MyriaLib.Entities.Players
         /// <param name="item">item to add</param>
         /// <param name="player">player character</param>
         /// <returns>if the item was added</returns>
-        public bool AddItem(Item item, Player player, string? source = null)
+        public bool AddItem(Item item, Character character, string? source = null)
         {
             int stackSize = item.StackSize;
 
@@ -284,7 +284,7 @@ namespace MyriaLib.Entities.Players
 
                     if (item.StackSize == 0)
                     {
-                        UpdateQuestItemProgress(player);
+                        UpdateQuestItemProgress(character);
                         ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                         return true;
                     }
@@ -296,7 +296,7 @@ namespace MyriaLib.Entities.Players
             {
                 Items.Add(item);
                 Restack();
-                UpdateQuestItemProgress(player);
+                UpdateQuestItemProgress(character);
                 ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                 return true;
             }
@@ -304,9 +304,9 @@ namespace MyriaLib.Entities.Players
             return false; // inventory full
         }
 
-        private void UpdateQuestItemProgress(Player player)
+        private void UpdateQuestItemProgress(Character character)
         {
-            foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            foreach (var quest in character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
             {
                 foreach (var itemReq in quest.RequiredItems)
                 {
@@ -342,7 +342,7 @@ namespace MyriaLib.Entities.Players
         /// <param name="quantity">amount to be sold</param>
         /// <param name="player">player character</param>
         /// <returns>if the item was successfully sold</returns>
-        public bool SellItem(string name, int quantity, ref Player player)
+        public bool SellItem(string name, int quantity, ref Character character)
         {
             var item = Items.FirstOrDefault(i => i.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (item == null || quantity <= 0)
@@ -351,14 +351,14 @@ namespace MyriaLib.Entities.Players
             if (item.StackSize < quantity)
                 return false;
 
-            int coinsReceived = JobManager.GetSellValue(item, player) * quantity;
+            int coinsReceived = JobManager.GetSellValue(item, character) * quantity;
 
             // Snapshot item data before any mutation
             Item soldCopy = item.CloneOne();
             soldCopy.StackSize = quantity;
 
             // Reduce stack or remove item
-            if (player.Money.TryAdd(coinsReceived))
+            if (character.Money.TryAdd(coinsReceived))
             {
                 if (item.StackSize == quantity)
                     Items.Remove(item);

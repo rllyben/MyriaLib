@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Entities.Items
 {
@@ -10,18 +10,18 @@ namespace MyriaLib.Entities.Items
         /// uses the item and grants its effects
         /// </summary>
         /// <param name="player">player character</param>
-        public override void Use(Player player)
+        public override void Use(Character character)
         {
             if (HealAmount > 0)
             {
-                int healed = Math.Min(HealAmount, player.MaxHealth - player.CurrentHealth);
-                player.CurrentHealth += healed;
+                int healed = Math.Min(HealAmount, character.MaxHealth - character.CurrentHealth);
+                character.CurrentHealth += healed;
             }
 
             if (ManaRestore > 0)
             {
-                int restored = Math.Min(ManaRestore, player.MaxMana - player.CurrentMana);
-                player.CurrentMana += restored;
+                int restored = Math.Min(ManaRestore, character.MaxMana - character.CurrentMana);
+                character.CurrentMana += restored;
             }
 
         }

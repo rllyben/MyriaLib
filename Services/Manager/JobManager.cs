@@ -1,7 +1,7 @@
 using System.Text.Json;
 using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Jobs;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Services.Manager
 {
@@ -31,33 +31,33 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// Skill XP — earned by performing the job's main task (crafting/gathering).
         /// Grants a 50 % bonus when this is the player's active job.
-        /// Also stamps <see cref="PlayerJob.LastSkillUsedDay"/> so Skill decay (J12) is suppressed today.
+        /// Also stamps <see cref="CharacterJob.LastSkillUsedDay"/> so Skill decay (J12) is suppressed today.
         /// </summary>
-        public static void GrantSkillXp(Player player, string jobId, long amount)
+        public static void GrantSkillXp(Character character, string jobId, long amount)
         {
             if (amount <= 0) return;
-            if (player.ActiveJobId == jobId)
+            if (character.ActiveJobId == jobId)
                 amount += (long)(amount * ActiveJobBonusFraction);
-            var entry = GetOrAdd(player, jobId);
+            var entry = GetOrAdd(character, jobId);
             entry.SkillXp += amount;
             entry.LastSkillUsedDay = DayCycleManager.GameDay; // J12: mark skill as used today
         }
 
         /// <summary>Knowledge XP — earned from job-master NPC quests.</summary>
-        public static void GrantKnowledgeXp(Player player, string jobId, long amount)
+        public static void GrantKnowledgeXp(Character character, string jobId, long amount)
         {
             if (amount <= 0) return;
-            GetOrAdd(player, jobId).KnowledgeXp += amount;
+            GetOrAdd(character, jobId).KnowledgeXp += amount;
         }
 
         /// <summary>
         /// Fame XP — earned only when this is the player's active job,
         /// by completing job-related tasks while working it.
         /// </summary>
-        public static void GrantFameXp(Player player, string jobId, long amount)
+        public static void GrantFameXp(Character character, string jobId, long amount)
         {
-            if (amount <= 0 || player.ActiveJobId != jobId) return;
-            GetOrAdd(player, jobId).FameXp += amount;
+            if (amount <= 0 || character.ActiveJobId != jobId) return;
+            GetOrAdd(character, jobId).FameXp += amount;
         }
 
         // ── Active job ───────────────────────────────────────────────────────────
@@ -68,29 +68,29 @@ namespace MyriaLib.Services.Manager
         /// Switching to a new non-null job requires <see cref="JobChangeCooldown"/> since the
         /// last switch; returns false and leaves the job unchanged if the cooldown has not elapsed.
         /// </summary>
-        public static bool SetActiveJob(Player player, string? jobId)
+        public static bool SetActiveJob(Character character, string? jobId)
         {
-            if (jobId == player.ActiveJobId) return true;
+            if (jobId == character.ActiveJobId) return true;
 
             if (jobId != null)
             {
-                if (!CanChangeJob(player)) return false;
-                player.LastJobChanged = DateTime.UtcNow;
+                if (!CanChangeJob(character)) return false;
+                character.LastJobChanged = DateTime.UtcNow;
             }
 
-            player.ActiveJobId = jobId;
+            character.ActiveJobId = jobId;
             return true;
         }
 
         /// <summary>Returns true when the player is allowed to switch to a new job.</summary>
-        public static bool CanChangeJob(Player player)
-            => GetCooldownRemaining(player) <= TimeSpan.Zero;
+        public static bool CanChangeJob(Character character)
+            => GetCooldownRemaining(character) <= TimeSpan.Zero;
 
         /// <summary>How long until the player may switch jobs again; zero or negative means ready.</summary>
-        public static TimeSpan GetCooldownRemaining(Player player)
-            => player.LastJobChanged == DateTime.MinValue
+        public static TimeSpan GetCooldownRemaining(Character character)
+            => character.LastJobChanged == DateTime.MinValue
                 ? TimeSpan.Zero
-                : player.LastJobChanged + JobChangeCooldown - DateTime.UtcNow;
+                : character.LastJobChanged + JobChangeCooldown - DateTime.UtcNow;
 
         // ── Selling ──────────────────────────────────────────────────────────────
 
@@ -99,17 +99,17 @@ namespace MyriaLib.Services.Manager
         /// applying the Fame bonus when the player is actively working the item's job.
         /// Equipment items without an explicit JobId fall back to their UpgradeCategory.
         /// </summary>
-        public static int GetSellValue(Item item, Player player)
+        public static int GetSellValue(Item item, Character character)
         {
             int baseSell = item.SellValue;
 
             string? jobId = item.JobId
                 ?? (item is EquipmentItem eq ? eq.UpgradeCategory : null);
 
-            if (jobId == null || jobId != player.ActiveJobId)
+            if (jobId == null || jobId != character.ActiveJobId)
                 return baseSell;
 
-            var entry = GetOrAdd(player, jobId);
+            var entry = GetOrAdd(character, jobId);
             double multiplier = JobXpService.GetFameMultiplierFromXp(entry.FameXp);
             return (int)(baseSell * multiplier);
         }
@@ -121,7 +121,7 @@ namespace MyriaLib.Services.Manager
         /// the buyer is never charged more than <paramref name="agreedPrice"/>.
         /// Returns <paramref name="agreedPrice"/> unchanged when the seller has no active job.
         /// </summary>
-        public static int GetPlayerSellReceipt(Player seller, int agreedPrice)
+        public static int GetPlayerSellReceipt(Character seller, int agreedPrice)
         {
             if (agreedPrice <= 0 || seller.ActiveJobId == null) return agreedPrice;
             var entry = GetOrAdd(seller, seller.ActiveJobId);
@@ -134,10 +134,10 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// Extra daily gather charges for a player, based on their highest gathering-job knowledge level.
         /// </summary>
-        public static int GetGatherKnowledgeBonus(Player player)
+        public static int GetGatherKnowledgeBonus(Character character)
         {
             int maxLevel = new[] { "miner", "woodcutter", "herbalist" }
-                .Select(id => JobXpService.GetLevel(GetOrAdd(player, id).KnowledgeXp))
+                .Select(id => JobXpService.GetLevel(GetOrAdd(character, id).KnowledgeXp))
                 .Max();
             return JobXpService.GetGatherLimitBonus(maxLevel);
         }
@@ -146,23 +146,23 @@ namespace MyriaLib.Services.Manager
         /// Items gathered per action for the given job, derived from knowledge level.
         /// Uses the same tier thresholds as the daily gather limit bonus (1 base + 0/1/2/3/4 bonus).
         /// </summary>
-        public static int GetGatherAmount(Player player, string jobId)
+        public static int GetGatherAmount(Character character, string jobId)
         {
-            int skillLevel = JobXpService.GetLevel(GetOrAdd(player, jobId).SkillXp);
+            int skillLevel = JobXpService.GetLevel(GetOrAdd(character, jobId).SkillXp);
             return 1 + JobXpService.GetGatherLimitBonus(skillLevel);
         }
 
         // ── Daily ticks (J11–J14) ────────────────────────────────────────────────
 
         /// <summary>
-        /// Applies all per-day job progression changes for the current player.
+        /// Applies all per-day job progression changes for the current character.
         /// Call once per game-day (subscribe to <see cref="DayCycleManager.DayAdvanced"/>).
         /// </summary>
-        public static void ApplyDailyTicks(Player player, int gameDay)
+        public static void ApplyDailyTicks(Character character, int gameDay)
         {
-            foreach (var job in player.Jobs)
+            foreach (var job in character.Jobs)
             {
-                bool isActive = job.JobId == player.ActiveJobId;
+                bool isActive = job.JobId == character.ActiveJobId;
 
                 // J11: Passive daily Fame tick — active job only, once per game day
                 if (isActive && job.LastFameTickDay < gameDay)
@@ -200,12 +200,12 @@ namespace MyriaLib.Services.Manager
         // ── Helpers ──────────────────────────────────────────────────────────────
 
         /// <summary>Returns the player's progress record for a job, creating one if needed.</summary>
-        public static PlayerJob GetOrAdd(Player player, string jobId)
+        public static CharacterJob GetOrAdd(Character character, string jobId)
         {
-            var entry = player.Jobs.FirstOrDefault(j => j.JobId == jobId);
+            var entry = character.Jobs.FirstOrDefault(j => j.JobId == jobId);
             if (entry != null) return entry;
-            entry = new PlayerJob { JobId = jobId };
-            player.Jobs.Add(entry);
+            entry = new CharacterJob { JobId = jobId };
+            character.Jobs.Add(entry);
             return entry;
         }
     }

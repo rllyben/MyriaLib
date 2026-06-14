@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Entities.Items
 {
@@ -11,9 +11,9 @@ namespace MyriaLib.Entities.Items
     {
         public override int MaxStackSize { get; set; } = 1;
 
-        public override void Use(Player player)
+        public override void Use(Character character)
         {
-            player.Inventory.Pages++;
+            character.Inventory.Pages++;
         }
     }
 }

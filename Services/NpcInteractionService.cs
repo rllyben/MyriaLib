@@ -1,33 +1,33 @@
 ﻿using MyriaLib.Entities.Items;
 using MyriaLib.Entities.NPCs;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Services
 {
     public static class NpcInteractionService
     {
-        public static NpcActionResult Execute(Player player, Npc npc, string serviceId, Item? item = null, int amount = 1)
+        public static NpcActionResult Execute(Character character, Npc npc, string serviceId, Item? item = null, int amount = 1)
         {
             switch (serviceId)
             {
                 case "heal":
-                    return npc.HealingAction(player);
+                    return npc.HealingAction(character);
 
                 case "buy_items":
                     if (item == null) return NpcActionResult.Fail("npc.action.item.null");
-                    return npc.BuyItem(player, item, amount);
+                    return npc.BuyItem(character, item, amount);
 
                 case "sell_items":
                     if (item == null) return NpcActionResult.Fail("npc.action.item.null");
-                    return npc.SellItem(player, item, amount);
+                    return npc.SellItem(character, item, amount);
 
                 case "upgrade":
                     if (item == null) return NpcActionResult.Fail("npc.action.item.null");
-                    return npc.UpgradeItem(player, item);
+                    return npc.UpgradeItem(character, item);
 
                 case "craft":
                     if (item == null) return NpcActionResult.Fail("npc.action.item.null");
-                    return npc.CraftItem(player, item);
+                    return npc.CraftItem(character, item);
 
                 case "shop_equipment":
                     // UI-driven: open shop window in WPF

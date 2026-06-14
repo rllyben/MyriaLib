@@ -2,24 +2,24 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MyriaLib.Systems.Enums;
 
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
     public class RaceProfile
     {
-        public PlayerRace                Race           { get; set; }
+        public CharacterRace                Race           { get; set; }
         public Dictionary<string, int>   BaseStatBonus  { get; set; } = new();
         public int                       BaseHpBonus    { get; set; }
         public int                       BaseManaBonus  { get; set; }
         public Dictionary<string, int>   StatGrowth     { get; set; } = new();
         public int                       HpPerLevel     { get; set; }
         public int                       ManaPerLevel   { get; set; }
-        public HashSet<PlayerClass>      ForbiddenClasses { get; set; } = new();
+        public HashSet<CharacterClass>      ForbiddenClasses { get; set; } = new();
 
         // ── Registry ─────────────────────────────────────────────────────────────
 
-        private static Dictionary<PlayerRace, RaceProfile> _all = new();
+        private static Dictionary<CharacterRace, RaceProfile> _all = new();
 
-        public static IReadOnlyDictionary<PlayerRace, RaceProfile> All => _all;
+        public static IReadOnlyDictionary<CharacterRace, RaceProfile> All => _all;
 
         private static readonly JsonSerializerOptions _opts = new()
         {

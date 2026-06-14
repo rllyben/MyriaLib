@@ -1,4 +1,4 @@
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Entities.Items
@@ -41,15 +41,15 @@ namespace MyriaLib.Entities.Items
         public float BonusCrit  => Bonuses.Crit;
         public float BonusBlock => Bonuses.Block;
 
-        public bool IsUsableBy(Player player) => AllowedClasses.Contains(player.Class);
+        public bool IsUsableBy(Character character) => AllowedClasses.Contains(character.Class);
 
-        public override void Use(Player player) { }
+        public override void Use(Character character) { }
 
         /// <summary>
         /// Applies one upgrade level, scaling Bonuses from BaseStats.
         /// Called both from the UI upgrade flow and from save-file reload (ItemConverter).
         /// </summary>
-        public bool TryUpgrade(Player player, int maxUpgradeLevel = 10)
+        public bool TryUpgrade(Character character, int maxUpgradeLevel = 10)
         {
             if (UpgradeLevel >= maxUpgradeLevel) return false;
             TryUpgrade_Internal();

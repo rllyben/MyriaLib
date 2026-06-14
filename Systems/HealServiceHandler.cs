@@ -1,6 +1,6 @@
 ﻿using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 using MyriaLib.Systems.Interfaces;
 
 namespace MyriaLib.Systems
@@ -9,14 +9,14 @@ namespace MyriaLib.Systems
     {
         public string ServiceId => "heal";
 
-        public bool CanUse(Player player, Npc npc, Room room) => player.IsAlive;
+        public bool CanUse(Character character, Npc npc, Room room) => character.IsAlive;
 
-        public NpcActionResult Execute(Player player, Npc npc, Room room, object? args = null)
+        public NpcActionResult Execute(Character character, Npc npc, Room room, object? args = null)
         {
             // Example pricing logic (change as you like)
             int cost = 0;
 
-            if (!player.Money.CanAfford(cost))
+            if (!character.Money.CanAfford(cost))
                 return new NpcActionResult
                 {
                     Success = false,
@@ -24,13 +24,13 @@ namespace MyriaLib.Systems
                     MessageArgs = new object[] { cost }
                 };
 
-            player.Money.TrySpend(cost);
+            character.Money.TrySpend(cost);
 
-            int hpBefore = player.CurrentHealth;
-            int mpBefore = player.CurrentMana;
+            int hpBefore = character.CurrentHealth;
+            int mpBefore = character.CurrentMana;
 
-            player.CurrentHealth = player.MaxHealth;
-            player.CurrentMana = player.MaxMana;
+            character.CurrentHealth = character.MaxHealth;
+            character.CurrentMana = character.MaxMana;
 
             return new NpcActionResult
             {

@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
@@ -48,9 +48,9 @@ namespace MyriaLib.Entities.NPCs
 
         // ── Class / Race requirements (Q12, Q13) ────────────────────────────────
         /// <summary>Player must be this class to see or accept this quest. Null = no restriction.</summary>
-        public PlayerClass? RequiredClass { get; set; }
+        public CharacterClass? RequiredClass { get; set; }
         /// <summary>Player must be this race to see or accept this quest. Null = no restriction.</summary>
-        public PlayerRace? RequiredRace { get; set; }
+        public CharacterRace? RequiredRace { get; set; }
 
         // ── Job aspect level requirements (Q11) ─────────────────────────────────
         /// <summary>Which job's aspect levels are checked. Null = no restriction.</summary>
@@ -119,31 +119,31 @@ namespace MyriaLib.Entities.NPCs
         };
 
         /// <summary>Grants any items listed in <see cref="AcceptItems"/> to the player's inventory.</summary>
-        public void GrantAcceptItems(Player player)
+        public void GrantAcceptItems(Character character)
         {
             foreach (var itemId in AcceptItems)
                 if (ItemFactory.TryCreateItem(itemId, out var item))
-                    player.Inventory.AddItem(item, player);
+                    character.Inventory.AddItem(item, character);
         }
 
-        public void GrantRewards(Player player)
+        public void GrantRewards(Character character)
         {
-            player.GainXp(RewardXp);
+            character.GainXp(RewardXp);
 
             if (RewardGold > 0)
-                player.Money.TryAdd(RewardGold);
+                character.Money.TryAdd(RewardGold);
 
             foreach (var itemId in RewardItems)
                 if (ItemFactory.TryCreateItem(itemId, out var item))
-                    player.Inventory.AddItem(item, player);
+                    character.Inventory.AddItem(item, character);
 
             // J9: Knowledge XP reward
             if (!string.IsNullOrEmpty(JobKnowledgeRewardJobId) && JobKnowledgeRewardAmount > 0)
-                JobManager.GrantKnowledgeXp(player, JobKnowledgeRewardJobId, JobKnowledgeRewardAmount);
+                JobManager.GrantKnowledgeXp(character, JobKnowledgeRewardJobId, JobKnowledgeRewardAmount);
 
             // J10: Fame XP reward (GrantFameXp enforces active-job requirement internally)
             if (!string.IsNullOrEmpty(JobFameRewardJobId) && JobFameRewardAmount > 0)
-                JobManager.GrantFameXp(player, JobFameRewardJobId, JobFameRewardAmount);
+                JobManager.GrantFameXp(character, JobFameRewardJobId, JobFameRewardAmount);
         }
 
     }

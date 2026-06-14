@@ -2,20 +2,20 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MyriaLib.Systems.Enums;
 
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
     public class ClassProfile
     {
-        public PlayerClass             Class       { get; set; }
+        public CharacterClass             Class       { get; set; }
         public Dictionary<string, int> StatGrowth  { get; set; } = new();
         public int                     HpPerLevel   { get; set; }
         public int                     ManaPerLevel { get; set; }
 
         // ── Registry ─────────────────────────────────────────────────────────────
 
-        private static Dictionary<PlayerClass, ClassProfile> _all = new();
+        private static Dictionary<CharacterClass, ClassProfile> _all = new();
 
-        public static IReadOnlyDictionary<PlayerClass, ClassProfile> All => _all;
+        public static IReadOnlyDictionary<CharacterClass, ClassProfile> All => _all;
 
         private static readonly JsonSerializerOptions _opts = new()
         {

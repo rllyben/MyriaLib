@@ -1,4 +1,4 @@
-namespace MyriaLib.Entities.Players
+namespace MyriaLib.Entities.Characters
 {
     /// <summary>
     /// Holds the player's money. Enforces an optional capacity ceiling (upgradeable).

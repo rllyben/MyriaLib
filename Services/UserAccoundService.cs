@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using MyriaLib.Models;
 using System.Text.Json;
 
@@ -7,7 +7,7 @@ namespace MyriaLib.Services
     public static class UserAccoundService
     {
         public static UserAccount CurrentUser { get; set; }
-        public static Player CurrentCharacter { get; set; }
+        public static Character CurrentCharacter { get; set; }
         public static void SaveUser()
         {
             string path = $"Data/users/{CurrentUser.Username}.json";

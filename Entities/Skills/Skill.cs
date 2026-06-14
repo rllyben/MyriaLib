@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Interfaces;
 
@@ -14,7 +14,7 @@ namespace MyriaLib.Entities.Skills
         public string Description { get; set; }
         public int CastTime { get; set; } = 0;     // turns before it activates
         public int RecoveryTime { get; set; } = 0; // turns before you can act again
-        public PlayerClass Class { get; set; }
+        public CharacterClass Class { get; set; }
         public bool IsHealing { get; set; } = false;
         public int ManaCost { get; set; }
         public SkillType Type { get; set; }
@@ -25,7 +25,7 @@ namespace MyriaLib.Entities.Skills
 
         public int MinLevel { get; set; } = 1;
 
-        public Action<Player, ICombatant> Effect { get; set; } // optional logic
+        public Action<Character, ICombatant> Effect { get; set; } // optional logic
     }
 
 }

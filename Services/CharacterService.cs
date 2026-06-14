@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using MyriaLib.Models;
 using MyriaLib.Services.Builder;
 using MyriaLib.Systems;
@@ -9,14 +9,21 @@ namespace MyriaLib.Services
 {
     public static class CharacterService
     {
-        public static void SaveCharacter(UserAccount user, Player player)
+        public static void DeleteCharacter(string name, UserAccount user)
         {
-            string path = Path.Combine("Data/saves", $"{user.Username}-{player.Name}.json");
+            string path = Path.Combine("Data/saves", $"{user.Username}-{name}.json");
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
+        public static void SaveCharacter(UserAccount user, Character character)
+        {
+            string path = Path.Combine("Data/saves", $"{user.Username}-{character.Name}.json");
 
             if (!Path.Exists(path))
                 Directory.CreateDirectory("Data/saves");
 
-            player.CurrentRoomId = player.CurrentRoom.Id;
+            character.CurrentRoomId = character.CurrentRoom.Id;
 
             var options = new JsonSerializerOptions
             {
@@ -24,13 +31,15 @@ namespace MyriaLib.Services
                 WriteIndented = true,
                 Converters = { new ItemConverter(), new MoneyConverter() }
             };
-            var json = JsonSerializer.Serialize(player, options);
+            var json = JsonSerializer.Serialize(character, options);
             File.WriteAllText(path, json);
         }
 
-        public static Player LoadCharacter(string name, UserAccount user)
+        public static Character? LoadCharacter(string name, UserAccount user)
         {
             string path = Path.Combine("Data/saves", $"{user.Username}-{name}.json");
+            if (!File.Exists(path))
+                return null;
             var json = File.ReadAllText(path);
 
             var options = new JsonSerializerOptions
@@ -39,13 +48,13 @@ namespace MyriaLib.Services
                 Converters = { new ItemConverter(), new MoneyConverter() }
             };
 
-            var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
-            Player player = jsonHero;
-            player.Inventory.Items.RemoveAll(i => i == null);
+            var jsonHero = JsonSerializer.Deserialize<Character>(json, options);
+            Character character = jsonHero;
+            character.Inventory.Items.RemoveAll(i => i == null);
             try
             {
-                int roomId = player.CurrentRoomId;
-                player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
+                int roomId = character.CurrentRoomId;
+                character.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
             }
             catch (Exception ex)
             {
@@ -53,16 +62,16 @@ namespace MyriaLib.Services
             }
 
             // Recalculate unused points for imported/loaded characters
-            player.RecalculateUnusedPoints();
-            player.ValidateQuestStatuses();
+            character.RecalculateUnusedPoints();
+            character.ValidateQuestStatuses();
 
-            SkillFactory.UpdateSkills(player);
-            ResolveAdvancedSystems(player);
-            return player;
+            SkillFactory.UpdateSkills(character);
+            ResolveAdvancedSystems(character);
+            return character;
         }
-        public static List<Player> LoadCharacters(UserAccount account)
+        public static List<Character> LoadCharacters(UserAccount account)
         {
-            List<Player> characters = new List<Player>();
+            List<Character> characters = new List<Character>();
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -74,37 +83,37 @@ namespace MyriaLib.Services
                 string path = Path.Combine("Data/saves", $"{account.Username}-{characterName}.json");
                 var json = File.ReadAllText(path);
 
-                var jsonHero = JsonSerializer.Deserialize<Player>(json, options);
-                Player player = jsonHero;
-                player.Inventory.Items.RemoveAll(i => i == null);
+                var jsonHero = JsonSerializer.Deserialize<Character>(json, options);
+                Character character = jsonHero;
+                character.Inventory.Items.RemoveAll(i => i == null);
                 try
                 {
-                    int roomId = player.CurrentRoomId;
-                    player.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
+                    int roomId = character.CurrentRoomId;
+                    character.CurrentRoom = RoomService.AllRooms.FirstOrDefault(r => r.Id == roomId);
                 }
                 catch (Exception ex) { }
 
-                player.RecalculateUnusedPoints();
-                player.ValidateQuestStatuses();
+                character.RecalculateUnusedPoints();
+                character.ValidateQuestStatuses();
 
-                SkillFactory.UpdateSkills(player);
-                ResolveAdvancedSystems(player);
-                characters.Add(player);
+                SkillFactory.UpdateSkills(character);
+                ResolveAdvancedSystems(character);
+                characters.Add(character);
             }
             return characters;
         }
 
         /// <summary>
-        /// Re-resolves fusion and runic skill data after a player is loaded from save.
-        /// Safe to call for console players and old saves — empty collections are a no-op.
+        /// Re-resolves fusion and runic skill data after a character is loaded from save.
+        /// Safe to call for console characters and old saves — empty collections are a no-op.
         /// </summary>
-        private static void ResolveAdvancedSystems(Player player)
+        private static void ResolveAdvancedSystems(Character character)
         {
-            BaseRuneService.ResolveRunes(player);
-            SkillFusionSystem.ResolveCompositeSkills(player);
-            SkillCombinationService.ResolveCombinedSkills(player);
-            SkillSlotService.ResolveSlots(player);
-            SkillSlotService.MigrateIfEmpty(player);
+            BaseRuneService.ResolveRunes(character);
+            SkillFusionSystem.ResolveCompositeSkills(character);
+            SkillCombinationService.ResolveCombinedSkills(character);
+            SkillSlotService.ResolveSlots(character);
+            SkillSlotService.MigrateIfEmpty(character);
         }
 
     }

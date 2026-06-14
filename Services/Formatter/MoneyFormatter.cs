@@ -1,4 +1,4 @@
-﻿using MyriaLib.Entities.Players;
+﻿using MyriaLib.Entities.Characters;
 using System.Globalization;
 
 namespace MyriaLib.Services.Formatter

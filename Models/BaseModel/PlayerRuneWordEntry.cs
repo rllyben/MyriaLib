@@ -1,10 +1,10 @@
 namespace MyriaLib.Models.BaseModel
 {
     /// <summary>
-    /// Per-player discovery state for a single runic word.
-    /// Saved as part of the player's file.
+    /// Per-character discovery state for a single runic word.
+    /// Saved as part of the character's file.
     /// </summary>
-    public class PlayerRuneWordEntry
+    public class CharacterRuneWordEntry
     {
         /// <summary>References <see cref="RuneWord.Id"/>.</summary>
         public string WordId { get; set; } = "";

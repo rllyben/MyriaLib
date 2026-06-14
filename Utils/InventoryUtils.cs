@@ -1,13 +1,13 @@
 using MyriaLib.Entities.Items;
-using MyriaLib.Entities.Players;
+using MyriaLib.Entities.Characters;
 
 namespace MyriaLib.Utils
 {
     public static class InventoryUtils
     {
-        public static Item ResolveInventoryItem(string input, Player player)
+        public static Item ResolveInventoryItem(string input, Character character)
         {
-            var matches = player.Inventory.Items
+            var matches = character.Inventory.Items
                 .Where(i => i.Id.StartsWith(input, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
