@@ -26,6 +26,7 @@ namespace MyriaLib.Systems
             var json = File.ReadAllText(file);
             _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
                        ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            ApplyModLocaleAdditions(lang);
 
             Culture = lang switch
             {
@@ -48,6 +49,24 @@ namespace MyriaLib.Systems
             return args is { Length: > 0 }
                 ? string.Format(Culture, format, args)
                 : format;
+        }
+
+        private static void ApplyModLocaleAdditions(GameLanguage lang)
+        {
+            var localeKey = lang switch
+            {
+                GameLanguage.De => "de",
+                _ => "en"
+            };
+
+            foreach (var mod in ModLoader.ActiveMods)
+            {
+                if (!mod.Manifest.LocaleAdditions.TryGetValue(localeKey, out var additions))
+                    continue;
+
+                foreach (var entry in additions)
+                    _strings[entry.Key] = entry.Value;
+            }
         }
 
     }

@@ -256,7 +256,17 @@ namespace MyriaLib.Entities.Characters
                 return false;
 
             consumable.Use(character);
-            RemoveItem(item);
+            if (item.StackSize > 1)
+            {
+                item.StackSize--;
+                Restack();
+                ItemRemoved?.Invoke(this, new ItemReceivedEventArgs(item.CloneOne(), 1));
+            }
+            else
+            {
+                RemoveItem(item);
+            }
+
             return true;
         }
         /// <summary>

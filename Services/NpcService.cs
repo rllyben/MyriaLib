@@ -1,5 +1,7 @@
-﻿using MyriaLib.Entities.Maps;
+using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
+using MyriaLib.Services.Builder;
+using MyriaLib.Systems.Mods;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -40,6 +42,8 @@ namespace MyriaLib.Services
             };
 
             AllNpcs = JsonSerializer.Deserialize<List<Npc>>(json, options) ?? new();
+            ApplyModNpcItemAdditions(AllNpcs);
+            ResolveItemRefs(AllNpcs);
 
             _npcs.Clear();
             foreach (Npc npc in AllNpcs)
@@ -50,19 +54,61 @@ namespace MyriaLib.Services
 
             return AllNpcs;
         }
+
+        private static void ApplyModNpcItemAdditions(List<Npc> npcs)
+        {
+            if (ModLoader.MultiplayerMode)
+                return;
+
+            foreach (var mod in ModLoader.GameplayMods)
+            {
+                foreach (var addition in mod.Manifest.NpcItemAdditions)
+                {
+                    if (string.IsNullOrWhiteSpace(addition.NpcId))
+                        continue;
+
+                    var npc = npcs.FirstOrDefault(n =>
+                        string.Equals(n.Id, addition.NpcId, StringComparison.OrdinalIgnoreCase));
+
+                    if (npc == null)
+                        continue;
+
+                    foreach (var itemId in addition.ItemIds.Where(id => !string.IsNullOrWhiteSpace(id)))
+                    {
+                        if (!npc.ItemNames.Contains(itemId, StringComparer.OrdinalIgnoreCase))
+                            npc.ItemNames.Add(itemId);
+                    }
+                }
+            }
+        }
+
+        private static void ResolveItemRefs(List<Npc> npcs)
+        {
+            foreach (var npc in npcs)
+            {
+                npc.ItemRefs.Clear();
+                foreach (var itemId in npc.ItemNames)
+                {
+                    var item = ItemFactory.CreateItem(itemId);
+                    if (item != null)
+                        npc.ItemRefs.Add(item);
+                }
+            }
+        }
+
         public static void ConnectNpcRooms(List<Npc> npcs, List<Room> rooms)
         {
             foreach (Room room in rooms)
             {
                 foreach (string npcid in room.Npcs)
                 {
-                    room.NpcRefs.Add(npcs.Where(n => n.Id == npcid).FirstOrDefault());
+                    var npc = npcs.FirstOrDefault(n =>
+                        string.Equals(n.Id, npcid, StringComparison.OrdinalIgnoreCase));
+
+                    if (npc != null)
+                        room.NpcRefs.Add(npc);
                 }
-
             }
-
         }
-
     }
-
 }

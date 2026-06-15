@@ -5,6 +5,7 @@ namespace MyriaLib.Systems.Mods
     {
         public ModManifest           Manifest        { get; init; } = new();
         public string                Directory       { get; init; } = "";
+        public bool                  IsEnabled       { get; init; } = true;
         /// <summary>True when every file in this mod lives under a visual-only path (locales, icons, images).</summary>
         public bool                  IsVisualOnly    { get; init; }
         public IReadOnlyList<string> OverriddenFiles { get; init; } = [];

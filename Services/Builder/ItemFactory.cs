@@ -4,6 +4,7 @@ using MyriaLib.Entities.Characters;
 using MyriaLib.Models.BaseModel;
 using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Systems.Mods;
 
 namespace MyriaLib.Services.Builder
 {
@@ -14,7 +15,12 @@ namespace MyriaLib.Services.Builder
         public static void LoadItems(string path = "Data/common/items.json")
         {
             string json = File.ReadAllText(path);
-            var list = JsonSerializer.Deserialize<List<GameItem>>(json);
+            var list = JsonSerializer.Deserialize<List<GameItem>>(json) ?? [];
+            if (!ModLoader.MultiplayerMode)
+            {
+                foreach (var mod in ModLoader.GameplayMods)
+                    list.AddRange(mod.Manifest.ItemAdditions);
+            }
             _itemDefs = list.ToDictionary(i => i.Id, i => i);
         }
 
@@ -96,6 +102,7 @@ namespace MyriaLib.Services.Builder
             MaxStackSize = def.MaxStackSize,
             HealAmount  = def.HealAmount,
             ManaRestore = def.ManaRestore,
+            UseEffect   = def.UseEffect,
             AllowedClasses = ParseClasses(def.AllowedClasses),
         };
 

@@ -31,6 +31,7 @@ namespace MyriaLib.Entities.Characters
         public List<Quest> ActiveQuests { get; set; } = new();
         public List<Quest> CompletedQuests { get; set; } = new();
         public Dictionary<string, RepeatRecord> RepeatableQuestRecords { get; set; } = new();
+        public Dictionary<string, string> ModState { get; set; } = new();
         [JsonIgnore]
         public Room CurrentRoom { get; set; }
         public int CurrentRoomId { get; set; }

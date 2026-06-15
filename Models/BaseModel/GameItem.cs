@@ -20,6 +20,7 @@ namespace MyriaLib.Models.BaseModel
         // Consumable fields
         public int HealAmount { get; set; }
         public int ManaRestore { get; set; }
+        public string? UseEffect { get; set; }
 
         // Equipment fields
         public EquipmentType SlotType { get; set; }

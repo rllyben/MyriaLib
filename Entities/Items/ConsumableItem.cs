@@ -1,4 +1,5 @@
 using MyriaLib.Entities.Characters;
+using MyriaLib.Systems.Mods;
 
 namespace MyriaLib.Entities.Items
 {
@@ -6,24 +7,26 @@ namespace MyriaLib.Entities.Items
     {
         public int HealAmount { get; set; }
         public int ManaRestore { get; set; }
+        public string? UseEffect { get; set; }
         /// <summary>
         /// uses the item and grants its effects
         /// </summary>
         /// <param name="player">player character</param>
         public override void Use(Character character)
         {
+            if (ModItemUseEffectRegistry.TryUse(this, character))
+                return;
+
+            ApplyBaseEffect(character);
+        }
+
+        public void ApplyBaseEffect(Character character)
+        {
             if (HealAmount > 0)
-            {
-                int healed = Math.Min(HealAmount, character.MaxHealth - character.CurrentHealth);
-                character.CurrentHealth += healed;
-            }
+                character.Heal(HealAmount, Id);
 
             if (ManaRestore > 0)
-            {
-                int restored = Math.Min(ManaRestore, character.MaxMana - character.CurrentMana);
-                character.CurrentMana += restored;
-            }
-
+                character.RestoreMana(ManaRestore, Id);
         }
 
     }

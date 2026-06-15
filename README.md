@@ -1626,7 +1626,50 @@ Mods/
   "version":     "1.0.0",
   "author":      "YourName",
   "description": "Increases monster stats across the board.",
-  "loadOrder":   100
+  "enabled":     true,
+  "loadOrder":   100,
+  "settings": [
+    {
+      "key":          "accentColor",
+      "label":        "Accent Color",
+      "description":  "Theme accent used by this visual mod.",
+      "type":         "colorSlider",
+      "defaultValue": "#C83232"
+    },
+    {
+      "key":          "accentBrightness",
+      "label":        "Accent Brightness",
+      "description":  "Scales derived theme colors.",
+      "type":         "slider",
+      "defaultValue": "100",
+      "min":          40,
+      "max":          160,
+      "step":         5
+    },
+    {
+      "key":          "animateAccent",
+      "label":        "Animate Accent",
+      "description":  "Cycles the accent color over time.",
+      "type":         "bool",
+      "defaultValue": "false"
+    }
+  ],
+  "settingValues": {
+    "accentColor": "#C83232",
+    "accentBrightness": "100",
+    "animateAccent": "false"
+  },
+  "visualEffects": [
+    {
+      "key":               "accentHueCycle",
+      "target":            "themeAccentPalette",
+      "effect":            "hueCycle",
+      "sourceSetting":     "accentColor",
+      "brightnessSetting": "accentBrightness",
+      "enabledSetting":    "animateAccent",
+      "speed":             0.2
+    }
+  ]
 }
 ```
 
@@ -1637,7 +1680,15 @@ Mods/
 | `version` | `"1.0.0"` | Shown in mod lists |
 | `author` | — | Optional |
 | `description` | — | Optional |
+| `enabled` | `true` | Disabled mods are visible in settings but do not apply overrides |
 | `loadOrder` | `100` | Lower = loaded first; higher-order mods win conflicts |
+| `settings` | `[]` | Optional mod-specific setting definitions shown by supporting frontends |
+| `settingValues` | `{}` | Persisted values keyed by setting key |
+| `visualEffects` | `[]` | Optional runtime visual effect definitions interpreted by supporting frontends |
+
+Supported generic setting types are `text`, `number`, `color`, `colorSlider`, `slider`, and `bool`. `colorSlider` renders a hue slider while still saving a hex color string such as `#C83232`. Slider definitions can set `min`, `max`, and `step`. Frontends can render these as native controls and extenders can read the resolved values from `LoadedMod.Manifest.SettingValues`.
+
+Visual effects are declarative recipes. `MyriaLib` only parses them; UI projects decide whether and how to run them. A WPF host might support `target: "themeAccentPalette"` with `effect: "hueCycle"`, while another frontend can ignore unknown targets or effects.
 
 ### Visual vs gameplay classification
 
@@ -1715,11 +1766,43 @@ Each gameplay mod carries a `Fingerprint` — a SHA-256 hash of all its gameplay
 | Member | Description |
 |---|---|
 | `ModLoader.Load(string dir = "Mods")` | Scan directory, register mods sorted by LoadOrder |
-| `ModLoader.ActiveMods` | `IReadOnlyList<LoadedMod>` — all loaded mods |
+| `ModLoader.ActiveMods` | `IReadOnlyList<LoadedMod>` — enabled mods that currently apply |
+| `ModLoader.AllMods` | `IReadOnlyList<LoadedMod>` — all discovered mods, including disabled mods |
+| `ModLoader.VisualMods` | Subset of `ActiveMods` where `IsVisualOnly == true` |
 | `ModLoader.GameplayMods` | Subset of `ActiveMods` where `IsVisualOnly == false` |
 | `ModLoader.MultiplayerMode` | `bool` — when true, gameplay overrides are bypassed in `ResolvePath` |
 | `ModLoader.ResolvePath(string path)` | Returns the effective file path after applying mod overrides |
+| `ModLoader.RegisterExtender(IModLoaderExtender)` | Register a project-specific hook for applying UI/visual mod behavior |
 | `ModLoader.GetModInfo()` | Builds a `ModInfo` snapshot for server validation |
+
+### Mod loader extenders
+
+`MyriaLib` stays UI-independent: it can classify visual mods and resolve file paths, but it does not know how a WPF, console, web, or other frontend should apply visual assets.
+
+Frontend projects can register an extender before calling `ModLoader.Load()`:
+
+```csharp
+public sealed class WpfVisualModExtender : ModLoaderExtender
+{
+    public override void BeforeModsReload(ModLoadContext context)
+    {
+        // Remove previously loaded resource dictionaries or clear image caches.
+    }
+
+    public override void AfterModsLoaded(ModLoadContext context)
+    {
+        foreach (var mod in context.VisualMods)
+        {
+            // Apply project-specific visual assets from mod.Directory.
+        }
+    }
+}
+
+ModLoader.RegisterExtender(new WpfVisualModExtender());
+ModLoader.Load("Data/Mods");
+```
+
+If an extender throws, mod loading continues and the failure is stored in `ModLoader.ExtenderErrors` for the host project to display or log.
 
 ### `LoadedMod` properties
 
