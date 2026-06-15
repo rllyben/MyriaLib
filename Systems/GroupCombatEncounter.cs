@@ -55,13 +55,15 @@ namespace MyriaLib.Systems
             var target   = GetMonster(targetMonsterIndex);
             if (target == null || !target.IsAlive) return false;
 
-            int dmg = CombatSystem.CalculateDamage(attacker, target);
+            var (dmg, isCrit) = CombatSystem.CalculateDamageWithCrit(attacker, target);
             if (dmg <= 0)
                 Log.Add(new CombatLogEntry("pg.fight.log.miss", attacker.Name));
             else
             {
                 target.TakeDamage(dmg);
-                Log.Add(new CombatLogEntry("pg.fight.log.hit", attacker.Name, dmg));
+                Log.Add(isCrit
+                    ? new CombatLogEntry("pg.fight.log.critHit", attacker.Name, dmg)
+                    : new CombatLogEntry("pg.fight.log.hit", attacker.Name, dmg));
                 HandleMonsterDeath(target);
             }
 

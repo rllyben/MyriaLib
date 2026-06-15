@@ -21,11 +21,20 @@ namespace MyriaLib.Systems
                 _ => "Data/locales/en.json"
             };
             file = ModLoader.ResolvePath(file);
-            if (!File.Exists(file)) file = "Data/locales/en.json";
+            if (!File.Exists(file)) file = Path.Combine("Data", "locales", "en.json");
+            file = Path.GetFullPath(file);
 
-            var json = File.ReadAllText(file);
-            _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-                       ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var json = File.ReadAllText(file);
+                _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                           ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException($"Failed to load localization file '{file}'.", ex);
+            }
+
             ApplyModLocaleAdditions(lang);
 
             Culture = lang switch

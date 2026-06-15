@@ -54,6 +54,32 @@ namespace MyriaLib.Systems
             return (int)dmg;
         }
 
+        // Returns damage and whether it was a critical hit (player-facing attacks only).
+        // Crits: 10% base + DEX/500 bonus, capped at 30%; deal 1.75× damage.
+        public static (int Damage, bool IsCritical) CalculateDamageWithCrit(ICombatant attacker, ICombatant defender)
+        {
+            float atk  = attacker.TotalPhysicalAttack;
+            float matk = attacker.TotalMagicAttack;
+            float def  = defender.TotalPhysicalDefense;
+            float mdef = defender.TotalMagicDefense;
+
+            if (!TryHit(attacker, defender)) return (0, false);
+
+            float pdmg = atk  * (atk  / (atk  + def));
+            float mdmg = matk * (matk / (matk + mdef));
+            float dmg  = Math.Max(pdmg, mdmg);
+            if (dmg < 1) dmg = 1;
+
+            if ((float)_random.NextDouble() < defender.GetBlockChance())
+                dmg /= 2;
+
+            float critChance = Math.Min(0.30f, 0.10f + attacker.TotalDEX / 500f);
+            bool  isCrit     = (float)_random.NextDouble() < critChance;
+            if (isCrit) dmg *= 1.75f;
+
+            return ((int)dmg, isCrit);
+        }
+
     }
 
 }

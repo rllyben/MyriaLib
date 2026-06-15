@@ -6,5 +6,7 @@ namespace MyriaLib.Systems.Mods
         public string ExtenderName { get; init; } = "";
         public string Phase { get; init; } = "";
         public Exception Exception { get; init; } = new();
+        public LoadedMod? Mod { get; init; }
+        public bool ModUnloaded { get; init; }
     }
 }

@@ -41,13 +41,15 @@ namespace MyriaLib.Systems
         {
             if (Phase != CombatPhase.PlayerTurn) return;
 
-            int dmg = CombatSystem.CalculateDamage(Character, Enemy);
+            var (dmg, isCrit) = CombatSystem.CalculateDamageWithCrit(Character, Enemy);
             if (dmg <= 0)
                 Log.Add(new CombatLogEntry("pg.fight.log.miss", Character.Name));
             else
             {
                 Enemy.TakeDamage(dmg);
-                Log.Add(new CombatLogEntry("pg.fight.log.hit", Character.Name, dmg));
+                Log.Add(isCrit
+                    ? new CombatLogEntry("pg.fight.log.critHit", Character.Name, dmg)
+                    : new CombatLogEntry("pg.fight.log.hit", Character.Name, dmg));
             }
 
             EndPlayerAction();

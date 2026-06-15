@@ -74,6 +74,26 @@ namespace MyriaLib.Systems.Mods
         /// <summary>Removes all registered extenders.</summary>
         public static void ClearExtenders() => _extenders.Clear();
 
+        /// <summary>Unloads a single active mod after a host-specific loader failed to apply it.</summary>
+        public static void UnloadModAfterError(
+            LoadedMod mod,
+            string phase,
+            Exception exception,
+            string extenderName)
+        {
+            if (_mods.Remove(mod))
+            {
+                _extenderErrors.Add(new ModExtenderError
+                {
+                    ExtenderName = extenderName,
+                    Phase = phase,
+                    Exception = exception,
+                    Mod = mod,
+                    ModUnloaded = true
+                });
+            }
+        }
+
         // ── Loading ───────────────────────────────────────────────────────────────
 
         /// <summary>
