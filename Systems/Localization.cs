@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.Json;
 using MyriaLib.Systems.Enums;
+using MyriaLib.Systems.Mods;
 
 namespace MyriaLib.Systems
 {
@@ -19,6 +20,7 @@ namespace MyriaLib.Systems
                 //GameLanguage.Es => "Data/locales/es.json",
                 _ => "Data/locales/en.json"
             };
+            file = ModLoader.ResolvePath(file);
             if (!File.Exists(file)) file = "Data/locales/en.json";
 
             var json = File.ReadAllText(file);
