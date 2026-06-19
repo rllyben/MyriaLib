@@ -14,7 +14,7 @@ namespace MyriaLib.Models.BaseModel
         /// Shown in brackets alongside or instead of the runic script.
         /// Does not affect game logic; the official word relationships always apply.
         /// </summary>
-        public string? PlayerLabel { get; set; }
+        public string? CharacterLabel { get; set; }
 
         /// <summary>
         /// True when the player has learned this word through in-game events (NPC dialogue, lore items, etc.).

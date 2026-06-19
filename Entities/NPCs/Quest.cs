@@ -47,9 +47,9 @@ namespace MyriaLib.Entities.NPCs
         public List<string> RewardItems { get; set; } = new();
 
         // ── Class / Race requirements (Q12, Q13) ────────────────────────────────
-        /// <summary>Player must be this class ID to see or accept this quest. Null = no restriction.</summary>
+        /// <summary>Character must be this class ID to see or accept this quest. Null = no restriction.</summary>
         public string? RequiredClass { get; set; }
-        /// <summary>Player must be this race ID to see or accept this quest. Null = no restriction.</summary>
+        /// <summary>Character must be this race ID to see or accept this quest. Null = no restriction.</summary>
         public string? RequiredRace { get; set; }
 
         // ── Job aspect level requirements (Q11) ─────────────────────────────────
@@ -69,7 +69,7 @@ namespace MyriaLib.Entities.NPCs
         public int RequiredPartySize { get; set; } = 0;
 
         // ── Job gating (J7) ──────────────────────────────────────────────────────
-        /// <summary>Player must have this job active to see or accept this quest. Null = no restriction.</summary>
+        /// <summary>Character must have this job active to see or accept this quest. Null = no restriction.</summary>
         public string? RequiredActiveJobId { get; set; }
 
         // ── Job aspect rewards on return (J9, J10) ───────────────────────────────

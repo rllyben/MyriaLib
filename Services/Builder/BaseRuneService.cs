@@ -110,7 +110,7 @@ namespace MyriaLib.Services.Builder
                 var def = Get(composite.BaseRuneId);
                 if (def == null)
                 {
-                    GameLog.Error($"Player '{character.Name}': base rune '{composite.BaseRuneId}' not found in data.");
+                    GameLog.Error($"Character '{character.Name}': base rune '{composite.BaseRuneId}' not found in data.");
                     continue;
                 }
 
@@ -136,7 +136,7 @@ namespace MyriaLib.Services.Builder
             character.RuneDictionary.Add(new CharacterRuneWordEntry
             {
                 WordId     = def.CoreWordId,
-                PlayerLabel = def.Description
+                CharacterLabel = def.Description
             });
         }
     }

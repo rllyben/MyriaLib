@@ -121,7 +121,7 @@ namespace MyriaLib.Services.Manager
         /// the buyer is never charged more than <paramref name="agreedPrice"/>.
         /// Returns <paramref name="agreedPrice"/> unchanged when the seller has no active job.
         /// </summary>
-        public static int GetPlayerSellReceipt(Character seller, int agreedPrice)
+        public static int GetCharacterSellReceipt(Character seller, int agreedPrice)
         {
             if (agreedPrice <= 0 || seller.ActiveJobId == null) return agreedPrice;
             var entry = GetOrAdd(seller, seller.ActiveJobId);

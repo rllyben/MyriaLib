@@ -18,12 +18,12 @@ namespace MyriaLib.Systems
         public bool CharactersWon  { get; private set; }
         public List<CombatLogEntry> Log { get; } = new();
 
-        private int _currentPlayerIndex;
+        private int _currentCharacterIndex;
 
-        public string CurrentTurnPlayerName =>
-            IsFinished || _currentPlayerIndex >= Characters.Count
+        public string CurrentTurnCharacterName =>
+            IsFinished || _currentCharacterIndex >= Characters.Count
                 ? ""
-                : Characters[_currentPlayerIndex].Name;
+                : Characters[_currentCharacterIndex].Name;
 
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
@@ -47,11 +47,11 @@ namespace MyriaLib.Systems
 
         // ── Actions ───────────────────────────────────────────────────────────
 
-        public bool PlayerAttack(string playerName, int targetMonsterIndex)
+        public bool CharacterAttack(string playerName, int targetMonsterIndex)
         {
             if (IsFinished || !IsThisCharactersTurn(playerName)) return false;
 
-            var attacker = Characters[_currentPlayerIndex];
+            var attacker = Characters[_currentCharacterIndex];
             var target   = GetMonster(targetMonsterIndex);
             if (target == null || !target.IsAlive) return false;
 
@@ -67,15 +67,15 @@ namespace MyriaLib.Systems
                 HandleMonsterDeath(target);
             }
 
-            if (!IsFinished) AdvanceAfterPlayerAction();
+            if (!IsFinished) AdvanceAfterCharacterAction();
             return true;
         }
 
-        public bool PlayerCastSkill(string playerName, Skill skill, int targetIndex)
+        public bool CharacterCastSkill(string playerName, Skill skill, int targetIndex)
         {
             if (IsFinished || !IsThisCharactersTurn(playerName)) return false;
 
-            var caster = Characters[_currentPlayerIndex];
+            var caster = Characters[_currentCharacterIndex];
             if (caster.CurrentMana < skill.ManaCost)
             {
                 Log.Add(new CombatLogEntry("pg.fight.log.nomana"));
@@ -87,13 +87,13 @@ namespace MyriaLib.Systems
             switch (skill.Target)
             {
                 case SkillTarget.Self:
-                    ExecuteSkillOnPlayer(skill, caster, caster);
+                    ExecuteSkillOnCharacter(skill, caster, caster);
                     break;
 
                 case SkillTarget.SingleAlly:
                     var ally = GetCharacter(targetIndex);
                     if (ally == null || !ally.IsAlive) { caster.SpendMana(-skill.ManaCost); return false; }
-                    ExecuteSkillOnPlayer(skill, caster, ally);
+                    ExecuteSkillOnCharacter(skill, caster, ally);
                     break;
 
                 case SkillTarget.SingleEnemy:
@@ -115,13 +115,13 @@ namespace MyriaLib.Systems
 
             skill.Effect?.Invoke(caster, GetMonster(targetIndex) ?? (ICombatant)caster);
 
-            if (!IsFinished) AdvanceAfterPlayerAction();
+            if (!IsFinished) AdvanceAfterCharacterAction();
             return true;
         }
 
         // ── Internal helpers ──────────────────────────────────────────────────
 
-        private void ExecuteSkillOnPlayer(Skill skill, Character caster, Character target)
+        private void ExecuteSkillOnCharacter(Skill skill, Character caster, Character target)
         {
             if (!skill.IsHealing) return;
             int baseStat = ResolveBaseStat(skill, caster);
@@ -176,9 +176,9 @@ namespace MyriaLib.Systems
                 FinishCharactersWon();
         }
 
-        private void AdvanceAfterPlayerAction()
+        private void AdvanceAfterCharacterAction()
         {
-            int next = _currentPlayerIndex + 1;
+            int next = _currentCharacterIndex + 1;
             while (next < Characters.Count && !Characters[next].IsAlive) next++;
 
             if (next >= Characters.Count)
@@ -190,7 +190,7 @@ namespace MyriaLib.Systems
             }
             else
             {
-                _currentPlayerIndex = next;
+                _currentCharacterIndex = next;
             }
         }
 
@@ -198,8 +198,8 @@ namespace MyriaLib.Systems
         {
             int idx = 0;
             while (idx < Characters.Count && !Characters[idx].IsAlive) idx++;
-            _currentPlayerIndex = idx;
-            if (_currentPlayerIndex >= Characters.Count) FinishCharactersLost();
+            _currentCharacterIndex = idx;
+            if (_currentCharacterIndex >= Characters.Count) FinishCharactersLost();
         }
 
         private void MonstersTurn()
@@ -265,8 +265,8 @@ namespace MyriaLib.Systems
         }
 
         private bool IsThisCharactersTurn(string playerName) =>
-            _currentPlayerIndex < Characters.Count &&
-            string.Equals(Characters[_currentPlayerIndex].Name, playerName, StringComparison.OrdinalIgnoreCase);
+            _currentCharacterIndex < Characters.Count &&
+            string.Equals(Characters[_currentCharacterIndex].Name, playerName, StringComparison.OrdinalIgnoreCase);
 
         private Monster? GetMonster(int index) =>
             index >= 0 && index < Monsters.Count ? Monsters[index] : null;

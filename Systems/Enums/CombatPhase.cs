@@ -2,7 +2,7 @@
 {
     public enum CombatPhase
     {
-        PlayerTurn,
+        CharacterTurn,
         EnemyTurn,
         Casting,
         Recovery,

@@ -9,11 +9,11 @@ namespace MyriaLib.Models.Dto
     public record CombatTurnResult(
         bool Success,
         List<CombatLogMessage> LogEntries,
-        int PlayerHp,
+        int CharacterHp,
         int MonsterHp,
         string Phase,
         bool Finished,
-        bool PlayerWon,
+        bool CharacterWon,
         long XpGained,
         List<string> LootItemIds);
 
@@ -21,14 +21,14 @@ namespace MyriaLib.Models.Dto
     public record StartGroupCombatResult(
         bool Success,
         string? Reason,
-        List<GroupCombatantState> Players,
+        List<GroupCombatantState> Characters,
         List<GroupCombatantState> Monsters,
-        string CurrentTurnPlayerName);
+        string CurrentTurnCharacterName);
     public record GroupCombatSnapshot(
-        List<GroupCombatantState> Players,
+        List<GroupCombatantState> Characters,
         List<GroupCombatantState> Monsters,
-        string CurrentTurnPlayerName,
+        string CurrentTurnCharacterName,
         bool Finished,
-        bool PlayersWon,
+        bool CharactersWon,
         List<CombatLogMessage> LogEntries);
 }

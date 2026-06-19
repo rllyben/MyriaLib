@@ -19,7 +19,7 @@ namespace MyriaLib.Services.Manager
     }
 
     /// <summary>
-    /// Player-facing coordinator for the runic magic system.
+    /// Character-facing coordinator for the runic magic system.
     /// Handles adding words to runes, re-evaluation, transform discovery,
     /// and the player's translation dictionary.
     /// </summary>
@@ -30,7 +30,7 @@ namespace MyriaLib.Services.Manager
         /// <summary>
         /// Adds a runic word to an existing rune in the player's collection.
         /// Re-evaluates the rune and checks for Transform combinations.
-        /// Any newly unlocked runes are added to <see cref="Player.KnownRunes"/> and returned in
+        /// Any newly unlocked runes are added to <see cref="Character.KnownRunes"/> and returned in
         /// <paramref name="newRunes"/> (empty list if none).
         /// </summary>
         public static AddWordResult AddWord(
@@ -103,16 +103,16 @@ namespace MyriaLib.Services.Manager
             return true;
         }
 
-        // ── Player dictionary ─────────────────────────────────────────────────────
+        // ── Character dictionary ─────────────────────────────────────────────────────
 
         /// <summary>
         /// Sets the player's personal label for a runic word (their own translation guess).
         /// Creates the dictionary entry if it doesn't exist yet.
         /// </summary>
-        public static void SetPlayerLabel(Character character, string wordId, string label)
+        public static void SetCharacterLabel(Character character, string wordId, string label)
         {
             var entry = GetOrCreateEntry(character, wordId);
-            entry.PlayerLabel = string.IsNullOrWhiteSpace(label) ? null : label.Trim();
+            entry.CharacterLabel = string.IsNullOrWhiteSpace(label) ? null : label.Trim();
         }
 
         /// <summary>
@@ -136,8 +136,8 @@ namespace MyriaLib.Services.Manager
             if (entry?.IsOfficiallyLearned == true)
                 return word.EnglishName;
 
-            if (!string.IsNullOrWhiteSpace(entry?.PlayerLabel))
-                return $"[{entry.PlayerLabel}]";
+            if (!string.IsNullOrWhiteSpace(entry?.CharacterLabel))
+                return $"[{entry.CharacterLabel}]";
 
             return string.IsNullOrWhiteSpace(word.RunicScript) ? "???" : word.RunicScript;
         }

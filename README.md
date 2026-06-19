@@ -11,7 +11,7 @@ A C# game-logic library for text-based or hybrid RPG games. Handles all back-end
 3. [Initialization & Load Order](#3-initialization--load-order)
 4. [Configuration (GameConfig)](#4-configuration-gameconfig)
 5. [Data Files — JSON Reference](#5-data-files--json-reference)
-6. [Player & Character](#6-player--character)
+6. [Character & Character](#6-player--character)
 7. [Inventory & Economy](#7-inventory--economy)
 8. [Combat](#8-combat)
 9. [Skills](#9-skills)
@@ -32,7 +32,7 @@ A C# game-logic library for text-based or hybrid RPG games. Handles all back-end
 
 ## 1. Overview
 
-MyriaLib is a self-contained game engine library. It defines all entity types (Player, Monster, Item, Room, NPC, Quest, Skill, Rune…), the services that operate on them, and the static managers that coordinate system-level rules (XP curves, daily decay, combat formulas, etc.).
+MyriaLib is a self-contained game engine library. It defines all entity types (Character, Monster, Item, Room, NPC, Quest, Skill, Rune…), the services that operate on them, and the static managers that coordinate system-level rules (XP curves, daily decay, combat formulas, etc.).
 
 **What the library handles:**
 - Character creation, progression, class and job switching
@@ -695,7 +695,7 @@ Loaded via `GameConfig.LoadRaces()`. Defines all playable races.
 ]
 ```
 
-`forbiddenClasses` lists `PlayerClass` enum names that this race cannot select.
+`forbiddenClasses` lists `CharacterClass` enum names that this race cannot select.
 
 ---
 
@@ -766,17 +766,17 @@ The `id` field must match the C# enum name exactly.
 
 ---
 
-## 6. Player & Character
+## 6. Character & Character
 
-### Player entity (`MyriaLib.Entities.Players.Player`)
+### Character entity (`MyriaLib.Entities.Characters.Character`)
 
-`Player` inherits from `CombatEntity` and aggregates all character state.
+`Character` inherits from `CombatEntity` and aggregates all character state.
 
 **Core state:**
 ```
 player.Name        // character name
-player.Race        // PlayerRace enum
-player.Class       // PlayerClass enum
+player.Race        // CharacterRace enum
+player.Class       // CharacterClass enum
 player.Level       // current character level
 player.Experience  // total accumulated XP
 player.Stats       // Stats object (STR, DEX, END, INT, SPR + bonuses)
@@ -812,7 +812,7 @@ player.SkillSlots        // List<SkillSlot>  — combat bar
 
 **Jobs:**
 ```
-player.Jobs         // List<PlayerJob>  — one entry per job the player has touched
+player.Jobs         // List<CharacterJob>  — one entry per job the player has touched
 player.ActiveJobId  // string?
 ```
 
@@ -843,17 +843,17 @@ player.HasToolFor(GatheringType type);    // checks inventory + weapon slot
 ### Creating a new character
 
 ```csharp
-var player = new Player
+var player = new Character
 {
     Name       = "Hero",
-    Race       = PlayerRace.Myralu,
-    Class      = PlayerClass.Fighter,
+    Race       = CharacterRace.Myralu,
+    Class      = CharacterClass.Fighter,
     Level      = 1,
     Experience = 0,
 };
 
 // Apply race base stats
-// (done internally by Player.LevelUp() on first level or by your creation flow)
+// (done internally by Character.LevelUp() on first level or by your creation flow)
 
 SkillFactory.UpdateSkills(player);         // grants class skills at level 1
 BaseRuneService.GrantBaseRunes(player);    // grants runic class starting runes
@@ -950,16 +950,16 @@ long balance = wallet.Balance.BronzeTotal;
 // Start encounter with a monster in the current room
 var encounter = new CombatEncounter(player, monster);
 
-// Player turn — one of:
-encounter.PlayerAttack();                    // basic attack
-encounter.PlayerBeginCast(skill);            // start casting a skill
-encounter.PlayerUseItem("health_potion");    // use a consumable
+// Character turn — one of:
+encounter.CharacterAttack();                    // basic attack
+encounter.CharacterBeginCast(skill);            // start casting a skill
+encounter.CharacterUseItem("health_potion");    // use a consumable
 
 // If casting, advance each game tick until cast is complete
 encounter.Tick();                            // decrements cast/recovery counters
 
 // Check state
-encounter.Phase     // CombatPhase: PlayerTurn | Casting | Recovery | Finished
+encounter.Phase     // CombatPhase: CharacterTurn | Casting | Recovery | Finished
 encounter.Log       // List<CombatLogEntry>  — localization keys + args
 encounter.InventoryFull  // true if loot couldn't fit
 
@@ -974,11 +974,11 @@ encounter.MonsterKilled += (_, e) => Console.WriteLine($"{e.MonsterId} defeated"
 
 ### Group combat (`GroupCombatEncounter`)
 
-Follows the same API but accepts `List<Player>` and `List<Monster>`.
+Follows the same API but accepts `List<Character>` and `List<Monster>`.
 
 ```csharp
 var encounter = new GroupCombatEncounter(players, monsters);
-string currentPlayer = encounter.CurrentTurnPlayerName;
+string currentCharacter = encounter.CurrentTurnCharacterName;
 // actions are attributed to the current player
 ```
 
@@ -1000,8 +1000,8 @@ int damage = CombatSystem.CalculateDamage(attacker, defender);
 | Tier | Class | How created |
 |------|-------|-------------|
 | Regular | `Skill` | Learned automatically by `SkillFactory.UpdateSkills()` on level-up or class change |
-| Combined | `CombinedSkill` | Player combines 2–5 regular skills |
-| Fusion | `CompositeSkill` | Player fuses base skill components |
+| Combined | `CombinedSkill` | Character combines 2–5 regular skills |
+| Fusion | `CompositeSkill` | Character fuses base skill components |
 
 Rune magic is a separate fourth system (§15).
 
@@ -1019,7 +1019,7 @@ var available = SkillFactory.GetSkillsFor(player);
 
 ```csharp
 // Combine two or more skills
-var result = SkillCombinationService.TryCreateForPlayer(
+var result = SkillCombinationService.TryCreateForCharacter(
     player,
     skillIds: new[] { "power_strike", "battle_cry" }
 );
@@ -1032,7 +1032,7 @@ Rules: 2–5 skills, all from the same class, unique combination. AoE combinatio
 
 ```csharp
 // Fuse base skill components
-bool created = SkillFusionSystem.TryCreateForPlayer(
+bool created = SkillFusionSystem.TryCreateForCharacter(
     player,
     componentIds: new[] { "fire_core", "heat_amplifier" }
 );
@@ -1115,19 +1115,19 @@ TimeSpan remaining = JobManager.GetCooldownRemaining(player);
 ### Quest lifecycle
 
 1. `QuestManager.GetAcceptableForNpc(player, npcId, partySize)` — quests available at this NPC
-2. Player accepts → `quest.Clone()` is added to `player.ActiveQuests`; `quest.GrantAcceptItems(player)` fires
+2. Character accepts → `quest.Clone()` is added to `player.ActiveQuests`; `quest.GrantAcceptItems(player)` fires
 3. Quest tracks progress automatically:
    - Kill progress: updated by `CombatEncounter.MonsterKilled` event (wired internally)
    - Item progress: updated by `Inventory.AddItem` (wired internally)
 4. Quest auto-completes when all objectives are met (status → `QuestStatus.Completed`)
 5. `QuestManager.GetReturnableForNpc(player, npcId)` — quests ready to turn in
-6. Player turns in → `quest.GrantRewards(player)` fires
+6. Character turns in → `quest.GrantRewards(player)` fires
 
 ### Quest API
 
 ```csharp
 // Get available quests at an NPC
-var available = QuestManager.GetAvailableForPlayer(player, partySize: 1);
+var available = QuestManager.GetAvailableForCharacter(player, partySize: 1);
 var npcQuests  = QuestManager.GetAcceptableForNpc(player, "master_smith", partySize: 1);
 
 // Accept
@@ -1243,7 +1243,7 @@ DayCycleManager.SegmentChanged += (segment) =>
 DayCycleManager.DayAdvanced += (gameDay) =>
 {
     // Apply daily penalties and ticks for all online players
-    foreach (var player in onlinePlayers)
+    foreach (var player in onlineCharacters)
     {
         ClassManager.ApplyDailyPenalty(player);
         JobManager.ApplyDailyTicks(player, gameDay);
@@ -1366,8 +1366,8 @@ bool ok = RuneManager.AddWord(player, rune, wordId, out var newRunes);
 // Remove a word
 RuneManager.RemoveWord(player, rune, wordId);
 
-// Player's translation dictionary
-RuneManager.SetPlayerLabel(player, wordId, label: "Fire");   // user's guess
+// Character's translation dictionary
+RuneManager.SetCharacterLabel(player, wordId, label: "Fire");   // user's guess
 RuneManager.LearnWord(player, wordId);                        // officially learned (NPC/lore)
 
 // Display a word as the player sees it
@@ -1406,7 +1406,7 @@ Level-up grants stat points (tracked in `Stats.UnusedPoints`) and unlocks new sk
 ```csharp
 // Grant class XP
 ClassManager.GrantClassXp(player, amount: 1000L);
-ClassManager.GrantClassXp(player, PlayerClass.Knight, amount: 500L); // specific class
+ClassManager.GrantClassXp(player, CharacterClass.Knight, amount: 500L); // specific class
 
 // Query
 int classLevel = ClassManager.GetClassLevel(player, player.Class);
@@ -1414,12 +1414,12 @@ long classXp   = ClassManager.GetClassXp(player, player.Class);
 string progress = ClassXpService.FormatProgress(classXp);
 
 // Switch class (7-day cooldown, race restrictions enforced)
-bool ok = ClassManager.SetClass(player, PlayerClass.Knight);
+bool ok = ClassManager.SetClass(player, CharacterClass.Knight);
 // Skills for old class are stashed; skills for new class are restored
 // 50% XP transfer within the same ClassGroup
 
 // Check allowed classes
-IEnumerable<PlayerClass> allowed = ClassManager.GetAllowedClasses(player.Race);
+IEnumerable<CharacterClass> allowed = ClassManager.GetAllowedClasses(player.Race);
 
 // Daily penalty (call on DayAdvanced)
 ClassManager.ApplyDailyPenalty(player);
@@ -1461,7 +1461,7 @@ Passwords are hashed with PBKDF2-SHA512 (salt 16 bytes, hash 32 bytes, 200,000 i
 await CharacterService.SaveCharacter(userAccount, player);
 
 // Load
-Player player = await CharacterService.LoadCharacter("HeroName", userAccount);
+Character player = await CharacterService.LoadCharacter("HeroName", userAccount);
 
 // List character names for account
 string[] names = await characterRepository.GetNamesAsync("username");
@@ -1488,7 +1488,7 @@ SettingsService.Save();
 
 ## 18. Events Reference
 
-### Player events
+### Character events
 
 ```csharp
 player.XpGained     += (_, e) => { /* e.Amount, e.TotalXp, e.NextLevelXp */ };
@@ -1561,7 +1561,7 @@ Race and class profiles are accessed via:
 if (RaceProfile.All.TryGetValue(player.Race, out var profile))
 {
     int hpGrowth = profile.HpPerLevel;
-    var forbidden = profile.ForbiddenClasses; // HashSet<PlayerClass>
+    var forbidden = profile.ForbiddenClasses; // HashSet<CharacterClass>
 }
 
 if (ClassProfile.All.TryGetValue(player.Class, out var profile))

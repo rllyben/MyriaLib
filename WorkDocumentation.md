@@ -81,7 +81,7 @@ Job:
 		Description is a string value that provides a description of the job.
 		Type is a string value that represents the type of job (e.g., Smith, Alchemist, Miner).
 
-	PlayerJob:
+	CharacterJob:
 		Is a class that represents a player's job or profession in the game. It contains information about the player's job-specific attributes and abilities.
 
 		JobId is a string value that references the Id of a Job, indicating which job the player has chosen.

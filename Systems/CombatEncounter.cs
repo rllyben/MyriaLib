@@ -15,7 +15,7 @@ namespace MyriaLib.Systems
         public Character Character { get; }
         public Monster Enemy { get; }
 
-        public CombatPhase Phase { get; private set; } = CombatPhase.PlayerTurn;
+        public CombatPhase Phase { get; private set; } = CombatPhase.CharacterTurn;
 
         public int TurnsUntilActionExecutes { get; private set; } = 0;
         public int RecoveryTurnsRemaining { get; private set; } = 0;
@@ -37,9 +37,9 @@ namespace MyriaLib.Systems
             MonsterKilled += UpdateQuestProgress;
         }
 
-        public void PlayerAttack()
+        public void CharacterAttack()
         {
-            if (Phase != CombatPhase.PlayerTurn) return;
+            if (Phase != CombatPhase.CharacterTurn) return;
 
             var (dmg, isCrit) = CombatSystem.CalculateDamageWithCrit(Character, Enemy);
             if (dmg <= 0)
@@ -52,12 +52,12 @@ namespace MyriaLib.Systems
                     : new CombatLogEntry("pg.fight.log.hit", Character.Name, dmg));
             }
 
-            EndPlayerAction();
+            EndCharacterAction();
         }
 
-        public bool PlayerBeginCast(Skill skill)
+        public bool CharacterBeginCast(Skill skill)
         {
-            if (Phase != CombatPhase.PlayerTurn) return false;
+            if (Phase != CombatPhase.CharacterTurn) return false;
             if (Character.CurrentMana < skill.ManaCost)
             {
                 Log.Add(new CombatLogEntry("pg.fight.log.nomana"));
@@ -81,7 +81,7 @@ namespace MyriaLib.Systems
             {
                 ExecuteSkill(skill);
                 RecoveryTurnsRemaining = skill.RecoveryTime;
-                EndPlayerAction();
+                EndCharacterAction();
             }
 
             return true;
@@ -91,16 +91,16 @@ namespace MyriaLib.Systems
         /// Use a consumable item in combat. Consumes the item immediately;
         /// the enemy gets one free attack in the recovery turn before the player can act again.
         /// </summary>
-        public bool PlayerUseItem(ConsumableItem item)
+        public bool CharacterUseItem(ConsumableItem item)
         {
-            if (Phase != CombatPhase.PlayerTurn) return false;
+            if (Phase != CombatPhase.CharacterTurn) return false;
 
             item.Use(Character);
             Character.Inventory.RemoveItem(item);
             Log.Add(new CombatLogEntry("pg.fight.log.usedItem", Character.Name, item.Name));
 
             RecoveryTurnsRemaining = 1;
-            EndPlayerAction();
+            EndCharacterAction();
             return true;
         }
 
@@ -118,7 +118,7 @@ namespace MyriaLib.Systems
                     _pendingAction = null;
 
                     if (Enemy.IsAlive) EnemyTurn();
-                    else FinishPlayerWon();
+                    else FinishCharacterWon();
                 }
                 return;
             }
@@ -128,7 +128,7 @@ namespace MyriaLib.Systems
             {
                 RecoveryTurnsRemaining--;
                 if (RecoveryTurnsRemaining <= 0)
-                    Phase = CombatPhase.PlayerTurn;
+                    Phase = CombatPhase.CharacterTurn;
                 else
                     EnemyTurn();
             }
@@ -210,11 +210,11 @@ namespace MyriaLib.Systems
 
         }
 
-        private void EndPlayerAction()
+        private void EndCharacterAction()
         {
             if (!Enemy.IsAlive)
             {
-                FinishPlayerWon();
+                FinishCharacterWon();
                 return;
             }
 
@@ -230,8 +230,8 @@ namespace MyriaLib.Systems
 
         private void EnemyTurn()
         {
-            if (!Enemy.IsAlive) { FinishPlayerWon(); return; }
-            if (!Character.IsAlive) { FinishPlayerLost(); return; }
+            if (!Enemy.IsAlive) { FinishCharacterWon(); return; }
+            if (!Character.IsAlive) { FinishCharacterLost(); return; }
 
             int dmg = CombatSystem.CalculateDamage(Enemy, Character);
             if (dmg <= 0)
@@ -242,8 +242,8 @@ namespace MyriaLib.Systems
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyHit", Enemy.Name, dmg));
             }
 
-            if (!Character.IsAlive) FinishPlayerLost();
-            else Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.PlayerTurn;
+            if (!Character.IsAlive) FinishCharacterLost();
+            else Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.CharacterTurn;
         }
         public Dictionary<string, int> GetDropNames()
         {
@@ -256,7 +256,7 @@ namespace MyriaLib.Systems
             return Math.Max(1L, (long)(baseXp * ratio * ratio));
         }
 
-        private void FinishPlayerWon()
+        private void FinishCharacterWon()
         {
             Phase = CombatPhase.Finished;
             long xpGained = ScaleXp(Enemy.Exp, Character.Level, Enemy.Level);
@@ -311,7 +311,7 @@ namespace MyriaLib.Systems
             }
         }
 
-        private void FinishPlayerLost()
+        private void FinishCharacterLost()
         {
             Phase = CombatPhase.Finished;
             Log.Add(new CombatLogEntry("pg.fight.log.lose"));

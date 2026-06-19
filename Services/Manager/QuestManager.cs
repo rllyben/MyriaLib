@@ -15,7 +15,7 @@ namespace MyriaLib.Services.Manager
             var json = File.ReadAllText(path);
             _allQuests = JsonSerializer.Deserialize<List<Quest>>(json)!;
         }
-        public static List<Quest> GetAvailableForPlayer(Character character, int partySize = 1)
+        public static List<Quest> GetAvailableForCharacter(Character character, int partySize = 1)
         {
             return _allQuests
                 .Where(q => character.Level >= q.RequiredLevel && CanAccept(q, character, partySize))
