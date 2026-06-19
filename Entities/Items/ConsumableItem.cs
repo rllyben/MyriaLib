@@ -1,4 +1,5 @@
 using MyriaLib.Entities.Characters;
+using MyriaLib.Systems;
 using MyriaLib.Systems.Mods;
 
 namespace MyriaLib.Entities.Items
@@ -15,9 +16,13 @@ namespace MyriaLib.Entities.Items
         public override void Use(Character character)
         {
             if (ModItemUseEffectRegistry.TryUse(this, character))
+            {
+                GameEvents.FireItemUsed(character, this);
                 return;
+            }
 
             ApplyBaseEffect(character);
+            GameEvents.FireItemUsed(character, this);
         }
 
         public void ApplyBaseEffect(Character character)

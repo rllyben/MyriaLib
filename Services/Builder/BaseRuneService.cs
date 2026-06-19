@@ -51,11 +51,10 @@ namespace MyriaLib.Services.Builder
         public static IReadOnlyList<BaseRuneData> GetAll() => _runes;
 
         /// <summary>Returns all base runes available to a specific player class.</summary>
-        public static List<BaseRuneData> GetForClass(CharacterClass playerClass)
+        public static List<BaseRuneData> GetForClass(string playerClass)
         {
-            string className = playerClass.ToString();
             return _runes
-                .Where(r => r.Class.Equals(className, StringComparison.OrdinalIgnoreCase))
+                .Where(r => r.Class.Equals(playerClass, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 

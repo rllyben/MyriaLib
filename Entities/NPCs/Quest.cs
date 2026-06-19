@@ -47,10 +47,10 @@ namespace MyriaLib.Entities.NPCs
         public List<string> RewardItems { get; set; } = new();
 
         // ── Class / Race requirements (Q12, Q13) ────────────────────────────────
-        /// <summary>Player must be this class to see or accept this quest. Null = no restriction.</summary>
-        public CharacterClass? RequiredClass { get; set; }
-        /// <summary>Player must be this race to see or accept this quest. Null = no restriction.</summary>
-        public CharacterRace? RequiredRace { get; set; }
+        /// <summary>Player must be this class ID to see or accept this quest. Null = no restriction.</summary>
+        public string? RequiredClass { get; set; }
+        /// <summary>Player must be this race ID to see or accept this quest. Null = no restriction.</summary>
+        public string? RequiredRace { get; set; }
 
         // ── Job aspect level requirements (Q11) ─────────────────────────────────
         /// <summary>Which job's aspect levels are checked. Null = no restriction.</summary>

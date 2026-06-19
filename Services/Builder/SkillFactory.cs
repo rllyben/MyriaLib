@@ -39,7 +39,7 @@ namespace MyriaLib.Services.Builder
                 Id              = d.Id,
                 Name            = d.Name,
                 Description     = d.Description,
-                Class           = Enum.Parse<CharacterClass>(d.Class),
+                Class           = d.Class,
                 ManaCost        = d.ManaCost,
                 Type            = Enum.Parse<SkillType>(d.Type),
                 Target          = Enum.Parse<SkillTarget>(d.Target),
@@ -58,7 +58,7 @@ namespace MyriaLib.Services.Builder
 
         public static List<Skill> GetSkillsFor(Character character)
         {
-            return _skills.Where(s => s.Class == character.Class && s.MinLevel <= character.Level).ToList();
+            return _skills.Where(s => s.Class.Equals(character.Class, StringComparison.OrdinalIgnoreCase) && s.MinLevel <= character.Level).ToList();
         }
         //public static List<BaseSkill> GetBaseSkillsFor(Character character)
         //{
@@ -74,7 +74,7 @@ namespace MyriaLib.Services.Builder
                 character.LearnSkill(skill);
             }
 
-            if (character.Class == CharacterClass.RunicMage)
+            if (character.Class.Equals(CharacterClass.RunicMage, StringComparison.OrdinalIgnoreCase))
                 BaseRuneService.GrantBaseRunes(character);
         }
 

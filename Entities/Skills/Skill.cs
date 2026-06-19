@@ -14,7 +14,7 @@ namespace MyriaLib.Entities.Skills
         public string Description { get; set; }
         public int CastTime { get; set; } = 0;     // turns before it activates
         public int RecoveryTime { get; set; } = 0; // turns before you can act again
-        public CharacterClass Class { get; set; }
+        public string Class { get; set; } = "";
         public bool IsHealing { get; set; } = false;
         public int ManaCost { get; set; }
         public SkillType Type { get; set; }

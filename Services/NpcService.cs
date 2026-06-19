@@ -42,7 +42,6 @@ namespace MyriaLib.Services
             };
 
             AllNpcs = JsonSerializer.Deserialize<List<Npc>>(json, options) ?? new();
-            ApplyModNpcItemAdditions(AllNpcs);
             ResolveItemRefs(AllNpcs);
 
             _npcs.Clear();
@@ -53,33 +52,6 @@ namespace MyriaLib.Services
             }
 
             return AllNpcs;
-        }
-
-        private static void ApplyModNpcItemAdditions(List<Npc> npcs)
-        {
-            if (ModLoader.MultiplayerMode)
-                return;
-
-            foreach (var mod in ModLoader.GameplayMods)
-            {
-                foreach (var addition in mod.Manifest.NpcItemAdditions)
-                {
-                    if (string.IsNullOrWhiteSpace(addition.NpcId))
-                        continue;
-
-                    var npc = npcs.FirstOrDefault(n =>
-                        string.Equals(n.Id, addition.NpcId, StringComparison.OrdinalIgnoreCase));
-
-                    if (npc == null)
-                        continue;
-
-                    foreach (var itemId in addition.ItemIds.Where(id => !string.IsNullOrWhiteSpace(id)))
-                    {
-                        if (!npc.ItemNames.Contains(itemId, StringComparer.OrdinalIgnoreCase))
-                            npc.ItemNames.Add(itemId);
-                    }
-                }
-            }
         }
 
         private static void ResolveItemRefs(List<Npc> npcs)

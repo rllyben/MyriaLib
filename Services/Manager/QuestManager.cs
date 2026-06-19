@@ -35,11 +35,13 @@ namespace MyriaLib.Services.Manager
                 return false;
 
             // Q12: Class requirement
-            if (q.RequiredClass.HasValue && character.Class != q.RequiredClass.Value)
+            if (!string.IsNullOrEmpty(q.RequiredClass)
+                && !q.RequiredClass.Equals(character.Class, StringComparison.OrdinalIgnoreCase))
                 return false;
 
             // Q13: Race requirement
-            if (q.RequiredRace.HasValue && character.Race != q.RequiredRace.Value)
+            if (!string.IsNullOrEmpty(q.RequiredRace)
+                && !q.RequiredRace.Equals(character.Race, StringComparison.OrdinalIgnoreCase))
                 return false;
 
             // Q11: Job aspect level requirements

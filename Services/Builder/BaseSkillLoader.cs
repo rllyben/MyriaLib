@@ -40,11 +40,10 @@ namespace MyriaLib.Services.Builder
             _skills.TryGetValue(id, out var s) ? s : null;
 
         /// <summary>Returns all base skill definitions available to a specific player class.</summary>
-        public static List<BaseSkillData> GetForClass(CharacterClass playerClass)
+        public static List<BaseSkillData> GetForClass(string playerClass)
         {
-            string className = playerClass.ToString();
             return _skills.Values
-                .Where(s => s.Class.Equals(className, StringComparison.OrdinalIgnoreCase))
+                .Where(s => s.Class.Equals(playerClass, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
     }

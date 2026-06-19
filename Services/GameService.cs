@@ -45,13 +45,21 @@ namespace MyriaLib.Services
         /// This is the "server start" phase. It does not start per-session features such as
         /// the inactivity timer — call <see cref="StartSession"/> after loading a character.
         /// </para>
+        /// <param name="skipGameState">
+        /// When <c>true</c>, skips loading persistent game state (day/time) and re-initialising
+        /// the day-cycle system. Use this for hot-reloads triggered by mod changes so that
+        /// the running game state is not disturbed.
+        /// </param>
         /// </summary>
-        public static bool InitializeGame(IProgress<string>? progress)
+        public static bool InitializeGame(IProgress<string>? progress, bool skipGameState = false)
         {
             void Report(string step) => progress?.Report(step);
 
-            Game = GameStatusService.Load();
-            Report("game_status");
+            if (!skipGameState)
+            {
+                Game = GameStatusService.Load();
+                Report("game_status");
+            }
 
             RaceProfile.Load(ModLoader.ResolvePath("Data/common/races.json"));
             ClassProfile.Load(ModLoader.ResolvePath("Data/common/classes.json"));
@@ -76,8 +84,13 @@ namespace MyriaLib.Services
             NpcService.ConnectNpcRooms(NpcService.AllNpcs, RoomService.AllRooms);
             Report("connections");
 
-            DayCycleManager.Initialize();
-            Report("day_cycle");
+            if (!skipGameState)
+            {
+                DayCycleManager.Initialize();
+                DayCycleManager.DayAdvanced -= GameEvents.FireDayAdvanced;
+                DayCycleManager.DayAdvanced += GameEvents.FireDayAdvanced;
+                Report("day_cycle");
+            }
 
             CraftingService.LoadRecipes(ModLoader.ResolvePath("Data/common/recipes.json"));
             Report("recipes");
@@ -105,6 +118,7 @@ namespace MyriaLib.Services
             BaseSkillLoader.Load(ModLoader.ResolvePath("Data/common/base_skills.json"));
             FusionRecipeService.Load(ModLoader.ResolvePath("Data/common/fusion_recipes.json"));
             SkillCombinationService.Load(ModLoader.ResolvePath("Data/common/skill_combinations.json"));
+            StartingEquipmentService.Load(ModLoader.ResolvePath("Data/common/starting_items.json"));
             Report("skill_systems");
 
             return true;
@@ -120,6 +134,18 @@ namespace MyriaLib.Services
         public static void StartSession(Character character)
         {
             SessionStarted?.Invoke(character);
+            GameEvents.FireSessionStarted(character);
+
+            // Route the character's own LeveledUp into the global hub.
+            // Named target method prevents duplicate subscriptions on repeated calls.
+            character.LeveledUp -= ForwardLevelUp;
+            character.LeveledUp += ForwardLevelUp;
+        }
+
+        private static void ForwardLevelUp(object? sender, MyriaLib.Systems.Events.LevelUpEventArgs e)
+        {
+            if (sender is Character c)
+                GameEvents.FireLevelUp(c, e.NewLevel);
         }
     }
 }

@@ -19,8 +19,8 @@ namespace MyriaLib.Entities.Characters
         public event EventHandler<LevelUpEventArgs>? LeveledUp;
         public event EventHandler<HealthChangedEventArgs>? HealthChanged;
         public event EventHandler<ManaChangedEventArgs>? ManaChanged;
-        public CharacterClass Class { get; set; } = CharacterClass.Fighter;
-        public CharacterRace Race { get; set; } = CharacterRace.Myralu;
+        public string Class { get; set; } = CharacterClass.Fighter;
+        public string Race  { get; set; } = CharacterRace.Myralu;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;
         public long ExpForNextLvl { get; set; }
@@ -49,7 +49,7 @@ namespace MyriaLib.Entities.Characters
         public List<string> ActiveCompositeSkillIds { get; set; } = new();
 
         /// <summary>Composite skills stashed per class; restored when the player switches back.</summary>
-        public Dictionary<CharacterClass, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new();
+        public Dictionary<string, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
         [JsonIgnore]
@@ -72,7 +72,7 @@ namespace MyriaLib.Entities.Characters
         public List<CombinedSkill> CombinedSkills { get; set; } = new();
 
         /// <summary>Combined skills stashed per class; restored when the player switches back.</summary>
-        public Dictionary<CharacterClass, List<CombinedSkill>> StashedCombinedSkills { get; set; } = new();
+        public Dictionary<string, List<CombinedSkill>> StashedCombinedSkills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         // ── Combat Skill Slots ────────────────────────────────────────────────────
         /// <summary>
@@ -108,7 +108,7 @@ namespace MyriaLib.Entities.Characters
         public bool RaceSelected { get; set; } = false;
 
         // ── Class XP ─────────────────────────────────────────────────────────────
-        public Dictionary<CharacterClass, long> ClassXp { get; set; } = new();
+        public Dictionary<string, long> ClassXp { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public DateTime LastClassPenaltyApplied { get; set; } = DateTime.MinValue;
         /// <summary>UTC timestamp of the last class switch; DateTime.MinValue = never switched (no cooldown).</summary>
         public DateTime LastClassChanged { get; set; } = DateTime.MinValue;

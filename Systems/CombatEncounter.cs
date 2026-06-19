@@ -265,6 +265,7 @@ namespace MyriaLib.Systems
             SkillFactory.UpdateSkills(Character);
 
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(Enemy.Id));
+            GameEvents.FireMonsterKilled(Character, Enemy);
 
             _drops = LootGenerator.GetLootFor(Enemy);
             _dropnumbers = new();

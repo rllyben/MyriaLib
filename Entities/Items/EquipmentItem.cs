@@ -41,7 +41,9 @@ namespace MyriaLib.Entities.Items
         public float BonusCrit  => Bonuses.Crit;
         public float BonusBlock => Bonuses.Block;
 
-        public bool IsUsableBy(Character character) => AllowedClasses.Contains(character.Class);
+        public bool IsUsableBy(Character character) =>
+            AllowedClasses.Count == 0
+            || AllowedClasses.Any(c => c.Equals(character.Class, StringComparison.OrdinalIgnoreCase));
 
         public override void Use(Character character) { }
 

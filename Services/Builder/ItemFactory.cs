@@ -16,11 +16,6 @@ namespace MyriaLib.Services.Builder
         {
             string json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<GameItem>>(json) ?? [];
-            if (!ModLoader.MultiplayerMode)
-            {
-                foreach (var mod in ModLoader.GameplayMods)
-                    list.AddRange(mod.Manifest.ItemAdditions);
-            }
             _itemDefs = list.ToDictionary(i => i.Id, i => i);
         }
 
@@ -78,8 +73,9 @@ namespace MyriaLib.Services.Builder
         {
             return _itemDefs.Values
                 .Where(def => def.Type == "equipment"
-                    && (def.AllowedClasses.Count == 0 || def.AllowedClasses.Contains(character.Class.ToString())))
-                .Select(def => CreateItem(def.Id)!)   // def.Id is from the dictionary, always found
+                    && (def.AllowedClasses.Count == 0
+                        || def.AllowedClasses.Any(c => c.Equals(character.Class, StringComparison.OrdinalIgnoreCase))))
+                .Select(def => CreateItem(def.Id)!)
                 .ToList();
         }
 
@@ -87,9 +83,9 @@ namespace MyriaLib.Services.Builder
         {
             return _itemDefs.Values
                 .Where(def => def.Type == "equipment"
-                    && def.AllowedClasses.Contains(character.Class.ToString())
+                    && def.AllowedClasses.Any(c => c.Equals(character.Class, StringComparison.OrdinalIgnoreCase))
                     && def.Rarity == "Common")
-                .Select(def => CreateItem(def.Id)!)   // def.Id is from the dictionary, always found
+                .Select(def => CreateItem(def.Id)!)
                 .ToList();
         }
 
@@ -103,7 +99,7 @@ namespace MyriaLib.Services.Builder
             HealAmount  = def.HealAmount,
             ManaRestore = def.ManaRestore,
             UseEffect   = def.UseEffect,
-            AllowedClasses = ParseClasses(def.AllowedClasses),
+            AllowedClasses = def.AllowedClasses ?? new(),
         };
 
         private static MaterialItem BuildMaterial(GameItem def) => new()
@@ -114,7 +110,7 @@ namespace MyriaLib.Services.Builder
             BuyPrice    = def.BuyPrice,
             MaxStackSize = def.MaxStackSize,
             ToolType    = def.ToolType,
-            AllowedClasses = ParseClasses(def.AllowedClasses),
+            AllowedClasses = def.AllowedClasses ?? new(),
         };
 
         private static EquipmentItem BuildEquipment(GameItem def)
@@ -148,7 +144,7 @@ namespace MyriaLib.Services.Builder
                 ToolType         = def.ToolType,
                 IsTool           = def.ToolType.HasValue,
                 UpgradeCategory  = def.UpgradeCategory,
-                AllowedClasses   = ParseClasses(def.AllowedClasses),
+                AllowedClasses   = def.AllowedClasses ?? new(),
                 BaseStats        = baseStats,
                 Bonuses          = baseStats,    // starts equal to base; scales on upgrade
             };
@@ -160,10 +156,8 @@ namespace MyriaLib.Services.Builder
             Name        = def.Name,
             Description = def.Description,
             BuyPrice    = def.BuyPrice,
-            AllowedClasses = ParseClasses(def.AllowedClasses),
+            AllowedClasses = def.AllowedClasses ?? new(),
         };
 
-        private static List<CharacterClass> ParseClasses(List<string> classes) =>
-            classes?.Select(c => Enum.Parse<CharacterClass>(c)).ToList() ?? new();
     }
 }
