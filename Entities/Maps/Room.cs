@@ -19,6 +19,8 @@ namespace MyriaLib.Entities.Maps
         public bool IsCaveRoom { get; set; } = false;
         public bool IsCity { get; set; } = false;
         public bool IsCleared { get; set; } = false; // unlocked once all dungeon monsters are defeated
+        /// <summary>When true, Name and Description are display strings, not locale keys.</summary>
+        public bool IsLiteral { get; set; } = false;
         public int DailyGatherLimit { get; set; } = 0;
         public int GathersRemaining { get; set; } = 0;
         public List<GatheringSpot> GatheringSpots { get; set; } = new();

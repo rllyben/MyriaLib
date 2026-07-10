@@ -1,11 +1,12 @@
 ﻿using MyriaLib.Entities.Characters;
-using MyriaLib.Systems.Enums;
+using MyriaLib.Entities.Effects;
 using MyriaLib.Systems.Interfaces;
+using System.Text.Json.Serialization;
 
 namespace MyriaLib.Entities.Skills
 {
     public enum SkillType { Physical, Magical }
-    public enum SkillTarget { SingleEnemy, AllEnemies, Self, SingleAlly }
+    public enum SkillTarget { SingleEnemy, AllEnemies, Self, SingleAlly, AllAllies }
 
     public class Skill
     {
@@ -20,12 +21,22 @@ namespace MyriaLib.Entities.Skills
         public SkillType Type { get; set; }
         public SkillTarget Target { get; set; }
 
-        public float ScalingFactor { get; set; } // e.g., 1.5 for 150% of base stat
-        public string StatToScaleFrom { get; set; } = "ATK"; // or "MATK", "STR", etc.
+        public float ScalingFactor { get; set; }
+        public string StatToScaleFrom { get; set; } = "ATK";
 
         public int MinLevel { get; set; } = 1;
 
-        public Action<Character, ICombatant> Effect { get; set; } // optional logic
+        // Extra aggro generated when this skill is cast, on top of the base +1.
+        // Default 0 means the skill generates the standard 1.0 aggro.
+        public float AggroModifier { get; set; } = 0f;
+
+        // Data-driven effects applied when the skill fires.
+        // Each entry references an EffectDefinition by ID and specifies who receives it.
+        public List<SkillEffectEntry> Effects { get; set; } = new();
+
+        // Optional code-defined effect hook for special cases not covered by EffectDefinition.
+        [JsonIgnore]
+        public Action<Character, ICombatant>? Effect { get; set; }
     }
 
 }

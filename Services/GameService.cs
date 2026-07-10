@@ -102,6 +102,7 @@ namespace MyriaLib.Services
             Report("quests");
 
             SkillFactory.LoadSkills(ModLoader.ResolvePath("Data/common/skills.json"));
+            EffectFactory.LoadEffects(ModLoader.ResolvePath("Data/common/effects.json"));
             Report("skills");
 
             DungeonRegistry.Load(ModLoader.ResolvePath("Data/common/dungeons.json"));

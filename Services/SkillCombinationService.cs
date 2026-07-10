@@ -3,6 +3,7 @@ using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Systems;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MyriaLib.Services
 {
@@ -21,7 +22,11 @@ namespace MyriaLib.Services
 
             var json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<SkillCombinationRecipe>>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new JsonStringEnumConverter() }
+                });
 
             if (list == null)
             {
@@ -86,7 +91,9 @@ namespace MyriaLib.Services
                 ScalingFactor   = recipe.ScalingFactorOverride ?? inputs.Average(s => s.ScalingFactor) * 1.1f,
                 StatToScaleFrom = recipe.StatToScaleFromOverride ?? dominant.StatToScaleFrom,
                 IsHealing       = recipe.IsHealingOverride ?? inputs.Any(s => s.IsHealing),
-                MinLevel        = 1
+                MinLevel        = 1,
+                Effects         = recipe.Effects ?? new(),
+                AggroModifier   = recipe.AggroModifier,
             };
         }
 
