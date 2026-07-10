@@ -35,6 +35,11 @@ namespace MyriaLib.Entities.Characters
         [JsonIgnore]
         public Room CurrentRoom { get; set; }
         public int CurrentRoomId { get; set; }
+
+        // Runtime-only aggro level, reset at the start of each GroupCombatEncounter.
+        // Determines which character monsters will focus on.
+        [JsonIgnore]
+        public float AggroLevel { get; set; }
         public int? LastHealerRoomId { get; set; } = null;
         public Dictionary<int, DateTime> RoomGatheringStatus { get; set; } = new();
 
@@ -142,7 +147,6 @@ namespace MyriaLib.Entities.Characters
             CurrentHealth = MaxHealth;
             CurrentMana = MaxMana;
             ExpForNextLvl = (long)(Math.Pow(Level, 2)) * 50;
-            Skills = SkillFactory.GetSkillsFor(this);
         }
         public void GainXp(long amount)
         {
@@ -166,6 +170,14 @@ namespace MyriaLib.Entities.Characters
             ));
 
         }
+        public override void TakeDamage(int amount)
+        {
+            int old = CurrentHealth;
+            base.TakeDamage(amount);
+            if (CurrentHealth != old)
+                HealthChanged?.Invoke(this, new HealthChangedEventArgs(old, CurrentHealth, null));
+        }
+
         public int ApplyDamage(int amount, string? source = null)
         {
             if (amount <= 0) return 0;
@@ -181,7 +193,7 @@ namespace MyriaLib.Entities.Characters
             return actual;
         }
 
-        public int Heal(int amount, string? source = null)
+        public override int Heal(int amount, string? source = null)
         {
             if (amount <= 0) return 0;
 
@@ -214,7 +226,7 @@ namespace MyriaLib.Entities.Characters
             return actual;
         }
 
-        public int RestoreMana(int amount, string? source = null)
+        public override int RestoreMana(int amount, string? source = null)
         {
             if (amount <= 0) return 0;
             int old = CurrentMana;

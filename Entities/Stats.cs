@@ -58,14 +58,14 @@ namespace MyriaLib.Entities
         // Returns the stat-only contribution to a derived stat (gear excluded).
         public int GetAddedStatBonus(DerivedStatType type) => type switch
         {
-            DerivedStatType.MaxHealth        => EnduranceBonus * 5,
+            DerivedStatType.MaxHealth        => EnduranceBonus * 10,
             DerivedStatType.MaxMana          => SpiritBonus * 5,
             DerivedStatType.PhysicalAttack   => StrengthBonus * 2 + EnduranceBonus,
             DerivedStatType.PhysicalDefense  => EnduranceBonus * 2 + StrengthBonus,
             DerivedStatType.MagicAttack      => IntelligenceBonus * 2 + SpiritBonus,
             DerivedStatType.MagicDefense     => SpiritBonus * 2 + IntelligenceBonus,
             DerivedStatType.HitChance        => DexterityBonus,
-            DerivedStatType.DodgeChance      => (int)(DexterityBonus * 0.85f),
+            DerivedStatType.DodgeChance      => (int)(DexterityBonus * 0.95f),
             _                                => 0,
         };
 

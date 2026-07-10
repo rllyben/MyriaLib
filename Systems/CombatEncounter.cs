@@ -1,4 +1,5 @@
-﻿using MyriaLib.Entities.Items;
+﻿using MyriaLib.Entities.Effects;
+using MyriaLib.Entities.Items;
 using MyriaLib.Entities.Monsters;
 using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
@@ -41,6 +42,19 @@ namespace MyriaLib.Systems
         {
             if (Phase != CombatPhase.CharacterTurn) return;
 
+            bool characterStunned = EffectProcessor.IsStunned(Character);
+            foreach (var entry in EffectProcessor.Tick(Character))
+                Log.Add(entry);
+
+            if (!Character.IsAlive) { FinishCharacterLost(); return; }
+
+            if (characterStunned)
+            {
+                Log.Add(new CombatLogEntry("pg.fight.effect.stunned", Character.Name));
+                EndCharacterAction();
+                return;
+            }
+
             var (dmg, isCrit) = CombatSystem.CalculateDamageWithCrit(Character, Enemy);
             if (dmg <= 0)
                 Log.Add(new CombatLogEntry("pg.fight.log.miss", Character.Name));
@@ -58,6 +72,26 @@ namespace MyriaLib.Systems
         public bool CharacterBeginCast(Skill skill)
         {
             if (Phase != CombatPhase.CharacterTurn) return false;
+
+            bool characterStunned = EffectProcessor.IsStunned(Character);
+            foreach (var entry in EffectProcessor.Tick(Character))
+                Log.Add(entry);
+
+            if (!Character.IsAlive) { FinishCharacterLost(); return false; }
+
+            if (characterStunned)
+            {
+                Log.Add(new CombatLogEntry("pg.fight.effect.stunned", Character.Name));
+                EndCharacterAction();
+                return false;
+            }
+
+            if (EffectProcessor.IsSilenced(Character))
+            {
+                Log.Add(new CombatLogEntry("pg.fight.effect.silenced", Character.Name));
+                return false;
+            }
+
             if (Character.CurrentMana < skill.ManaCost)
             {
                 Log.Add(new CombatLogEntry("pg.fight.log.nomana"));
@@ -94,6 +128,19 @@ namespace MyriaLib.Systems
         public bool CharacterUseItem(ConsumableItem item)
         {
             if (Phase != CombatPhase.CharacterTurn) return false;
+
+            bool characterStunned = EffectProcessor.IsStunned(Character);
+            foreach (var entry in EffectProcessor.Tick(Character))
+                Log.Add(entry);
+
+            if (!Character.IsAlive) { FinishCharacterLost(); return false; }
+
+            if (characterStunned)
+            {
+                Log.Add(new CombatLogEntry("pg.fight.effect.stunned", Character.Name));
+                EndCharacterAction();
+                return false;
+            }
 
             item.Use(Character);
             Character.Inventory.RemoveItem(item);
@@ -139,28 +186,61 @@ namespace MyriaLib.Systems
         {
             Character.SpendMana(skill.ManaCost);
 
+            // In solo encounters AllAllies and SingleAlly both resolve to the character themselves.
+            var primaryTarget = (skill.Target == SkillTarget.Self
+                              || skill.Target == SkillTarget.SingleAlly
+                              || skill.Target == SkillTarget.AllAllies)
+                ? (MyriaLib.Entities.CombatEntity)Character
+                : Enemy;
+
+            int damageDealt = 0;
+
             switch (skill.Target)
             {
                 case SkillTarget.Self:
+                case SkillTarget.SingleAlly:
+                case SkillTarget.AllAllies:
                     ExecuteSkillOnSelf(skill);
                     break;
 
                 case SkillTarget.AllEnemies:
-                    ExecuteSkillOnEnemy(skill, Enemy);
-                    break;
-
-                case SkillTarget.SingleAlly:
-                    // In solo combat, SingleAlly targets the only ally: the player themselves
-                    ExecuteSkillOnSelf(skill);
-                    break;
-
                 case SkillTarget.SingleEnemy:
                 default:
-                    ExecuteSkillOnEnemy(skill, Enemy);
+                    damageDealt = ExecuteSkillOnEnemy(skill, Enemy);
                     break;
             }
 
-            // Invoke optional code-defined effect last (buffs, status effects, etc.)
+            // Apply data-driven effects.
+            int effectStat = ResolveEffectStat(skill);
+            foreach (var entry in skill.Effects)
+            {
+                var effectHost = entry.ApplyTo == EffectTarget.Caster || entry.ApplyTo == EffectTarget.AllAllies
+                    ? (MyriaLib.Entities.CombatEntity)Character
+                    : primaryTarget;
+
+                var effect = EffectFactory.CreateEffect(entry.EffectId, skill.Id, skill.ScalingFactor, effectStat);
+                if (effect == null) continue;
+
+                if (effect.Type == EffectType.LifeSteal)
+                {
+                    int healAmount = Math.Max(1, (int)(damageDealt * effect.Magnitude));
+                    Character.Heal(healAmount);
+                    Log.Add(new CombatLogEntry("pg.fight.effect.lifesteal", Character.Name, healAmount));
+                }
+                else if (effect.Type == EffectType.ManaSiphon)
+                {
+                    int manaAmount = Math.Max(1, (int)(damageDealt * effect.Magnitude));
+                    Character.RestoreMana(manaAmount);
+                    Log.Add(new CombatLogEntry("pg.fight.effect.manasiphon", Character.Name, manaAmount));
+                }
+                else
+                {
+                    EffectProcessor.Apply(effectHost, effect);
+                    Log.Add(new CombatLogEntry("pg.fight.effect.applied", effect.Name, effectHost.Name));
+                }
+            }
+
+            // Optional code-defined effect hook.
             skill.Effect?.Invoke(Character, Enemy);
         }
 
@@ -174,41 +254,54 @@ namespace MyriaLib.Systems
                 Character.Heal(healed);
                 Log.Add(new CombatLogEntry("pg.fight.log.heal", Character.Name, healed));
             }
-            // Non-healing Self skills (buffs) rely entirely on skill.Effect invoked after this.
+            // Non-healing Self/Ally/AllAllies skills rely entirely on their Effects entries.
         }
 
-        private void ExecuteSkillOnEnemy(Skill skill, ICombatant target)
+        private int ExecuteSkillOnEnemy(Skill skill, ICombatant target)
         {
-            if (skill.IsHealing) return;
+            if (skill.IsHealing) return 0;
 
             int baseStat = ResolveSkillBaseStat(skill);
             float raw = baseStat * skill.ScalingFactor;
             float def = skill.Type == SkillType.Physical
                 ? target.TotalPhysicalDefense
                 : target.TotalMagicDefense;
-            int dmg = Math.Max(1, (int)(raw * (raw / (raw + def))));
+            int dmg = Math.Max(1, (int)CombatSystem.ExponentialDamage(raw, def));
             target.TakeDamage(dmg);
             Log.Add(new CombatLogEntry("pg.fight.log.skillHit", Character.Name, skill.Name, dmg));
+            return dmg;
         }
 
-        private int ResolveSkillBaseStat(Skill skill)
-        {
-            // same mapping you already have :contentReference[oaicite:4]{index=4}
-            return skill.StatToScaleFrom.ToUpper() switch
+        private int ResolveSkillBaseStat(Skill skill) =>
+            skill.StatToScaleFrom.ToUpper() switch
             {
-                "ATK" => Character.TotalPhysicalAttack,
+                "ATK"  => Character.TotalPhysicalAttack,
                 "MATK" => Character.TotalMagicAttack,
-                "SPR" => Character.TotalSPR,
-                "INT" => Character.TotalINT,
-                "DEX" => Character.TotalDEX,
-                "AIM" => Character.TotalAim * 2,
-                "EVA" => Character.TotalEvasion * 2,
-                "END" => Character.TotalEND,
-                "STR" => Character.TotalSTR,
-                _ => Character.TotalPhysicalAttack
+                "SPR"  => Character.TotalSPR,
+                "INT"  => Character.TotalINT,
+                "DEX"  => Character.TotalDEX,
+                "AIM"  => Character.TotalAim * 2,
+                "EVA"  => Character.TotalEvasion * 2,
+                "END"  => Character.TotalEND,
+                "STR"  => Character.TotalSTR,
+                _      => Character.TotalPhysicalAttack
             };
 
-        }
+        // Uses the caster's PRIMARY stat for effect magnitude scaling.
+        // ATK/MATK map to their underlying stat (STR/INT) so all skills
+        // start at a similar baseline (~8-10 at level 1).
+        private int ResolveEffectStat(Skill skill) =>
+            skill.StatToScaleFrom.ToUpper() switch
+            {
+                "ATK"             => Character.TotalSTR,
+                "MATK"            => Character.TotalINT,
+                "SPR"             => Character.TotalSPR,
+                "INT"             => Character.TotalINT,
+                "DEX" or "AIM" or "EVA" => Character.TotalDEX,
+                "END"             => Character.TotalEND,
+                "STR"             => Character.TotalSTR,
+                _                 => Character.TotalSTR
+            };
 
         private void EndCharacterAction()
         {
@@ -233,6 +326,19 @@ namespace MyriaLib.Systems
             if (!Enemy.IsAlive) { FinishCharacterWon(); return; }
             if (!Character.IsAlive) { FinishCharacterLost(); return; }
 
+            bool enemyStunned = EffectProcessor.IsStunned(Enemy);
+            foreach (var entry in EffectProcessor.Tick(Enemy))
+                Log.Add(entry);
+
+            if (!Enemy.IsAlive) { FinishCharacterWon(); return; }
+
+            if (enemyStunned)
+            {
+                Log.Add(new CombatLogEntry("pg.fight.effect.stunned", Enemy.Name));
+                Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.CharacterTurn;
+                return;
+            }
+
             int dmg = CombatSystem.CalculateDamage(Enemy, Character);
             if (dmg <= 0)
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyMiss", Enemy.Name));
@@ -242,8 +348,15 @@ namespace MyriaLib.Systems
                 Log.Add(new CombatLogEntry("pg.fight.log.enemyHit", Enemy.Name, dmg));
             }
 
-            if (!Character.IsAlive) FinishCharacterLost();
-            else Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.CharacterTurn;
+            if (!Character.IsAlive)
+            {
+                // Solo encounters have no allies, so resurrection cannot trigger for the player.
+                FinishCharacterLost();
+            }
+            else
+            {
+                Phase = (RecoveryTurnsRemaining > 0) ? CombatPhase.Recovery : CombatPhase.CharacterTurn;
+            }
         }
         public Dictionary<string, int> GetDropNames()
         {

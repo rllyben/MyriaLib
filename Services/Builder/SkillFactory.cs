@@ -5,6 +5,7 @@ using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Utils;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MyriaLib.Services.Builder
 {
@@ -25,7 +26,11 @@ namespace MyriaLib.Services.Builder
             }
 
             var skillJson = File.ReadAllText(path);
-            var skillData = JsonSerializer.Deserialize<List<SkillData>>(skillJson);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            };
+            var skillData = JsonSerializer.Deserialize<List<SkillData>>(skillJson, jsonOptions);
             if (skillData == null)
             {
                 GameLog.Error($"Failed to deserialize skills from '{path}'.");
@@ -46,7 +51,9 @@ namespace MyriaLib.Services.Builder
                 ScalingFactor   = d.ScalingFactor,
                 StatToScaleFrom = d.StatToScaleFrom,
                 MinLevel        = d.MinLevel,
-                IsHealing       = d.IsHealing
+                IsHealing       = d.IsHealing,
+                AggroModifier   = d.AggroModifier,
+                Effects         = d.Effects,
             }).ToList();
 
             _skillsById = _skills.ToDictionary(s => s.Id);
@@ -68,6 +75,11 @@ namespace MyriaLib.Services.Builder
         //}
         public static void UpdateSkills(Character character)
         {
+            // Remove any skills that don't belong to the character's current class.
+            // This cleans up wrong skills set before the class was known (e.g. from saves
+            // written with a stale default class) without touching combined/composite skills.
+            character.Skills.RemoveAll(s => !s.Class.Equals(character.Class, StringComparison.OrdinalIgnoreCase));
+
             var unlocked = GetSkillsFor(character);
             foreach (var skill in unlocked)
             {

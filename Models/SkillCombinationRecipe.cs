@@ -1,3 +1,5 @@
+using MyriaLib.Entities.Effects;
+
 namespace MyriaLib.Models
 {
     /// <summary>
@@ -24,5 +26,13 @@ namespace MyriaLib.Models
         public float? ScalingFactorOverride { get; set; }
         public int? ManaCostOverride { get; set; }
         public bool? IsHealingOverride { get; set; }
+
+        /// <summary>
+        /// Data-driven effects applied when the combined skill fires.
+        /// Null or empty means no effects beyond the base damage/heal.
+        /// </summary>
+        public List<SkillEffectEntry>? Effects { get; set; }
+
+        public float AggroModifier { get; set; } = 0f;
     }
 }

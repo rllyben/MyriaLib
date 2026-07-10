@@ -27,31 +27,36 @@ namespace MyriaLib.Systems
 
             return roll <= hitChance; // True = hit, False = miss
         }
+        // Controls how steeply damage scales with the attack/defense gap.
+        // Higher values make large stat differences more dramatic.
+        private const float DamageSteepness = 0.8f;
+
+        // Exponential damage formula: baseline is 40% of ATK at equal stats,
+        // rises/falls exponentially as the gap grows. Never reaches zero.
+        internal static float ExponentialDamage(float atk, float def)
+        {
+            float sum = atk + def;
+            if (sum <= 0f) return 0f;
+            return atk * 0.4f * MathF.Exp(DamageSteepness * (atk - def) / sum);
+        }
+
         public static int CalculateDamage(ICombatant attacker, ICombatant defender)
         {
-            float atk = attacker.TotalPhysicalAttack;
+            float atk  = attacker.TotalPhysicalAttack;
             float matk = attacker.TotalMagicAttack;
-            float def = defender.TotalPhysicalDefense;
+            float def  = defender.TotalPhysicalDefense;
             float mdef = defender.TotalMagicDefense;
 
-            if (!TryHit(attacker, defender))
-            {
-                return 0;
-            }
+            if (!TryHit(attacker, defender)) return 0;
 
-            float pdmg = atk * (atk / (atk + def));
-            float mdmg = matk * (matk / (matk + mdef));
-            float dmg = Math.Max(pdmg, mdmg);
-            if (dmg < 1)
-                dmg = 1;
-            // Check for block
-            float blockRoll = (float)_random.NextDouble();
-            if (blockRoll < defender.GetBlockChance())
-            {
+            float pdmg = ExponentialDamage(atk, def);
+            float mdmg = ExponentialDamage(matk, mdef);
+            float dmg  = Math.Max(pdmg, mdmg);
+
+            if ((float)_random.NextDouble() < defender.GetBlockChance())
                 dmg /= 2;
-            }
 
-            return (int)dmg;
+            return Math.Max(1, (int)dmg);
         }
 
         // Returns damage and whether it was a critical hit (player-facing attacks only).
@@ -65,10 +70,9 @@ namespace MyriaLib.Systems
 
             if (!TryHit(attacker, defender)) return (0, false);
 
-            float pdmg = atk  * (atk  / (atk  + def));
-            float mdmg = matk * (matk / (matk + mdef));
+            float pdmg = ExponentialDamage(atk, def);
+            float mdmg = ExponentialDamage(matk, mdef);
             float dmg  = Math.Max(pdmg, mdmg);
-            if (dmg < 1) dmg = 1;
 
             if ((float)_random.NextDouble() < defender.GetBlockChance())
                 dmg /= 2;
@@ -77,7 +81,7 @@ namespace MyriaLib.Systems
             bool  isCrit     = (float)_random.NextDouble() < critChance;
             if (isCrit) dmg *= 1.75f;
 
-            return ((int)dmg, isCrit);
+            return (Math.Max(1, (int)dmg), isCrit);
         }
 
     }
