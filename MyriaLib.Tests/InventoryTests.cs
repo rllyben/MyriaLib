@@ -1,11 +1,55 @@
 using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Items;
+using MyriaLib.Systems.Enums;
 using Xunit;
 
 namespace MyriaLib.Tests;
 
 public class InventoryTests
 {
+    [Fact]
+    public void UnequipSlot_MovesEquippedItemBackToInventory_AndClearsTheSlot()
+    {
+        var character = TestHelpers.CreateCharacter();
+        var sword = new EquipmentItem { Id = "sword", Name = "Sword", SlotType = EquipmentType.Weapon };
+        character.WeaponSlot = sword;
+
+        bool unequipped = character.Inventory.UnequipSlot(EquipmentType.Weapon, character);
+
+        Assert.True(unequipped);
+        Assert.Null(character.WeaponSlot);
+        Assert.Contains(character.Inventory.Items, i => i.Id == "sword");
+    }
+
+    [Fact]
+    public void UnequipSlot_EmptySlot_ReturnsFalse()
+    {
+        var character = TestHelpers.CreateCharacter();
+        Assert.False(character.Inventory.UnequipSlot(EquipmentType.Armor, character));
+    }
+
+    [Fact]
+    public void UnequipSlot_InventoryFull_LeavesItemEquipped()
+    {
+        int originalPageSize = Inventory.PageSize;
+        try
+        {
+            Inventory.PageSize = 0; // Capacity = 0 -> AddItem always fails
+            var character = TestHelpers.CreateCharacter();
+            var sword = new EquipmentItem { Id = "sword", Name = "Sword", SlotType = EquipmentType.Weapon };
+            character.WeaponSlot = sword;
+
+            bool unequipped = character.Inventory.UnequipSlot(EquipmentType.Weapon, character);
+
+            Assert.False(unequipped);
+            Assert.Same(sword, character.WeaponSlot); // still equipped, nothing changed
+            Assert.Empty(character.Inventory.Items);
+        }
+        finally
+        {
+            Inventory.PageSize = originalPageSize;
+        }
+    }
     [Fact]
     public void AddItem_MergesFullyIntoExistingStack_WhenSpaceAllows()
     {

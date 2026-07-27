@@ -1,6 +1,7 @@
 ﻿using MyriaLib.Utils;
 using MyriaLib.Entities.Items;
 using MyriaLib.Services.Manager;
+using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Events;
 
@@ -249,6 +250,43 @@ namespace MyriaLib.Entities.Characters
             System.Diagnostics.Debug.WriteLine($"[Inventory] UnequipItem failed - unknown slot type");
             return false;
         }
+
+        /// <summary>
+        /// Unequips whatever is in <paramref name="slotType"/> and returns it to
+        /// <paramref name="character"/>'s inventory. Returns false (no state changed) if the slot
+        /// is already empty or the inventory has no room for the returned item.
+        /// <para>
+        /// This is the single implementation single-player (EquipmentViewModel.ExecuteUnequip) and
+        /// multiplayer (GameHub.UnequipItem) both now call — previously each had its own identical
+        /// by-slot-type logic hand-duplicated independently. Not to be confused with the older
+        /// <see cref="UnequipItem(string, Character)"/> overload above, which resolves by item name
+        /// against the loose inventory list — that can never actually match an equipped item (it
+        /// isn't in that list) and is unrelated to this method.
+        /// </para>
+        /// </summary>
+        public bool UnequipSlot(EquipmentType slotType, Character character)
+        {
+            EquipmentItem? item = slotType switch
+            {
+                EquipmentType.Weapon    => character.WeaponSlot,
+                EquipmentType.Armor     => character.ArmorSlot,
+                EquipmentType.Accessory => character.AccessorySlot,
+                _                       => null
+            };
+            if (item == null) return false;
+
+            if (!AddItem(item, character, "unequip"))
+                return false;
+
+            switch (slotType)
+            {
+                case EquipmentType.Weapon:    character.WeaponSlot    = null; break;
+                case EquipmentType.Armor:     character.ArmorSlot     = null; break;
+                case EquipmentType.Accessory: character.AccessorySlot = null; break;
+            }
+            return true;
+        }
+
         public bool UseItem(string itemname, Character character)
         {
             var item = InventoryUtils.ResolveInventoryItem(itemname, character);
@@ -294,7 +332,7 @@ namespace MyriaLib.Entities.Characters
 
                     if (item.StackSize == 0)
                     {
-                        UpdateQuestItemProgress(character);
+                        GameEvents.FireItemReceived(character, item, stackSize);
                         ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                         return true;
                     }
@@ -306,32 +344,12 @@ namespace MyriaLib.Entities.Characters
             {
                 Items.Add(item);
                 Restack();
-                UpdateQuestItemProgress(character);
+                GameEvents.FireItemReceived(character, item, stackSize);
                 ItemReceived?.Invoke(this, new ItemReceivedEventArgs(item, stackSize, source));
                 return true;
             }
 
             return false; // inventory full
-        }
-
-        private void UpdateQuestItemProgress(Character character)
-        {
-            foreach (var quest in character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-            {
-                foreach (var itemReq in quest.RequiredItems)
-                {
-                    int owned = Items.Where(i => i.Id == itemReq.Key).Sum(i => i.StackSize);
-                    quest.ItemProgress[itemReq.Key] = Math.Min(owned, itemReq.Value);
-                }
-
-                bool allKillsDone = quest.RequiredKills.All(rk =>
-                    quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
-                bool allItemsDone = quest.RequiredItems.All(ri =>
-                    quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
-
-                if (allKillsDone && allItemsDone)
-                    quest.Status = QuestStatus.Completed;
-            }
         }
         /// <summary>
         /// removes an item from the inventory

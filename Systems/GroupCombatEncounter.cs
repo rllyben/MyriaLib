@@ -29,6 +29,14 @@ namespace MyriaLib.Systems
 
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
+        /// <summary>
+        /// Total actual (level-scaled) XP granted to each character across this encounter so far,
+        /// accumulated per kill. Read this instead of summing Monsters' raw Exp values for
+        /// anything XP-derived (UI display, bonus calculations) — each character can be scaled
+        /// differently per kill depending on their own level vs. that monster's level.
+        /// </summary>
+        public Dictionary<Character, long> XpGrantedByCharacter { get; } = new();
+
         public GroupCombatEncounter(IEnumerable<Character> characters, IEnumerable<Monster> enemies)
         {
             var rng = Random.Shared;
@@ -268,13 +276,18 @@ namespace MyriaLib.Systems
 
             Log.Add(new CombatLogEntry("pg.fight.log.win", monster.Name));
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(monster.Id));
-            UpdateQuestProgress(monster.Id);
+
+            // Quest kill-credit goes to every party member, alive or not (matches prior behavior);
+            // XP/class-XP is alive-only, handled separately below.
+            foreach (var p in Characters)
+                GameEvents.FireMonsterKilled(p, monster);
 
             foreach (var p in Characters.Where(p => p.IsAlive))
             {
                 long xpGained = ScaleXp(monster.Exp, p.Level, monster.Level);
                 p.GainXp(xpGained);
                 ClassManager.GrantClassXp(p, xpGained);
+                XpGrantedByCharacter[p] = XpGrantedByCharacter.GetValueOrDefault(p) + xpGained;
             }
 
             var recipient = Characters.FirstOrDefault(p => p.IsAlive);
@@ -383,24 +396,6 @@ namespace MyriaLib.Systems
             IsFinished = true;
             CharactersWon = false;
             Log.Add(new CombatLogEntry("pg.fight.log.lose"));
-        }
-
-        private void UpdateQuestProgress(int monsterId)
-        {
-            foreach (var player in Characters)
-            {
-                foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-                {
-                    if (!quest.RequiredKills.TryGetValue(monsterId, out int required)) continue;
-                    if (!quest.KillProgress.ContainsKey(monsterId))
-                        quest.KillProgress[monsterId] = 0;
-                    if (quest.KillProgress[monsterId] >= required) continue;
-                    quest.KillProgress[monsterId]++;
-                    if (quest.RequiredKills.All(rk =>
-                            quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
-                        quest.Status = QuestStatus.Completed;
-                }
-            }
         }
 
         private static long ScaleXp(long baseXp, int playerLevel, int monsterLevel)

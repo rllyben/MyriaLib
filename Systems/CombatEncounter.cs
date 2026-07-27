@@ -29,13 +29,20 @@ namespace MyriaLib.Systems
         public bool InventoryFull { get; set; } = false;
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
+        /// <summary>
+        /// The actual (level-scaled) XP granted to <see cref="Character"/> on victory — 0 until
+        /// the encounter finishes. Read this instead of <see cref="Enemy"/>.Exp for anything
+        /// XP-derived (UI display, bonus calculations): Enemy.Exp is the monster's raw base
+        /// value before ScaleXp's level-difference scaling is applied.
+        /// </summary>
+        public long LastXpGained { get; private set; }
+
         public CombatEncounter(Character character, Monster enemy)
         {
             Character = character;
             Enemy = enemy;
             Enemy.ResetHealth(); // if you do that elsewhere, remove
             Log.Add(new CombatLogEntry("pg.fight.log.start", enemy.Name));
-            MonsterKilled += UpdateQuestProgress;
         }
 
         public void CharacterAttack()
@@ -373,6 +380,7 @@ namespace MyriaLib.Systems
         {
             Phase = CombatPhase.Finished;
             long xpGained = ScaleXp(Enemy.Exp, Character.Level, Enemy.Level);
+            LastXpGained = xpGained;
             Character.GainXp(xpGained);
             ClassManager.GrantClassXp(Character, xpGained);
             SkillFactory.UpdateSkills(Character);
@@ -402,26 +410,6 @@ namespace MyriaLib.Systems
 
             DayCycleManager.AddTicks(GameTick.CombatVictory);
             Log.Add(new CombatLogEntry("pg.fight.log.win", Enemy.Name));
-        }
-
-        private void UpdateQuestProgress(object? sender, MonsterKilledEventArgs e)
-        {
-            foreach (var quest in Character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-            {
-                if (!quest.RequiredKills.TryGetValue(e.MonsterId, out int required))
-                    continue;
-
-                if (!quest.KillProgress.ContainsKey(e.MonsterId))
-                    quest.KillProgress[e.MonsterId] = 0;
-
-                if (quest.KillProgress[e.MonsterId] >= required)
-                    continue;
-
-                quest.KillProgress[e.MonsterId]++;
-
-                if (quest.RequiredKills.All(rk => quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
-                    quest.Status = QuestStatus.Completed;
-            }
         }
 
         private void FinishCharacterLost()

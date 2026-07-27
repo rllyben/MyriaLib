@@ -49,6 +49,12 @@ namespace MyriaLib.Systems
         /// <summary>Fires after a consumable item is used successfully.</summary>
         public static event Action<Character, Item>? ItemUsed;
 
+        /// <summary>
+        /// Fires after an item is added to a character's inventory (gather, loot, purchase, quest
+        /// reward, etc.). <c>amount</c> is how many were just added, not the resulting stack total.
+        /// </summary>
+        public static event Action<Character, Item, int>? ItemReceived;
+
         // ── Internal fire helpers — called by engine code, not by mods ────────
 
         public static void FireSessionStarted(Character c)              => SessionStarted?.Invoke(c);
@@ -58,5 +64,6 @@ namespace MyriaLib.Systems
         public static void FireDayAdvanced(int day)                     => DayAdvanced?.Invoke(day);
         public static void FireMonsterKilled(Character c, Monster m)    => MonsterKilled?.Invoke(c, m);
         public static void FireItemUsed(Character c, Item item)         => ItemUsed?.Invoke(c, item);
+        public static void FireItemReceived(Character c, Item item, int amount) => ItemReceived?.Invoke(c, item, amount);
     }
 }

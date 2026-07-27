@@ -133,6 +133,14 @@ namespace MyriaLib.Services
                 QuestManager.LoadQuests(ModLoader.ResolvePath("Data/common/quests.json"));
             else
                 QuestManager.LoadQuests(source.GetQuests());
+
+            // Quest kill/item progress is tracked via GameEvents instead of Inventory/combat
+            // reaching into Quest directly (see QuestManager.OnItemReceived/OnMonsterKilled).
+            // -= then += so repeated InitializeGame() calls (mod hot-reload) don't double-fire.
+            GameEvents.ItemReceived -= QuestManager.OnItemReceived;
+            GameEvents.ItemReceived += QuestManager.OnItemReceived;
+            GameEvents.MonsterKilled -= QuestManager.OnMonsterKilled;
+            GameEvents.MonsterKilled += QuestManager.OnMonsterKilled;
             Report("quests");
 
             if (source is null)

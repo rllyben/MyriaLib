@@ -2,6 +2,7 @@
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Characters;
 using MyriaLib.Services;
+using MyriaLib.Systems;
 using MyriaLib.Systems.Enums;
 
 namespace MyriaLib.Services.Manager
@@ -9,6 +10,83 @@ namespace MyriaLib.Services.Manager
     public static class QuestManager
     {
         private static List<Quest> _allQuests = new();
+
+        /// <summary>
+        /// Event-handler adapter for <see cref="MyriaLib.Systems.GameEvents.ItemReceived"/>.
+        /// Wired explicitly in GameService.InitializeGame() — NOT in a static constructor: a type
+        /// initializer only runs once something actually touches QuestManager, which nothing on
+        /// the Inventory/GameEvents call path does, so a static-constructor subscription here
+        /// silently never fires until some unrelated code happens to touch QuestManager first.
+        /// A named method (not a lambda) is required so the explicit -=/+= at the call site can
+        /// de-duplicate across repeated InitializeGame() calls (each lambda would be a distinct
+        /// delegate instance and -= wouldn't remove the previous one).
+        /// </summary>
+        public static void OnItemReceived(Character character, MyriaLib.Entities.Items.Item item, int amount)
+            => UpdateItemProgress(character);
+
+        /// <summary>Event-handler adapter for <see cref="MyriaLib.Systems.GameEvents.MonsterKilled"/>. See <see cref="OnItemReceived"/> for why this isn't a static-constructor subscription.</summary>
+        public static void OnMonsterKilled(Character character, MyriaLib.Entities.Monsters.Monster monster)
+            => UpdateKillProgress(character, monster.Id);
+
+        /// <summary>
+        /// Recomputes every in-progress quest's item-collection progress from the character's
+        /// current inventory and completes any quest whose kill and item objectives are both met.
+        /// Call after inventory contents change in a way that could satisfy a quest (normally via
+        /// <see cref="MyriaLib.Systems.GameEvents.ItemReceived"/> — this is wired automatically).
+        /// </summary>
+        public static void UpdateItemProgress(Character character)
+        {
+            foreach (var quest in character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            {
+                foreach (var itemReq in quest.RequiredItems)
+                {
+                    int owned = character.Inventory.Items.Where(i => i.Id == itemReq.Key).Sum(i => i.StackSize);
+                    quest.ItemProgress[itemReq.Key] = Math.Min(owned, itemReq.Value);
+                }
+
+                TryCompleteQuest(quest);
+            }
+        }
+
+        /// <summary>
+        /// Credits a monster kill toward every in-progress quest of <paramref name="character"/>
+        /// that requires it, and completes any quest whose kill and item objectives are both met.
+        /// Wired automatically via <see cref="MyriaLib.Systems.GameEvents.MonsterKilled"/> — call
+        /// this once per character who should receive credit (e.g. every living party member).
+        /// </summary>
+        public static void UpdateKillProgress(Character character, int monsterId)
+        {
+            foreach (var quest in character.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
+            {
+                if (!quest.RequiredKills.TryGetValue(monsterId, out int required))
+                    continue;
+
+                if (!quest.KillProgress.ContainsKey(monsterId))
+                    quest.KillProgress[monsterId] = 0;
+
+                if (quest.KillProgress[monsterId] >= required)
+                    continue;
+
+                quest.KillProgress[monsterId]++;
+                TryCompleteQuest(quest);
+            }
+        }
+
+        /// <summary>
+        /// Completes a quest only once BOTH its kill and item objectives are satisfied. Previously
+        /// CombatEncounter/GroupCombatEncounter each completed a quest as soon as kills were done,
+        /// ignoring any still-unmet item requirements — centralizing here fixes that divergence.
+        /// </summary>
+        private static void TryCompleteQuest(Quest quest)
+        {
+            bool allKillsDone = quest.RequiredKills.All(rk =>
+                quest.KillProgress.TryGetValue(rk.Key, out int kills) && kills >= rk.Value);
+            bool allItemsDone = quest.RequiredItems.All(ri =>
+                quest.ItemProgress.TryGetValue(ri.Key, out int items) && items >= ri.Value);
+
+            if (allKillsDone && allItemsDone)
+                quest.Status = QuestStatus.Completed;
+        }
 
         public static void LoadQuests(string path = "Data/common/quests.json")
         {
