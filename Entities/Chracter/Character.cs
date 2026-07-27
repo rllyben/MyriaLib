@@ -277,22 +277,9 @@ namespace MyriaLib.Entities.Characters
         /// <param name="item">item to equip</param>
         public void Equip(EquipmentItem item)
         {
-            switch (item.SlotType)
-            {
-                case EquipmentType.Weapon:
-                    if (WeaponSlot != null) Inventory.AddItem(WeaponSlot, this);
-                    WeaponSlot = item;
-                    break;
-                case EquipmentType.Armor:
-                    if (ArmorSlot != null) Inventory.AddItem(ArmorSlot, this);
-                    ArmorSlot = item;
-                    break;
-                case EquipmentType.Accessory:
-                    if (AccessorySlot != null) Inventory.AddItem(AccessorySlot, this);
-                    AccessorySlot = item;
-                    break;
-            }
-
+            if (Equipped.GetValueOrDefault(item.SlotType) is { } previous)
+                Inventory.AddItem(previous, this);
+            Equipped[item.SlotType] = item;
         }
         /// <summary>
         /// updates stats for an Level up

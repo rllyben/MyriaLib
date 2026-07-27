@@ -52,106 +52,17 @@ namespace MyriaLib.Entities.Characters
 
         public bool SwapEquipment(string itemId, Character character)
         {
-            System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment called for: {itemId}");
-            
             var match = InventoryUtils.ResolveInventoryItem(itemId, character);
-            System.Diagnostics.Debug.WriteLine($"[Inventory] Resolved item: {match?.Name ?? "NULL"}");
-            
-            if (match is not EquipmentItem equipment)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Inventory] Item is not EquipmentItem");
-                return false;
-            }
+            if (match is not EquipmentItem equipment) return false;
+            if (!equipment.IsUsableBy(character)) return false;
 
-            System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment found: {equipment.Name}, SlotType: {equipment.SlotType}");
-            
-            if (!equipment.IsUsableBy(character))
-            {
-                System.Diagnostics.Debug.WriteLine($"[Inventory] Equipment not usable by player");
-                return false;
-            }
+            System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping {equipment.SlotType} slot: {equipment.Name}");
 
-            switch (equipment.SlotType)
-            {
-                case EquipmentType.Weapon:
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Weapon slot");
-                        
-                        if (character.WeaponSlot != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot occupied, swapping out: {character.WeaponSlot.Name}");
-                            EquipmentItem we = character.WeaponSlot;
-                            character.WeaponSlot = equipment;
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] New weapon equipped: {equipment.Name}");
-                            
-                            RemoveItem(equipment);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
-                            
-                            AddItem(we, character);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped weapon to inventory: {we.Name}");
-                            return true;
-                        }
-                        
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon slot empty, equipping: {equipment.Name}");
-                        character.WeaponSlot = equipment;
-                        RemoveItem(equipment);
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Weapon equipped successfully");
-                        return true;
-                    }
-                case EquipmentType.Armor:
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Armor slot");
-                        
-                        if (character.ArmorSlot != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot occupied, swapping out: {character.ArmorSlot.Name}");
-                            EquipmentItem arm = character.ArmorSlot;
-                            character.ArmorSlot = equipment;
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] New armor equipped: {equipment.Name}");
-                            
-                            RemoveItem(equipment);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
-                            
-                            AddItem(arm, character);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped armor to inventory: {arm.Name}");
-                            return true;
-                        }
-                        
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Armor slot empty, equipping: {equipment.Name}");
-                        character.ArmorSlot = equipment;
-                        RemoveItem(equipment);
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Armor equipped successfully");
-                        return true;
-                    }
-                case EquipmentType.Accessory:
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping Accessory slot");
-                        
-                        if (character.AccessorySlot != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot occupied, swapping out: {character.AccessorySlot.Name}");
-                            EquipmentItem acce = character.AccessorySlot;
-                            character.AccessorySlot = equipment;
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] New accessory equipped: {equipment.Name}");
-                            
-                            RemoveItem(equipment);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Removed {equipment.Name} from inventory");
-                            
-                            AddItem(acce, character);
-                            System.Diagnostics.Debug.WriteLine($"[Inventory] Added unequipped accessory to inventory: {acce.Name}");
-                            return true;
-                        }
-                        
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory slot empty, equipping: {equipment.Name}");
-                        character.AccessorySlot = equipment;
-                        RemoveItem(equipment);
-                        System.Diagnostics.Debug.WriteLine($"[Inventory] Accessory equipped successfully");
-                        return true;
-                    }
-            }
-            
-            System.Diagnostics.Debug.WriteLine($"[Inventory] SwapEquipment failed - unknown slot type");
-            return false;
+            var previous = character.Equipped.GetValueOrDefault(equipment.SlotType);
+            character.Equipped[equipment.SlotType] = equipment;
+            RemoveItem(equipment);
+            if (previous != null) AddItem(previous, character);
+            return true;
         }
         public bool UnequipItem(string itemname, Character character)
         {
@@ -266,24 +177,13 @@ namespace MyriaLib.Entities.Characters
         /// </summary>
         public bool UnequipSlot(string slotType, Character character)
         {
-            EquipmentItem? item = slotType switch
-            {
-                EquipmentType.Weapon    => character.WeaponSlot,
-                EquipmentType.Armor     => character.ArmorSlot,
-                EquipmentType.Accessory => character.AccessorySlot,
-                _                       => null
-            };
+            var item = character.Equipped.GetValueOrDefault(slotType);
             if (item == null) return false;
 
             if (!AddItem(item, character, "unequip"))
                 return false;
 
-            switch (slotType)
-            {
-                case EquipmentType.Weapon:    character.WeaponSlot    = null; break;
-                case EquipmentType.Armor:     character.ArmorSlot     = null; break;
-                case EquipmentType.Accessory: character.AccessorySlot = null; break;
-            }
+            character.Equipped[slotType] = null;
             return true;
         }
 
