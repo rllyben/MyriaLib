@@ -289,11 +289,8 @@ namespace MyriaLib.Entities.Characters
             var profile = RaceProfile.All[Race];
 
             Level++;
-            Stats.Strength += profile.StatGrowth["STR"];
-            Stats.Dexterity += profile.StatGrowth["DEX"];
-            Stats.Endurance += profile.StatGrowth["END"];
-            Stats.Intelligence += profile.StatGrowth["INT"];
-            Stats.Spirit += profile.StatGrowth["SPR"];
+            foreach (var (statId, growth) in profile.StatGrowth)
+                Stats.SetBase(statId, Stats.GetBase(statId) + growth);
             Stats.UnusedPoints++;
 
             Stats.BaseHealth += profile.HpPerLevel;
@@ -355,8 +352,7 @@ namespace MyriaLib.Entities.Characters
             // 1 point per level starting from level 2 (level 1 has 0 points)
             int totalPointsEarned = Math.Max(0, Level - 1);
 
-            int pointsSpent = Stats.StrengthBonus + Stats.DexterityBonus + Stats.EnduranceBonus
-                            + Stats.IntelligenceBonus + Stats.SpiritBonus;
+            int pointsSpent = Stats.BonusValues.Values.Sum();
 
             Stats.UnusedPoints = Math.Max(0, totalPointsEarned - pointsSpent);
         }
