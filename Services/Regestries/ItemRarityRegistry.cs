@@ -21,12 +21,22 @@ namespace MyriaLib.Services.Regestries
 
         public static IReadOnlyList<EnumDefinition> All => _definitions;
 
-        public static string GetDisplayName(ItemRarity rarity)
-            => _definitions.FirstOrDefault(d => d.Id.Equals(rarity.ToString(), StringComparison.OrdinalIgnoreCase))
-                           ?.DisplayName ?? rarity.ToString();
+        public static string GetDisplayName(string rarity)
+            => _definitions.FirstOrDefault(d => d.Id.Equals(rarity, StringComparison.OrdinalIgnoreCase))
+                           ?.DisplayName ?? rarity;
 
-        public static int GetOrder(ItemRarity rarity)
-            => _definitions.FirstOrDefault(d => d.Id.Equals(rarity.ToString(), StringComparison.OrdinalIgnoreCase))
-                           ?.Order ?? (int)rarity;
+        /// <summary>
+        /// Sort order for a rarity. Falls back to its position in
+        /// <see cref="ItemRarity.AllBuiltIn"/> (matching the original enum's ordinal) for built-in
+        /// rarities not overridden by item_rarities.json, or 0 for an unrecognized mod-added one.
+        /// </summary>
+        public static int GetOrder(string rarity)
+        {
+            var match = _definitions.FirstOrDefault(d => d.Id.Equals(rarity, StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match.Order;
+
+            int index = ItemRarity.AllBuiltIn.ToList().IndexOf(rarity);
+            return index >= 0 ? index : 0;
+        }
     }
 }

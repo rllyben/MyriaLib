@@ -11,7 +11,7 @@ namespace MyriaLib.Entities.Items
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-        public virtual ItemRarity Rarity { get; set; } = ItemRarity.Common;
+        public virtual string Rarity { get; set; } = ItemRarity.Common;
         [JsonInclude]
         public int StackSize { get; set; } = 1;
         public virtual int MaxStackSize { get; set; } = 50;

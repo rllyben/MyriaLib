@@ -53,8 +53,11 @@ namespace MyriaLib.Services.Builder
                 _ => throw new Exception($"Unsupported item type: {def.Type}")
             };
 
-            if (Enum.TryParse<ItemRarity>(def.Rarity, true, out var rarity))
-                item.Rarity = rarity;
+            // def.Rarity is already a plain string (GameItem.Rarity) — assign directly instead of
+            // validating against a closed enum, so mod-defined rarity tiers beyond the 7 built-in
+            // ones (see ItemRarity.AllBuiltIn) work without being silently rejected.
+            if (!string.IsNullOrEmpty(def.Rarity))
+                item.Rarity = def.Rarity;
 
             item.StackSize = stackSize > 1 ? stackSize : (def.StackSize > 0 ? def.StackSize : 1);
             return item;
