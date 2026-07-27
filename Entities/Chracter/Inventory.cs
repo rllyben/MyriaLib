@@ -264,7 +264,7 @@ namespace MyriaLib.Entities.Characters
         /// isn't in that list) and is unrelated to this method.
         /// </para>
         /// </summary>
-        public bool UnequipSlot(EquipmentType slotType, Character character)
+        public bool UnequipSlot(string slotType, Character character)
         {
             EquipmentItem? item = slotType switch
             {

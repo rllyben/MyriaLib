@@ -23,7 +23,9 @@ namespace MyriaLib.Models.BaseModel
         public string? UseEffect { get; set; }
 
         // Equipment fields
-        public EquipmentType SlotType { get; set; }
+        // Raw JSON value (items.json stores this as a plain int, e.g. 2) — converted to the new
+        // string-based EquipmentType via EquipmentType.FromLegacyInt when building an EquipmentItem.
+        public int SlotType { get; set; }
         public int BaseBonusHP { get; set; }
         public int BaseBonusMP { get; set; }
         public int BaseBonusSTR { get; set; }

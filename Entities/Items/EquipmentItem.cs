@@ -5,7 +5,7 @@ namespace MyriaLib.Entities.Items
 {
     public class EquipmentItem : Item
     {
-        public EquipmentType SlotType { get; set; }
+        public string SlotType { get; set; } = MyriaLib.Systems.Enums.EquipmentType.Weapon;
         public override int BuyPrice { get; set; } = 300;
 
         /// <summary>Base bonus values as defined in item data (before upgrades).</summary>
