@@ -16,7 +16,7 @@ namespace MyriaLib.Services.Manager
 
         // ── State ────────────────────────────────────────────────────────────────
 
-        public static TimeSegment CurrentTimeSegment => GameService.Game.TimeOfDay;
+        public static string CurrentTimeSegment => GameService.Game.TimeOfDay;
         public static int GameDay => GameService.Game.GameDay;
 
         /// <summary>Ticks accumulated toward the next segment transition (0 … TicksPerSegment-1).</summary>
@@ -25,7 +25,7 @@ namespace MyriaLib.Services.Manager
         // ── Events ───────────────────────────────────────────────────────────────
 
         /// <summary>Fires each time the time-of-day segment changes. Carries the new segment.</summary>
-        public static event Action<TimeSegment>? SegmentChanged;
+        public static event Action<string>? SegmentChanged;
 
         /// <summary>Fires each time a new game-day begins. Carries the new day number.</summary>
         public static event Action<int>? DayAdvanced;
@@ -118,11 +118,12 @@ namespace MyriaLib.Services.Manager
 
         // ── Private ──────────────────────────────────────────────────────────────
 
-        private static readonly TimeSegment[] _segments = Enum.GetValues<TimeSegment>();
+        private static readonly string[] _segments = TimeSegment.AllBuiltIn.ToArray();
 
         private static void AdvanceSegmentInternal(GameStatus game)
         {
-            int next = ((int)game.TimeOfDay + 1) % _segments.Length;
+            int current = Array.IndexOf(_segments, game.TimeOfDay);
+            int next = (current + 1) % _segments.Length; // -1 (unrecognized) wraps to 0, same as a new day
             bool newDay = next == 0; // Night → Morning wrap
 
             game.TimeOfDay = _segments[next];

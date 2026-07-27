@@ -21,8 +21,8 @@ namespace MyriaLib.Services.Regestries
 
         public static IReadOnlyList<EnumDefinition> All => _definitions;
 
-        public static string GetDisplayName(TimeSegment segment)
-            => _definitions.FirstOrDefault(d => d.Id.Equals(segment.ToString(), StringComparison.OrdinalIgnoreCase))
-                           ?.DisplayName ?? segment.ToString();
+        public static string GetDisplayName(string segment)
+            => _definitions.FirstOrDefault(d => d.Id.Equals(segment, StringComparison.OrdinalIgnoreCase))
+                           ?.DisplayName ?? segment;
     }
 }
