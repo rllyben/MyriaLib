@@ -37,9 +37,15 @@ namespace MyriaLib.Services.Builder
                 return;
             }
 
-            _runes = JsonSerializer.Deserialize<List<BaseRuneData>>(
+            var runes = JsonSerializer.Deserialize<List<BaseRuneData>>(
                          File.ReadAllText(filePath), _opts) ?? new();
+            Load(runes);
+        }
 
+        /// <summary>Loads base rune definitions from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<BaseRuneData> runes)
+        {
+            _runes = runes;
             _runesById = _runes.ToDictionary(r => r.Id, r => r, StringComparer.OrdinalIgnoreCase);
         }
 

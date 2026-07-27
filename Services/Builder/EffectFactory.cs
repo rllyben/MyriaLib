@@ -32,6 +32,12 @@ namespace MyriaLib.Services.Builder
                 return;
             }
 
+            LoadEffects(list);
+        }
+
+        /// <summary>Loads effect definitions from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadEffects(List<EffectDefinition> list)
+        {
             _definitions = list.ToDictionary(d => d.Id, d => d, StringComparer.OrdinalIgnoreCase);
         }
 

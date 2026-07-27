@@ -35,6 +35,12 @@ namespace MyriaLib.Services
                 return;
             }
 
+            Load(list);
+        }
+
+        /// <summary>Loads skill combination recipes from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<SkillCombinationRecipe> list)
+        {
             _recipes = list.ToDictionary(r => MakeKey(r.InputSkillIds));
         }
 

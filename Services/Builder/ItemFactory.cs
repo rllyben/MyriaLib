@@ -16,6 +16,12 @@ namespace MyriaLib.Services.Builder
         {
             string json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<GameItem>>(json) ?? [];
+            LoadItems(list);
+        }
+
+        /// <summary>Loads item definitions from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadItems(List<GameItem> list)
+        {
             _itemDefs = list.ToDictionary(i => i.Id, i => i);
         }
 

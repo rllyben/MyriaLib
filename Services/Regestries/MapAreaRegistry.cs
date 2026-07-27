@@ -15,6 +15,12 @@ namespace MyriaLib.Services.Regestries
         {
             var json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<T>>(json) ?? new();
+            Load(list);
+        }
+
+        /// <summary>Loads map areas from already-parsed data (e.g. read from a database).</summary>
+        public void Load(List<T> list)
+        {
             _items = list.ToDictionary(x => x.Id);
         }
 

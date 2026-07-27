@@ -20,23 +20,26 @@ namespace MyriaLib.Services
         public static Dictionary<int, Room> LoadRooms(string path = "")
         {
             string filePath = string.IsNullOrEmpty(path) ? _defaultPath : path;
-            string test = Path.Combine(Directory.GetCurrentDirectory(), filePath);
-            Debug.WriteLine(Directory.GetCurrentDirectory());
-            Debug.WriteLine(filePath);
-            Debug.WriteLine(test);
 
             if (!File.Exists(filePath))
                 return new();
 
             string json = File.ReadAllText(filePath);
-            
+
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
             };
 
-            AllRooms = JsonSerializer.Deserialize<List<Room>>(json, options) ?? new();
+            var rooms = JsonSerializer.Deserialize<List<Room>>(json, options) ?? new();
+            return LoadRooms(rooms);
+        }
+
+        /// <summary>Loads rooms from already-parsed data (e.g. read from a database) and resolves exits.</summary>
+        public static Dictionary<int, Room> LoadRooms(List<Room> rooms)
+        {
+            AllRooms = rooms;
 
             // Create lookup map
             var roomMap = AllRooms.ToDictionary(r => r.Id, r => r);

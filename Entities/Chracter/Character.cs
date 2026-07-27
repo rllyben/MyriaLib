@@ -211,6 +211,30 @@ namespace MyriaLib.Entities.Characters
             return actual;
         }
 
+        /// <summary>
+        /// Sets health to an absolute value (e.g. server-authoritative multiplayer combat
+        /// results) and fires <see cref="HealthChanged"/> if it actually changed — unlike
+        /// assigning <see cref="CurrentHealth"/> directly, which UI listeners never see.
+        /// </summary>
+        public void SetHealth(int newValue, string? source = null)
+        {
+            int old = CurrentHealth;
+            newValue = Math.Clamp(newValue, 0, MaxHealth);
+            if (newValue == old) return;
+            CurrentHealth = newValue;
+            HealthChanged?.Invoke(this, new HealthChangedEventArgs(old, newValue, source));
+        }
+
+        /// <summary>Mana counterpart to <see cref="SetHealth"/>.</summary>
+        public void SetMana(int newValue, string? source = null)
+        {
+            int old = CurrentMana;
+            newValue = Math.Clamp(newValue, 0, MaxMana);
+            if (newValue == old) return;
+            CurrentMana = newValue;
+            ManaChanged?.Invoke(this, new ManaChangedEventArgs(old, newValue, source));
+        }
+
         public int SpendMana(int amount, string? source = null)
         {
             if (amount <= 0) return 0;

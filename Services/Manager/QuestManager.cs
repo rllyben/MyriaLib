@@ -13,7 +13,14 @@ namespace MyriaLib.Services.Manager
         public static void LoadQuests(string path = "Data/common/quests.json")
         {
             var json = File.ReadAllText(path);
-            _allQuests = JsonSerializer.Deserialize<List<Quest>>(json)!;
+            var quests = JsonSerializer.Deserialize<List<Quest>>(json)!;
+            LoadQuests(quests);
+        }
+
+        /// <summary>Loads quests from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadQuests(List<Quest> quests)
+        {
+            _allQuests = quests;
         }
         public static List<Quest> GetAvailableForCharacter(Character character, int partySize = 1)
         {

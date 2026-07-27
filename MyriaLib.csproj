@@ -9,4 +9,30 @@
     <FileVersion>0.2.0.0</FileVersion>
   </PropertyGroup>
 
+  <!--
+    Canonical, version-controlled copy of the shared static game-content JSON files
+    (Data\common) and locale strings (Data\locales). MyriaRPG and MyriaServer link
+    these same files into their own build output instead of keeping independent
+    copies, so the three projects can no longer drift out of sync with each other.
+    MyriaLib itself does not read these at its own assembly location; they only
+    need to exist here so the other two projects have exactly one physical source
+    to link against, consistent with how they already reference MyriaLib's code
+    via ProjectReference.
+  -->
+  <ItemGroup>
+    <None Include="Data\**\*.json" />
+  </ItemGroup>
+
+  <!--
+    MyriaLib.Tests is a nested SDK-style project (see MyriaLib.Tests.csproj). Without this,
+    MyriaLib's own implicit file globbing would also pick up the test project's .cs files
+    and try to compile them into MyriaLib itself.
+  -->
+  <ItemGroup>
+    <Compile Remove="MyriaLib.Tests\**" />
+    <Content Remove="MyriaLib.Tests\**" />
+    <EmbeddedResource Remove="MyriaLib.Tests\**" />
+    <None Remove="MyriaLib.Tests\**" />
+  </ItemGroup>
+
 </Project>

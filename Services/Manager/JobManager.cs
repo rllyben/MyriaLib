@@ -12,7 +12,14 @@ namespace MyriaLib.Services.Manager
         public static void LoadJobs(string path = "Data/common/jobs.json")
         {
             if (!File.Exists(path)) return;
-            _allJobs = JsonSerializer.Deserialize<List<Job>>(File.ReadAllText(path)) ?? new();
+            var jobs = JsonSerializer.Deserialize<List<Job>>(File.ReadAllText(path)) ?? new();
+            LoadJobs(jobs);
+        }
+
+        /// <summary>Loads jobs from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadJobs(List<Job> jobs)
+        {
+            _allJobs = jobs;
         }
 
         public static Job? GetById(string id)

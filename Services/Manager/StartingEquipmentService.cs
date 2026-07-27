@@ -21,11 +21,18 @@ namespace MyriaLib.Services.Manager
                 var entries = JsonSerializer.Deserialize<List<StartingItemEntry>>(
                     File.ReadAllText(path), _opts);
                 if (entries == null) return;
-                _starterItems = entries
+                var starterItems = entries
                     .Where(e => !string.IsNullOrWhiteSpace(e.ClassId))
                     .ToDictionary(e => e.ClassId, e => e.ItemIds ?? [], StringComparer.OrdinalIgnoreCase);
+                Load(starterItems);
             }
             catch { /* file error — skip silently */ }
+        }
+
+        /// <summary>Loads starting-item assignments from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(Dictionary<string, string[]> starterItemsByClass)
+        {
+            _starterItems = new(starterItemsByClass, StringComparer.OrdinalIgnoreCase);
         }
 
         public static void GrantStartingEquipment(Character character)
