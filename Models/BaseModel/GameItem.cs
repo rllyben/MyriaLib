@@ -13,7 +13,7 @@ namespace MyriaLib.Models.BaseModel
         public int BuyPrice { get; set; }
         public int StackSize { get; set; } = 1;
         public int MaxStackSize { get; set; } = 1;
-        public GatheringType? ToolType { get; set; } = null;
+        public string? ToolType { get; set; } = null;
         public List<string> AllowedClasses { get; set; } = new();
         public string? UpgradeCategory { get; set; }
 

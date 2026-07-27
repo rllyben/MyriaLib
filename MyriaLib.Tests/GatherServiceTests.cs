@@ -140,7 +140,7 @@ public class GatherServiceTests
         // spot.Type here uses a value with no mapped job to confirm the jobless path is safe.
         var character = TestHelpers.CreateCharacter();
         var room = MakeRoom(
-            new GatheringSpot { Id = "s1", Name = "Spot", Description = "", Type = (GatheringType)999, GatheredItemId = "stone_fragment" });
+            new GatheringSpot { Id = "s1", Name = "Spot", Description = "", Type = "Unknown", GatheredItemId = "stone_fragment" });
 
         var outcome = GatherService.Gather(character, room);
 

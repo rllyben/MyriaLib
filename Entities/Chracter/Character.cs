@@ -334,7 +334,7 @@ namespace MyriaLib.Entities.Characters
         /// Returns true if the player has a tool that enables the given gathering type —
         /// checks both the inventory bag and the equipped weapon slot.
         /// </summary>
-        public bool HasToolFor(GatheringType type)
+        public bool HasToolFor(string type)
         {
             if (type == GatheringType.Herb) return true;
             return Inventory.Items.Any(i => i.ToolType == type)

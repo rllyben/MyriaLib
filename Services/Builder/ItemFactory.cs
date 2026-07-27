@@ -151,7 +151,7 @@ namespace MyriaLib.Services.Builder
                 BuyPrice         = def.BuyPrice,
                 SlotType         = EquipmentType.FromLegacyInt.GetValueOrDefault(def.SlotType, EquipmentType.Weapon),
                 ToolType         = def.ToolType,
-                IsTool           = def.ToolType.HasValue,
+                IsTool           = def.ToolType != null,
                 UpgradeCategory  = def.UpgradeCategory,
                 AllowedClasses   = def.AllowedClasses ?? new(),
                 BaseStats        = baseStats,
