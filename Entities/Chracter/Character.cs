@@ -56,21 +56,29 @@ namespace MyriaLib.Entities.Characters
         /// <summary>Composite skills stashed per class; restored when the player switches back.</summary>
         public Dictionary<string, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Level breakpoints shared by <see cref="FusionSlotCount"/> and <see cref="SkillSlotCount"/>
+        /// (both use the same curve by default). Base is 1 slot; each entry raises the cap once
+        /// Level reaches it. Pass entries sorted ascending by level — mirrors the shape and the
+        /// same ordering assumption as JobXpService.GatherBonusThresholds/UpgradeGates. A mod or a
+        /// differently-paced game can replace this instead of being stuck with a hardcoded curve.
+        /// </summary>
+        public static (int Level, int Slots)[] SkillSlotBreakpoints { get; set; } =
+        {
+            (3, 2), (9, 3), (18, 4), (27, 5), (36, 6), (45, 7), (54, 8), (63, 9), (72, 10)
+        };
+
+        private static int ResolveSlotCount(int level)
+        {
+            int slots = 1;
+            foreach (var (breakLevel, breakSlots) in SkillSlotBreakpoints)
+                if (level >= breakLevel) slots = breakSlots;
+            return slots;
+        }
+
         /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
         [JsonIgnore]
-        public int FusionSlotCount => Level switch
-        {
-            >= 72 => 10,
-            >= 63 => 9,
-            >= 54 => 8,
-            >= 45 => 7,
-            >= 36 => 6,
-            >= 27 => 5,
-            >= 18 => 4,
-            >= 9  => 3,
-            >= 3  => 2,
-            _     => 1
-        };
+        public int FusionSlotCount => ResolveSlotCount(Level);
 
         // ── Skill Combination (combining 2–5 learned base skills) ─────────────────
         /// <summary>All combined skills the player has created by pairing their learned skills.</summary>
@@ -88,22 +96,10 @@ namespace MyriaLib.Entities.Characters
 
         /// <summary>
         /// Maximum number of skills the player can slot for combat, based on level.
-        /// Follows the rule: base 1 slot, then +1 at levels 3, 9, 18, 27, 36, 45, 54, 63, 72.
+        /// See <see cref="SkillSlotBreakpoints"/> for the level curve.
         /// </summary>
         [JsonIgnore]
-        public int SkillSlotCount => Level switch
-        {
-            >= 72 => 10,
-            >= 63 => 9,
-            >= 54 => 8,
-            >= 45 => 7,
-            >= 36 => 6,
-            >= 27 => 5,
-            >= 18 => 4,
-            >= 9  => 3,
-            >= 3  => 2,
-            _     => 1
-        };
+        public int SkillSlotCount => ResolveSlotCount(Level);
 
         // ── Race ─────────────────────────────────────────────────────────────────
         /// <summary>

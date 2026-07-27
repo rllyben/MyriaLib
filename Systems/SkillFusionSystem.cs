@@ -26,6 +26,20 @@ namespace MyriaLib.Systems
         /// <summary>MP cost multiplier applied per component (multiplicative stacking).</summary>
         public static float ManaCostMultiplierPerComponent { get; set; } = 0.6f;
 
+        /// <summary>
+        /// Optional override for target-derivation. When set, called instead of the built-in
+        /// <see cref="DeriveTarget"/> rules — e.g. a game with row/column AoE instead of a single
+        /// AllEnemies concept can supply its own targeting logic without forking this class.
+        /// Static methods can't be made virtual, so this delegate is the override seam instead.
+        /// </summary>
+        public static Func<IReadOnlyList<BaseSkillData>, List<SkillComponentType>, SkillTarget>? DeriveTargetOverride { get; set; }
+
+        /// <summary>
+        /// Optional override for fusion-name generation. When set, called instead of the built-in
+        /// <see cref="BuildFusionName"/> rules.
+        /// </summary>
+        public static Func<IReadOnlyList<BaseSkillData>, string>? BuildFusionNameOverride { get; set; }
+
         // ── Public API ────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -50,7 +64,7 @@ namespace MyriaLib.Systems
                                  + (components.Count - 1) * ScalingPerComponent;
             string statToScale   = components.OrderByDescending(c => c.ScalingFactor).First().StatToScaleFrom;
             bool   isHealing     = allTypes.Contains(SkillComponentType.Heal);
-            var    target        = DeriveTarget(components, allTypes);
+            var    target        = DeriveTargetOverride?.Invoke(components, allTypes) ?? DeriveTarget(components, allTypes);
             var    type          = allTypes.Contains(SkillComponentType.Magic)
                                      ? SkillType.Magical : SkillType.Physical;
 
@@ -60,7 +74,7 @@ namespace MyriaLib.Systems
                 manaCost += (int)(components[i].ManaCost * ManaCostMultiplierPerComponent);
 
             string id   = "fusion_" + string.Join("_", components.Select(c => c.Id).OrderBy(x => x));
-            string name = BuildFusionName(components);
+            string name = BuildFusionNameOverride?.Invoke(components) ?? BuildFusionName(components);
             string desc = $"A fusion of {string.Join(", ", components.Select(c => c.Name))}.";
 
             var skill = new Skill

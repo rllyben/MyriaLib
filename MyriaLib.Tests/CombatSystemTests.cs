@@ -6,6 +6,22 @@ namespace MyriaLib.Tests;
 public class CombatSystemTests
 {
     [Fact]
+    public void DamageSteepness_IsSettable_AndAffectsExponentialDamage()
+    {
+        float original = CombatSystem.DamageSteepness;
+        try
+        {
+            // Zero steepness collapses the exponential term to 1 regardless of the atk/def gap.
+            CombatSystem.DamageSteepness = 0f;
+            Assert.Equal(40f, CombatSystem.ExponentialDamage(100f, 0f), precision: 3);
+        }
+        finally
+        {
+            CombatSystem.DamageSteepness = original;
+        }
+    }
+
+    [Fact]
     public void TryHit_AimEqualToEvasion_IsGuaranteedHit()
     {
         var attacker = new TestCombatant { TotalAim = 50 };

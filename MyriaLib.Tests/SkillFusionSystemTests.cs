@@ -132,4 +132,45 @@ public class SkillFusionSystemTests
             FusionRecipeService.Load(new List<FusionRecipe>()); // reset shared static state
         }
     }
+
+    [Fact]
+    public void DeriveTargetOverride_WhenSet_ReplacesTheBuiltInTargetingRules()
+    {
+        var original = SkillFusionSystem.DeriveTargetOverride;
+        try
+        {
+            // Default rules would resolve this single, non-Self/Area component to SingleEnemy —
+            // the override forces AllAllies instead, proving it fully replaces (not augments) the
+            // built-in DeriveTarget logic.
+            SkillFusionSystem.DeriveTargetOverride = (_, _) => SkillTarget.AllAllies;
+            var slash = MakeComponent("slash", "Slash", new[] { "Physical" }, manaCost: 10, scalingFactor: 1.0f, statToScaleFrom: "ATK", requiredLevel: 1);
+
+            var result = SkillFusionSystem.Fuse(new List<BaseSkillData> { slash });
+
+            Assert.Equal(SkillTarget.AllAllies, result!.Target);
+        }
+        finally
+        {
+            SkillFusionSystem.DeriveTargetOverride = original;
+        }
+    }
+
+    [Fact]
+    public void BuildFusionNameOverride_WhenSet_ReplacesTheBuiltInNamingRules()
+    {
+        var original = SkillFusionSystem.BuildFusionNameOverride;
+        try
+        {
+            SkillFusionSystem.BuildFusionNameOverride = _ => "Custom Fusion Name";
+            var slash = MakeComponent("slash", "Slash", new[] { "Physical" }, manaCost: 10, scalingFactor: 1.0f, statToScaleFrom: "ATK", requiredLevel: 1);
+
+            var result = SkillFusionSystem.Fuse(new List<BaseSkillData> { slash });
+
+            Assert.Equal("Custom Fusion Name", result!.Name);
+        }
+        finally
+        {
+            SkillFusionSystem.BuildFusionNameOverride = original;
+        }
+    }
 }

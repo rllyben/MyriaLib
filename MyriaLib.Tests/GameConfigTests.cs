@@ -51,6 +51,22 @@ public class GameConfigTests
     }
 
     [Fact]
+    public void SetSkillSlotBreakpoints_UpdatesCharacterSkillSlotBreakpoints()
+    {
+        var original = Character.SkillSlotBreakpoints;
+        try
+        {
+            var custom = new[] { (5, 42) };
+            GameConfig.SetSkillSlotBreakpoints(custom);
+            Assert.Equal(custom, Character.SkillSlotBreakpoints);
+        }
+        finally
+        {
+            GameConfig.SetSkillSlotBreakpoints(original);
+        }
+    }
+
+    [Fact]
     public void SetClassProgression_UpdatesClassXpService()
     {
         int origMax = ClassXpService.MaxLevel;

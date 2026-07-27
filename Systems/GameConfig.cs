@@ -80,6 +80,16 @@ namespace MyriaLib.Systems
             JobXpService.UpgradeGates      = gates;
         }
 
+        /// <summary>
+        /// Overrides the level breakpoints for combat skill-bar and fusion-skill slot counts
+        /// (both share this curve). Pass entries sorted ascending by level. Default: base 1 slot,
+        /// +1 at levels 3, 9, 18, 27, 36, 45, 54, 63, 72.
+        /// </summary>
+        public static void SetSkillSlotBreakpoints((int Level, int Slots)[] breakpoints)
+        {
+            Character.SkillSlotBreakpoints = breakpoints;
+        }
+
         /// <summary>Sets the cooldown between class changes. Default: 7 days.</summary>
         public static void SetClassCooldown(TimeSpan cooldown)
         {
