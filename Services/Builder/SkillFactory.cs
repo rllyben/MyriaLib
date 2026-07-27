@@ -53,7 +53,7 @@ namespace MyriaLib.Services.Builder
                 Class           = d.Class,
                 ManaCost        = d.ManaCost,
                 Type            = Enum.Parse<SkillType>(d.Type),
-                Target          = Enum.Parse<SkillTarget>(d.Target),
+                Target          = d.Target,
                 ScalingFactor   = d.ScalingFactor,
                 StatToScaleFrom = d.StatToScaleFrom,
                 MinLevel        = d.MinLevel,

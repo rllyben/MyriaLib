@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 namespace MyriaLib.Entities.Skills
 {
     public enum SkillType { Physical, Magical }
-    public enum SkillTarget { SingleEnemy, AllEnemies, Self, SingleAlly, AllAllies }
 
     public class Skill
     {
@@ -19,7 +18,7 @@ namespace MyriaLib.Entities.Skills
         public bool IsHealing { get; set; } = false;
         public int ManaCost { get; set; }
         public SkillType Type { get; set; }
-        public SkillTarget Target { get; set; }
+        public string Target { get; set; }
 
         public float ScalingFactor { get; set; }
         public string StatToScaleFrom { get; set; } = "ATK";

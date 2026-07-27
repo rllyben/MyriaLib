@@ -32,7 +32,7 @@ namespace MyriaLib.Systems
         /// AllEnemies concept can supply its own targeting logic without forking this class.
         /// Static methods can't be made virtual, so this delegate is the override seam instead.
         /// </summary>
-        public static Func<IReadOnlyList<BaseSkillData>, List<SkillComponentType>, SkillTarget>? DeriveTargetOverride { get; set; }
+        public static Func<IReadOnlyList<BaseSkillData>, List<SkillComponentType>, string>? DeriveTargetOverride { get; set; }
 
         /// <summary>
         /// Optional override for fusion-name generation. When set, called instead of the built-in
@@ -147,7 +147,7 @@ namespace MyriaLib.Systems
 
         // ── Private helpers ───────────────────────────────────────────────────────
 
-        private static SkillTarget DeriveTarget(
+        private static string DeriveTarget(
             IReadOnlyList<BaseSkillData> components,
             List<SkillComponentType> allTypes)
         {
@@ -193,9 +193,8 @@ namespace MyriaLib.Systems
                 skill.ScalingFactor = recipe.ScalingFactorOverride.Value;
             if (recipe.ManaCostOverride.HasValue)
                 skill.ManaCost = recipe.ManaCostOverride.Value;
-            if (!string.IsNullOrEmpty(recipe.TargetOverride)
-                && Enum.TryParse<SkillTarget>(recipe.TargetOverride, ignoreCase: true, out var targetOverride))
-                skill.Target = targetOverride;
+            if (!string.IsNullOrEmpty(recipe.TargetOverride))
+                skill.Target = recipe.TargetOverride;
         }
     }
 }

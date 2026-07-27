@@ -192,6 +192,13 @@ namespace MyriaLib.Systems
                         if (IsFinished) break;
                     }
                     break;
+
+                default:
+                    // Unrecognized/mod-added Target: the resolution switch above already treats
+                    // this as Self (see primaryTargets), so execution matches that instead of
+                    // silently doing nothing (mana already spent) as it would have before.
+                    ExecuteSkillOnCharacter(skill, caster, caster);
+                    break;
             }
 
             // Apply data-driven effects to resolved targets.
