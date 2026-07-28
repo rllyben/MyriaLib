@@ -76,10 +76,26 @@
     <None Remove="MyriaLib.Progression\**" />
   </ItemGroup>
 
+  <!--
+    MyriaLib.Crafting is a nested SDK-style project (see MyriaLib.Crafting.csproj) — the fourth
+    and last of the confirmed-safe below-Core leaves identified during Phase 2 research, pulled
+    out following the same proven pattern. Only CraftingService moves — CraftExecutionService
+    (Services/CraftExecutionService.cs) takes Character/Npc directly and stays in Core. Same
+    reason as the exclusions above: without this, MyriaLib's own implicit file globbing would
+    compile the moved file a second time here too.
+  -->
+  <ItemGroup>
+    <Compile Remove="MyriaLib.Crafting\**" />
+    <Content Remove="MyriaLib.Crafting\**" />
+    <EmbeddedResource Remove="MyriaLib.Crafting\**" />
+    <None Remove="MyriaLib.Crafting\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="MyriaLib.Economy\MyriaLib.Economy.csproj" />
     <ProjectReference Include="MyriaLib.Enums\MyriaLib.Enums.csproj" />
     <ProjectReference Include="MyriaLib.Progression\MyriaLib.Progression.csproj" />
+    <ProjectReference Include="MyriaLib.Crafting\MyriaLib.Crafting.csproj" />
   </ItemGroup>
 
 </Project>
