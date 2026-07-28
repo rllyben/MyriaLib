@@ -49,8 +49,22 @@
     <None Remove="MyriaLib.Economy\**" />
   </ItemGroup>
 
+  <!--
+    MyriaLib.Enums is a nested SDK-style project (see MyriaLib.Enums.csproj) — the second package
+    pulled out of MyriaLib proper (Systems/Enums/*.cs), following the same proven pattern as
+    MyriaLib.Economy. Same reason as the exclusions above: without this, MyriaLib's own implicit
+    file globbing would compile the moved files a second time here too.
+  -->
+  <ItemGroup>
+    <Compile Remove="MyriaLib.Enums\**" />
+    <Content Remove="MyriaLib.Enums\**" />
+    <EmbeddedResource Remove="MyriaLib.Enums\**" />
+    <None Remove="MyriaLib.Enums\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="MyriaLib.Economy\MyriaLib.Economy.csproj" />
+    <ProjectReference Include="MyriaLib.Enums\MyriaLib.Enums.csproj" />
   </ItemGroup>
 
 </Project>
