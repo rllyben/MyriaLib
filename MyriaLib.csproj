@@ -62,9 +62,24 @@
     <None Remove="MyriaLib.Enums\**" />
   </ItemGroup>
 
+  <!--
+    MyriaLib.Progression is a nested SDK-style project (see MyriaLib.Progression.csproj) — the
+    third package pulled out of MyriaLib proper (GameTick/JobXpService/ClassXpService), following
+    the same proven pattern as MyriaLib.Economy/MyriaLib.Enums. Same reason as the exclusions
+    above: without this, MyriaLib's own implicit file globbing would compile the moved files a
+    second time here too.
+  -->
+  <ItemGroup>
+    <Compile Remove="MyriaLib.Progression\**" />
+    <Content Remove="MyriaLib.Progression\**" />
+    <EmbeddedResource Remove="MyriaLib.Progression\**" />
+    <None Remove="MyriaLib.Progression\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="MyriaLib.Economy\MyriaLib.Economy.csproj" />
     <ProjectReference Include="MyriaLib.Enums\MyriaLib.Enums.csproj" />
+    <ProjectReference Include="MyriaLib.Progression\MyriaLib.Progression.csproj" />
   </ItemGroup>
 
 </Project>
