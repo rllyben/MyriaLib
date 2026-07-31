@@ -5,6 +5,7 @@ namespace MyriaLib.Models.Dto
     public record UpgradeActionResult(bool Success, string? Reason, string? ItemId, int UpgradeLevel, long SkillXpGained, string? JobId);
     public record StartCombatResult(bool Success, string? Reason, string? MonsterName, int MonsterHp, int MonsterMaxHp, int MonsterLevel = 0);
     public record NpcShopBuyResult(bool Success, string? Reason, long TotalCost, int Quantity);
+    public record EquipItemResult(bool Success, string? Reason);
     public record CombatLogMessage(string Key, string[] Args);
     public record CombatTurnResult(
         bool Success,

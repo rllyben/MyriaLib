@@ -50,11 +50,25 @@ namespace MyriaLib.Entities.Characters
         /// <summary>How many pages currently contain at least one item (always ≥ 1).</summary>
         public int UsedPages => Math.Max(1, (int)Math.Ceiling((double)Items.Count / PageSize));
 
-        public bool SwapEquipment(string itemId, Character character)
+        public bool SwapEquipment(string itemId, Character character) =>
+            SwapEquipment(itemId, character, out _);
+
+        /// <summary>Same as <see cref="SwapEquipment(string, Character)"/>, but reports why it failed
+        /// (used by the multiplayer server so it can tell the client what went wrong instead of
+        /// silently doing nothing).</summary>
+        public bool SwapEquipment(string itemId, Character character, out string? reason)
         {
             var match = InventoryUtils.ResolveInventoryItem(itemId, character);
-            if (match is not EquipmentItem equipment) return false;
-            if (!equipment.IsUsableBy(character)) return false;
+            if (match is not EquipmentItem equipment)
+            {
+                reason = "Item not found in inventory.";
+                return false;
+            }
+            if (!equipment.IsUsableBy(character))
+            {
+                reason = "Your class cannot equip this item.";
+                return false;
+            }
 
             System.Diagnostics.Debug.WriteLine($"[Inventory] Swapping {equipment.SlotType} slot: {equipment.Name}");
 
@@ -62,6 +76,7 @@ namespace MyriaLib.Entities.Characters
             character.Equipped[equipment.SlotType] = equipment;
             RemoveItem(equipment);
             if (previous != null) AddItem(previous, character);
+            reason = null;
             return true;
         }
         public bool UnequipItem(string itemname, Character character)
