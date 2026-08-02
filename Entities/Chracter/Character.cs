@@ -19,7 +19,9 @@ namespace MyriaLib.Entities.Characters
         public event EventHandler<LevelUpEventArgs>? LeveledUp;
         public event EventHandler<HealthChangedEventArgs>? HealthChanged;
         public event EventHandler<ManaChangedEventArgs>? ManaChanged;
+        [JsonConverter(typeof(CharacterClassJsonConverter))]
         public string Class { get; set; } = CharacterClass.Fighter;
+        [JsonConverter(typeof(CharacterRaceJsonConverter))]
         public string Race  { get; set; } = CharacterRace.Myralu;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;

@@ -5,10 +5,10 @@ namespace MyriaLib.Systems.Enums
     /// <see cref="CharacterClass"/>/<see cref="CharacterRace"/>/<see cref="ItemRarity"/>/
     /// <see cref="GatheringType"/>/<see cref="EquipmentType"/> — so mod-added targeting types work
     /// the same way as these built-ins without requiring any code changes. Previously a closed
-    /// enum declared in Entities/Skills/Skill.cs; already stored as a plain string in skills.json
-    /// and SQL (DbSkill.Target), converted via Enum.Parse at factory time — same situation as
-    /// GatheringType, no legacy-int migration needed. Moved here to sit alongside the other
-    /// string-constant enums.
+    /// enum declared in Entities/Skills/Skill.cs. skills.json/SQL always store the current string
+    /// form, but character saves can carry a Skill snapshot from before this conversion, storing
+    /// Target as the old enum's raw int (e.g. "Target": 0) — handled via FromLegacyInt +
+    /// SkillTargetJsonConverter, same pattern as CharacterClass/CharacterRace.
     /// </summary>
     public static class SkillTarget
     {
@@ -22,5 +22,16 @@ namespace MyriaLib.Systems.Enums
         {
             SingleEnemy, AllEnemies, Self, SingleAlly, AllAllies
         };
+
+        /// <summary>Maps the old enum integer values to string IDs (for save-file migration).</summary>
+        public static readonly IReadOnlyDictionary<int, string> FromLegacyInt =
+            new Dictionary<int, string>
+            {
+                [0] = SingleEnemy,
+                [1] = AllEnemies,
+                [2] = Self,
+                [3] = SingleAlly,
+                [4] = AllAllies,
+            };
     }
 }

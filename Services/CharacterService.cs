@@ -24,6 +24,15 @@ namespace MyriaLib.Services
             WriteIndented = true,
         };
 
+        /// <summary>
+        /// Bumped whenever the save file's JSON *shape* changes in a way a per-field JsonConverter
+        /// can't express (renamed/restructured fields, etc). Field-level legacy-value conversions
+        /// (e.g. Class/Race once stored as enum ints) are handled by their own JsonConverters and
+        /// don't need a version bump. Saves written before this field existed are treated as
+        /// version 0. See <see cref="MigrateCharacterJson"/> to add a new migration step.
+        /// </summary>
+        private const int CurrentSaveVersion = 1;
+
         private static string SavePath(UserAccount user, string characterName)
             => Path.Combine("Data/saves", $"{user.Username}-{characterName}.json");
 
@@ -48,6 +57,7 @@ namespace MyriaLib.Services
             var snapshot = ModLoader.GetCurrentSnapshot();
             var wrapper  = new JsonObject
             {
+                ["SaveVersion"]   = CurrentSaveVersion,
                 ["SavedWithMods"] = JsonNode.Parse(JsonSerializer.Serialize(snapshot, _snapshotOpts)),
                 ["Character"]     = JsonNode.Parse(charJson),
             };
@@ -78,19 +88,27 @@ namespace MyriaLib.Services
             string path = SavePath(user, name);
             if (!File.Exists(path)) return null;
 
-            var raw  = File.ReadAllText(path);
-            string characterJson;
+            var raw = File.ReadAllText(path);
+            string characterJson = raw;
 
-            // Support both new wrapper format ({ "SavedWithMods":…, "Character":… })
-            // and the old format (bare Character JSON).
+            // Support both the wrapper format ({ "SaveVersion":…, "SavedWithMods":…, "Character":… })
+            // and the old bare-Character-JSON format (no wrapper at all - implicitly version 0).
             try
             {
-                using var doc = JsonDocument.Parse(raw);
-                characterJson = doc.RootElement.TryGetProperty("Character", out var el)
-                    ? el.GetRawText()
-                    : raw;
+                if (JsonNode.Parse(raw) is JsonObject root)
+                {
+                    var savedVersion = root.TryGetPropertyValue("SaveVersion", out var versionNode) && versionNode != null
+                        ? versionNode.GetValue<int>()
+                        : 0;
+
+                    var characterNode = root.TryGetPropertyValue("Character", out var charNode) && charNode != null
+                        ? charNode
+                        : root;
+
+                    characterJson = MigrateCharacterJson(characterNode, savedVersion).ToJsonString();
+                }
             }
-            catch { characterJson = raw; }
+            catch { /* fall through and let Deserialize below report the real parse error */ }
 
             var character = JsonSerializer.Deserialize<Character>(characterJson, _opts);
             if (character == null) return null;
@@ -125,20 +143,29 @@ namespace MyriaLib.Services
         }
 
         /// <summary>
-        /// Converts class/race values that were saved as enum integers (old format) to string IDs.
-        /// Also converts numeric keys in ClassXp and Stashed* dictionaries.
+        /// Applies structural JSON migrations needed to bring a save up to CurrentSaveVersion,
+        /// before it's deserialized into Character. This is only for changes a JsonConverter can't
+        /// express - renamed/removed/restructured fields - not legacy-value conversions (those
+        /// belong on the property's own JsonConverter, e.g. CharacterClassJsonConverter).
+        ///
+        /// To add a migration: add "if (fromVersion < N) { ... mutate characterNode ... }" below,
+        /// then bump CurrentSaveVersion to N.
+        /// </summary>
+        private static JsonNode MigrateCharacterJson(JsonNode characterNode, int fromVersion)
+        {
+            // No structural migrations exist yet - CurrentSaveVersion 1 just marks "this save
+            // has a SaveVersion field at all". Add version-gated steps here as the save format
+            // changes in the future.
+            return characterNode;
+        }
+
+        /// <summary>
+        /// Converts numeric keys in ClassXp and Stashed* dictionaries that were saved as enum
+        /// integers (old format) to string IDs. Character.Class/Race themselves are handled by
+        /// CharacterClassJsonConverter/CharacterRaceJsonConverter at deserialize time.
         /// </summary>
         private static void MigrateLegacyClassRace(Character character)
         {
-            // Class / Race — may be "3" (old int-serialised enum) instead of "Fighter"
-            if (int.TryParse(character.Class, out var classInt)
-                && MyriaLib.Systems.Enums.CharacterClass.FromLegacyInt.TryGetValue(classInt, out var classStr))
-                character.Class = classStr;
-
-            if (int.TryParse(character.Race, out var raceInt)
-                && MyriaLib.Systems.Enums.CharacterRace.FromLegacyInt.TryGetValue(raceInt, out var raceStr))
-                character.Race = raceStr;
-
             // ClassXp — keys may be "3" etc.
             var legacyXpKeys = character.ClassXp.Keys.Where(k => int.TryParse(k, out _)).ToList();
             foreach (var key in legacyXpKeys)

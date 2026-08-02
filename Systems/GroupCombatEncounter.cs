@@ -294,6 +294,7 @@ namespace MyriaLib.Systems
                 long xpGained = ScaleXp(monster.Exp, p.Level, monster.Level);
                 p.GainXp(xpGained);
                 ClassManager.GrantClassXp(p, xpGained);
+                SkillFactory.UpdateSkills(p);
                 XpGrantedByCharacter[p] = XpGrantedByCharacter.GetValueOrDefault(p) + xpGained;
             }
 
@@ -306,6 +307,17 @@ namespace MyriaLib.Systems
                     if (drop.StackSize == 0) drop.StackSize = 1;
                     recipient.Inventory.AddItem(drop, recipient);
                 }
+            }
+
+            // Mirrors CombatEncounter.FinishCharacterWon's dungeon room-clearing - previously only
+            // the solo path did this, so dungeon monsters killed via group combat never left the
+            // room and dungeons could never be marked cleared.
+            var room = Characters.FirstOrDefault()?.CurrentRoom;
+            if (room != null && room.IsDungeonRoom)
+            {
+                room.CurrentMonsters.Remove(monster);
+                if (room.CurrentMonsters.Count == 0)
+                    room.IsCleared = true;
             }
 
             if (Monsters.All(m => !m.IsAlive))
