@@ -1,4 +1,7 @@
 {
+  "update.checking": "Suche nach Updates...",
+  "update.downloading": "Update wird heruntergeladen... {0}%",
+  "update.restarting": "Update bereit — Neustart...",
   "app.general.UI.back": "Zurück",
   "app.general.UI.cancel": "Abbrechen",
   "app.general.UI.settings": "Einstellungen",

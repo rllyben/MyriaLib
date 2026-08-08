@@ -1,4 +1,7 @@
 {
+  "update.checking": "Checking for updates...",
+  "update.downloading": "Downloading update... {0}%",
+  "update.restarting": "Update ready — restarting...",
   "app.general.UI.back": "Back",
   "app.general.UI.cancel": "Cancel",
   "app.general.UI.settings": "Settings",
