@@ -44,7 +44,8 @@
       "33": 0.25,
       "34": 0.25,
       "35": 0.25,
-      "36": 0.25
+      "36": 0.25,
+      "37": 0.15
     }
   },
   {
@@ -60,7 +61,9 @@
       "33": 0.25,
       "34": 0.25,
       "35": 0.25,
-      "36": 0.25
+      "36": 0.25,
+      "38": 0.15,
+      "8": 0.15
     }
   },
   {
@@ -76,7 +79,8 @@
       "33": 0.25,
       "34": 0.25,
       "35": 0.25,
-      "36": 0.25
+      "36": 0.25,
+      "10": 0.15
     }
   },
   {
@@ -92,7 +96,9 @@
       "33": 0.25,
       "34": 0.25,
       "35": 0.25,
-      "36": 0.25
+      "36": 0.25,
+      "12": 0.15,
+      "13": 0.1
     }
   },
   {
@@ -108,7 +114,8 @@
       "33": 0.25,
       "34": 0.25,
       "35": 0.25,
-      "36": 0.25
+      "36": 0.25,
+      "11": 0.15
     }
   },
   {
@@ -408,9 +415,10 @@
       "east": 64
     },
     "EncounterableMonsters": {
-      "15": 0.4,
-      "16": 0.4,
-      "17": 0.2
+      "15": 0.35,
+      "16": 0.35,
+      "17": 0.15,
+      "3": 0.15
     },
     "GatheringSpots": [
       {
@@ -429,7 +437,7 @@
     "Description": "room.grelmito.1.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 13,
+    "AccessLevel": 12,
     "ExitIds": {
       "north": 1,
       "south": 23
@@ -438,7 +446,8 @@
       "19": 0.2,
       "20": 0.3,
       "21": 0.25,
-      "29": 0.25
+      "29": 0.25,
+      "18": 0.2
     }
   },
   {
@@ -447,7 +456,7 @@
     "Description": "room.grelmito.2.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 13,
+    "AccessLevel": 12,
     "ExitIds": {
       "north": 22,
       "south": 24,
@@ -457,7 +466,8 @@
       "19": 0.2,
       "20": 0.3,
       "21": 0.25,
-      "29": 0.25
+      "29": 0.25,
+      "18": 0.2
     }
   },
   {
@@ -466,7 +476,7 @@
     "Description": "room.grelmito.3.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 13,
+    "AccessLevel": 12,
     "ExitIds": {
       "north": 23,
       "south": 25
@@ -475,7 +485,8 @@
       "19": 0.2,
       "20": 0.3,
       "21": 0.25,
-      "29": 0.25
+      "29": 0.25,
+      "18": 0.2
     }
   },
   {
@@ -484,7 +495,7 @@
     "Description": "room.grelmito.4.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 24,
       "south": 26
@@ -502,7 +513,7 @@
     "Description": "room.grelmito.5.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 25,
       "south": 27,
@@ -537,7 +548,7 @@
     "Description": "room.whispering_woods.1.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "east": 23,
       "south": 29
@@ -565,7 +576,7 @@
     "Description": "room.whispering_woods.2.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 28,
       "south": 30
@@ -593,7 +604,7 @@
     "Description": "room.whispering_woods.3.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 29,
       "south": 31,
@@ -622,7 +633,7 @@
     "Description": "room.whispering_woods.4.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 30,
       "east": 26,
@@ -651,7 +662,7 @@
     "Description": "room.whispering_woods.5.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "south": 33
     },
@@ -678,7 +689,7 @@
     "Description": "room.whispering_woods.6.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 32,
       "west": 34,
@@ -707,7 +718,7 @@
     "Description": "room.whispering_woods.7.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "east": 33,
       "south": 35
@@ -735,7 +746,7 @@
     "Description": "room.whispering_woods.8.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 15,
+    "AccessLevel": 13,
     "ExitIds": {
       "north": 34
     },
@@ -762,7 +773,7 @@
     "Description": "room.mountain_pass.1.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 18,
+    "AccessLevel": 17,
     "ExitIds": {
       "north": 11,
       "south": 37
@@ -780,7 +791,7 @@
     "Description": "room.mountain_pass.2.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 18,
+    "AccessLevel": 17,
     "ExitIds": {
       "north": 36,
       "south": 38
@@ -798,7 +809,7 @@
     "Description": "room.mountain_pass.3.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 18,
+    "AccessLevel": 17,
     "ExitIds": {
       "north": 37,
       "south": 39
@@ -816,7 +827,7 @@
     "Description": "room.mountain_pass.4.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 18,
+    "AccessLevel": 17,
     "ExitIds": {
       "north": 38,
       "south": 40
@@ -834,7 +845,7 @@
     "Description": "room.mountain_pass.5.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 18,
+    "AccessLevel": 17,
     "ExitIds": {
       "north": 39,
       "south": 41
@@ -852,7 +863,7 @@
     "Description": "room.mountain_pass.6.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "north": 40,
       "south": 42
@@ -870,7 +881,7 @@
     "Description": "room.mountain_pass.7.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "north": 41,
       "south": 43
@@ -888,7 +899,7 @@
     "Description": "room.mountain_pass.8.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "north": 42,
       "south": 44
@@ -906,7 +917,7 @@
     "Description": "room.mountain_pass.9.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "north": 43,
       "south": 45
@@ -924,7 +935,7 @@
     "Description": "room.mountain_pass.10.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "north": 44,
       "west": 49,
@@ -943,7 +954,7 @@
     "Description": "room.mountain_pass.11.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "west": 45,
       "east": 48
@@ -961,7 +972,7 @@
     "Description": "room.mountain_pass.13.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "west": 46,
       "east": 27,
@@ -980,7 +991,7 @@
     "Description": "room.mountain_pass.14.desc",
     "HasMonsters": true,
     "RequirementType": 1,
-    "AccessLevel": 20,
+    "AccessLevel": 18,
     "ExitIds": {
       "west": 62,
       "east": 45
