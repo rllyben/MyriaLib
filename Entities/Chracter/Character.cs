@@ -5,6 +5,7 @@ using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models.BaseModel;
+using MyriaLib.Models.Dto;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
@@ -231,6 +232,52 @@ namespace MyriaLib.Entities.Characters
             if (newValue == old) return;
             CurrentMana = newValue;
             ManaChanged?.Invoke(this, new ManaChangedEventArgs(old, newValue, source));
+        }
+
+        /// <summary>
+        /// Overwrites this character's level-derived state (Level/Experience/ExpForNextLvl,
+        /// base stats, unused stat points, base health/mana) with the server's authoritative
+        /// values, fired after any action that might have granted XP - replacing the old
+        /// approach of the client replaying GainXp()/LevelUp() locally, which drifts whenever
+        /// a rookie bonus, level-gap XP scaling, or anything else server-side doesn't match
+        /// the client's own math exactly. Fires LeveledUp if Level actually changed, same as
+        /// SetHealth/SetMana do for their own events.
+        /// </summary>
+        public void ApplySyncedProgress(CharacterProgressResult p)
+        {
+            int oldLevel = Level;
+
+            Level         = p.Level;
+            Experience    = p.Experience;
+            ExpForNextLvl = p.ExpForNextLvl;
+
+            Stats.Strength     = p.Strength;
+            Stats.Dexterity    = p.Dexterity;
+            Stats.Endurance    = p.Endurance;
+            Stats.Intelligence = p.Intelligence;
+            Stats.Spirit       = p.Spirit;
+            Stats.UnusedPoints = p.UnusedPoints;
+            Stats.BaseHealth   = p.BaseHealth;
+            Stats.BaseMana     = p.BaseMana;
+
+            if (Level != oldLevel)
+                LeveledUp?.Invoke(this, new LevelUpEventArgs(oldLevel, Level));
+        }
+
+        /// <summary>
+        /// Overwrites kill/item objective progress on matching active quests with the server's
+        /// authoritative counters. Quests are matched by Id; anything the client doesn't
+        /// currently have active (e.g. already turned in) is ignored.
+        /// </summary>
+        public void ApplySyncedQuestProgress(IEnumerable<QuestProgressState> progress)
+        {
+            foreach (var p in progress)
+            {
+                var quest = ActiveQuests.FirstOrDefault(q => q.Id == p.QuestId);
+                if (quest is null) continue;
+                quest.KillProgress = new Dictionary<int, int>(p.KillProgress);
+                quest.ItemProgress = new Dictionary<string, int>(p.ItemProgress);
+            }
         }
 
         public int SpendMana(int amount, string? source = null)
