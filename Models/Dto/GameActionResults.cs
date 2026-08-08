@@ -5,6 +5,7 @@ namespace MyriaLib.Models.Dto
     public record UpgradeActionResult(bool Success, string? Reason, string? ItemId, int UpgradeLevel, long SkillXpGained, string? JobId);
     public record StartCombatResult(bool Success, string? Reason, string? MonsterName, int MonsterHp, int MonsterMaxHp, int MonsterLevel = 0);
     public record NpcShopBuyResult(bool Success, string? Reason, long TotalCost, int Quantity);
+    public record NpcSellResult(bool Success, string? Reason, long TotalGain, int Quantity);
     public record HealActionResult(bool Success, string? Reason, int CharacterHp, int CharacterMaxHp, int CharacterMana, int CharacterMaxMana);
     public record EquipItemResult(bool Success, string? Reason);
     public record CombatLogMessage(string Key, string[] Args);
@@ -17,9 +18,10 @@ namespace MyriaLib.Models.Dto
         bool Finished,
         bool CharacterWon,
         long XpGained,
-        List<string> LootItemIds);
+        List<string> LootItemIds,
+        long RookieBonusXp = 0);
 
-    public record GroupCombatantState(string Name, int Hp, int MaxHp, bool IsAlive, int Level = 0, long XpGained = 0);
+    public record GroupCombatantState(string Name, int Hp, int MaxHp, bool IsAlive, int Level = 0, long XpGained = 0, long RookieBonusXp = 0, List<string>? LootItemIds = null);
     public record StartGroupCombatResult(
         bool Success,
         string? Reason,

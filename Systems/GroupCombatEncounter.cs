@@ -37,6 +37,11 @@ namespace MyriaLib.Systems
         /// </summary>
         public Dictionary<Character, long> XpGrantedByCharacter { get; } = new();
 
+        /// <summary>Item ids granted to each character across this encounter so far (accumulated
+        /// per kill, one entry per dropped item). Only the single living recipient of a given kill's
+        /// loot gets entries added for that kill.</summary>
+        public Dictionary<Character, List<string>> LootGrantedByCharacter { get; } = new();
+
         public GroupCombatEncounter(IEnumerable<Character> characters, IEnumerable<Monster> enemies)
         {
             var rng = Random.Shared;
@@ -302,10 +307,13 @@ namespace MyriaLib.Systems
             if (recipient != null)
             {
                 var drops = LootGenerator.GetLootFor(monster);
+                if (!LootGrantedByCharacter.TryGetValue(recipient, out var lootList))
+                    LootGrantedByCharacter[recipient] = lootList = new();
                 foreach (var drop in drops)
                 {
                     if (drop.StackSize == 0) drop.StackSize = 1;
                     recipient.Inventory.AddItem(drop, recipient);
+                    lootList.Add(drop.Id);
                 }
             }
 
