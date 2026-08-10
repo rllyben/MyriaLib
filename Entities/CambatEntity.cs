@@ -1,5 +1,6 @@
 using MyriaLib.Entities.Effects;
 using MyriaLib.Entities.Items;
+using MyriaLib.Systems.Enums;
 using MyriaLib.Systems.Interfaces;
 using System.Text.Json.Serialization;
 
@@ -43,9 +44,30 @@ namespace MyriaLib.Entities
 
         public bool IsAlive => CurrentHealth > 0;
 
-        public EquipmentItem? WeaponSlot    { get; set; }
-        public EquipmentItem? ArmorSlot     { get; set; }
-        public EquipmentItem? AccessorySlot { get; set; }
+        // Genuinely extensible backing store — a mod can add any slot-type key at runtime and
+        // GetBonusFromGear picks it up immediately. Not itself serialized: the 3 named properties
+        // below are the JSON wire format (existing save files have "WeaponSlot"/"ArmorSlot"/
+        // "AccessorySlot" as top-level keys with no "Equipped" key), so their setters are what
+        // actually populate this dictionary on load. A slot added only via this dictionary won't
+        // survive save/load or appear in any UI yet — that needs matching DB/UI/ItemFactory work.
+        [JsonIgnore]
+        public Dictionary<string, EquipmentItem?> Equipped { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public EquipmentItem? WeaponSlot
+        {
+            get => Equipped.GetValueOrDefault(EquipmentType.Weapon);
+            set => Equipped[EquipmentType.Weapon] = value;
+        }
+        public EquipmentItem? ArmorSlot
+        {
+            get => Equipped.GetValueOrDefault(EquipmentType.Armor);
+            set => Equipped[EquipmentType.Armor] = value;
+        }
+        public EquipmentItem? AccessorySlot
+        {
+            get => Equipped.GetValueOrDefault(EquipmentType.Accessory);
+            set => Equipped[EquipmentType.Accessory] = value;
+        }
 
         public int TotalPhysicalAttack  => (TotalSTR * 2 + TotalEND) + GetBonusFromGear(g => g.Bonuses.ATK)  + GetEffectStatBonus("ATK");
         public int TotalPhysicalDefense => (TotalEND * 2 + TotalSTR) + GetBonusFromGear(g => g.Bonuses.DEF)  + GetEffectStatBonus("DEF");
@@ -93,21 +115,9 @@ namespace MyriaLib.Entities
         public virtual float GetBlockChance()    => BlockChance;
 
         public int GetBonusFromGear(Func<EquipmentItem, int> selector)
-        {
-            int total = 0;
-            if (WeaponSlot    != null) total += selector(WeaponSlot);
-            if (ArmorSlot     != null) total += selector(ArmorSlot);
-            if (AccessorySlot != null) total += selector(AccessorySlot);
-            return total;
-        }
+            => Equipped.Values.Where(i => i != null).Sum(i => selector(i!));
 
         public float GetBonusFromGear(Func<EquipmentItem, float> selector)
-        {
-            float total = 0;
-            if (WeaponSlot    != null) total += selector(WeaponSlot);
-            if (ArmorSlot     != null) total += selector(ArmorSlot);
-            if (AccessorySlot != null) total += selector(AccessorySlot);
-            return total;
-        }
+            => Equipped.Values.Where(i => i != null).Sum(i => selector(i!));
     }
 }

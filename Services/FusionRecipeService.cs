@@ -31,7 +31,12 @@ namespace MyriaLib.Services
                            File.ReadAllText(filePath),
                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                        ?? new();
+            Load(list);
+        }
 
+        /// <summary>Loads fusion recipes from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<FusionRecipe> list)
+        {
             _recipes = list.ToDictionary(
                 r => MakeKey(r.ComponentIds),
                 r => r,

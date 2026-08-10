@@ -21,7 +21,12 @@ namespace MyriaLib.Systems
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var tables  = JsonSerializer.Deserialize<List<MonsterLootTable>>(File.ReadAllText(path), options);
             if (tables == null) return;
+            Load(tables);
+        }
 
+        /// <summary>Loads type-based loot tables from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<MonsterLootTable> tables)
+        {
             _typeLoot.Clear();
             foreach (var table in tables)
             {

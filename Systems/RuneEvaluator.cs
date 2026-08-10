@@ -44,7 +44,7 @@ namespace MyriaLib.Systems
 
             float   scalingFactor = baseRune.BaseScalingFactor;
             int     manaCost      = baseRune.BaseManaCost;
-            var     target        = Enum.Parse<SkillTarget>(baseRune.Target, ignoreCase: true);
+            var     target        = baseRune.Target;
             bool    isAoe         = false;
 
             int supportCount       = 0;

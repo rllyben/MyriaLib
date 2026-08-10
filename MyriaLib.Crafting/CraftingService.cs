@@ -21,14 +21,21 @@ namespace MyriaLib.Services
         {
             if (!File.Exists(path)) return;
             var raw = JsonSerializer.Deserialize<Dictionary<string, RecipeDto[]>>(File.ReadAllText(path)) ?? new();
-            _byNpc = new(StringComparer.OrdinalIgnoreCase);
+            var recipes = new Dictionary<string, CraftingRecipe[]>(StringComparer.OrdinalIgnoreCase);
             foreach (var (npcId, dtos) in raw)
-                _byNpc[npcId] = dtos.Select(d => new CraftingRecipe(
+                recipes[npcId] = dtos.Select(d => new CraftingRecipe(
                     d.OutputId,
                     d.XpReward,
                     d.RequiredKnowledgeLevel,
                     d.Ingredients.Select(i => new RecipeIngredient(i.ItemId, i.Amount)).ToArray()
                 )).ToArray();
+            LoadRecipes(recipes);
+        }
+
+        /// <summary>Loads recipes from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadRecipes(Dictionary<string, CraftingRecipe[]> recipesByNpc)
+        {
+            _byNpc = new(recipesByNpc, StringComparer.OrdinalIgnoreCase);
         }
 
         public static CraftingRecipe? GetRecipe(string npcId, string outputId)

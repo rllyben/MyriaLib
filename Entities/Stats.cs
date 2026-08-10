@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MyriaLib.Entities
 {
     public enum StatType
@@ -19,21 +21,46 @@ namespace MyriaLib.Entities
         HitChance,
         DodgeChance
     }
+
     public class Stats
     {
+        // Canonical stat IDs ("STR"/"DEX"/"END"/"INT"/"SPR") — same convention as
+        // ClassManager.GetClassBonusForStat, RaceProfile/ClassProfile's StatGrowth dictionaries,
+        // and Skill.StatToScaleFrom. Not itself serialized: Strength/StrengthBonus/etc. below
+        // remain the only JSON wire format (existing save files have "Strength"/"StrengthBonus"
+        // as keys inside the nested "Stats" object, no "BaseValues"/"BonusValues" key), so their
+        // setters are what actually populate these dictionaries on load.
+        private Dictionary<string, int> _baseValues = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["STR"] = 10, ["DEX"] = 10, ["END"] = 10, ["INT"] = 10, ["SPR"] = 10,
+        };
+        private Dictionary<string, int> _bonusValues = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["STR"] = 0, ["DEX"] = 0, ["END"] = 0, ["INT"] = 0, ["SPR"] = 0,
+        };
+
+        [JsonIgnore] public IReadOnlyDictionary<string, int> BaseValues => _baseValues;
+        [JsonIgnore] public IReadOnlyDictionary<string, int> BonusValues => _bonusValues;
+
+        public int GetBase(string statId) => _baseValues.GetValueOrDefault(statId);
+        public void SetBase(string statId, int value) => _baseValues[statId] = value;
+        public int GetBonus(string statId) => _bonusValues.GetValueOrDefault(statId);
+        public void SetBonus(string statId, int value) => _bonusValues[statId] = value;
+        public int GetTotal(string statId) => GetBase(statId) + GetBonus(statId);
+
         // Base stats from class/level progression
-        public int Strength { get; set; } = 10;
-        public int Dexterity { get; set; } = 10;
-        public int Endurance { get; set; } = 10;
-        public int Intelligence { get; set; } = 10;
-        public int Spirit { get; set; } = 10;
+        public int Strength     { get => GetBase("STR"); set => SetBase("STR", value); }
+        public int Dexterity    { get => GetBase("DEX"); set => SetBase("DEX", value); }
+        public int Endurance    { get => GetBase("END"); set => SetBase("END", value); }
+        public int Intelligence { get => GetBase("INT"); set => SetBase("INT", value); }
+        public int Spirit       { get => GetBase("SPR"); set => SetBase("SPR", value); }
 
         // Stat points invested by the player
-        public int StrengthBonus { get; set; } = 0;
-        public int DexterityBonus { get; set; } = 0;
-        public int EnduranceBonus { get; set; } = 0;
-        public int IntelligenceBonus { get; set; } = 0;
-        public int SpiritBonus { get; set; } = 0;
+        public int StrengthBonus     { get => GetBonus("STR"); set => SetBonus("STR", value); }
+        public int DexterityBonus    { get => GetBonus("DEX"); set => SetBonus("DEX", value); }
+        public int EnduranceBonus    { get => GetBonus("END"); set => SetBonus("END", value); }
+        public int IntelligenceBonus { get => GetBonus("INT"); set => SetBonus("INT", value); }
+        public int SpiritBonus       { get => GetBonus("SPR"); set => SetBonus("SPR", value); }
 
         public int UnusedPoints { get; set; } = 0;
 
@@ -69,6 +96,14 @@ namespace MyriaLib.Entities
             _                                => 0,
         };
 
-        public Stats Clone() => (Stats)MemberwiseClone();
+        public Stats Clone()
+        {
+            var clone = (Stats)MemberwiseClone();
+            // MemberwiseClone is shallow — without this, the clone and the original would share
+            // the same two dictionary instances, so mutating one would mutate the other.
+            clone._baseValues = new Dictionary<string, int>(_baseValues, StringComparer.OrdinalIgnoreCase);
+            clone._bonusValues = new Dictionary<string, int>(_bonusValues, StringComparer.OrdinalIgnoreCase);
+            return clone;
+        }
     }
 }

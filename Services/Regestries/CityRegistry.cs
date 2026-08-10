@@ -7,6 +7,7 @@ namespace MyriaLib.Services.Regestries
         private static readonly MapAreaRegistry<City> _registry = new();
 
         public static void Load(string path = "Data/common/cities.json") => _registry.Load(path);
+        public static void Load(List<City> data) => _registry.Load(data);
         public static City? GetCityByRoom(Room room) => _registry.GetByRoom(room);
         public static City? GetCityById(string id) => _registry.GetById(id);
         public static City? GetCityByName(string name) => _registry.GetByName(name);

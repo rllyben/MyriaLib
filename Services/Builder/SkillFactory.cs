@@ -39,6 +39,12 @@ namespace MyriaLib.Services.Builder
                 return;
             }
 
+            LoadSkills(skillData);
+        }
+
+        /// <summary>Loads skills from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadSkills(List<SkillData> skillData)
+        {
             _skills = skillData.Select(d => new Skill
             {
                 Id              = d.Id,
@@ -47,7 +53,7 @@ namespace MyriaLib.Services.Builder
                 Class           = d.Class,
                 ManaCost        = d.ManaCost,
                 Type            = Enum.Parse<SkillType>(d.Type),
-                Target          = Enum.Parse<SkillTarget>(d.Target),
+                Target          = d.Target,
                 ScalingFactor   = d.ScalingFactor,
                 StatToScaleFrom = d.StatToScaleFrom,
                 MinLevel        = d.MinLevel,

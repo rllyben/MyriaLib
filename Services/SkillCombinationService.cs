@@ -2,6 +2,7 @@ using MyriaLib.Entities.Characters;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models;
 using MyriaLib.Systems;
+using MyriaLib.Systems.Enums;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -35,6 +36,12 @@ namespace MyriaLib.Services
                 return;
             }
 
+            Load(list);
+        }
+
+        /// <summary>Loads skill combination recipes from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<SkillCombinationRecipe> list)
+        {
             _recipes = list.ToDictionary(r => MakeKey(r.InputSkillIds));
         }
 
@@ -85,9 +92,7 @@ namespace MyriaLib.Services
                 Type            = recipe.TypeOverride != null
                                     ? Enum.Parse<SkillType>(recipe.TypeOverride)
                                     : dominant.Type,
-                Target          = recipe.TargetOverride != null
-                                    ? Enum.Parse<SkillTarget>(recipe.TargetOverride)
-                                    : dominant.Target,
+                Target          = recipe.TargetOverride ?? dominant.Target,
                 ScalingFactor   = recipe.ScalingFactorOverride ?? inputs.Average(s => s.ScalingFactor) * 1.1f,
                 StatToScaleFrom = recipe.StatToScaleFromOverride ?? dominant.StatToScaleFrom,
                 IsHealing       = recipe.IsHealingOverride ?? inputs.Any(s => s.IsHealing),

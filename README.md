@@ -1,1819 +1,462 @@
-# MyriaLib - Game Library
+# MyriaLib
 
-A C# game-logic library for text-based or hybrid RPG games. Handles all back-end systems — combat, progression, quests, jobs, inventory, world navigation — so the consuming application only needs to build the UI layer on top.
+MyriaLib is a data-driven, UI-agnostic C# game logic library for turn-based RPGs. It owns every rule that decides what happens in your game — combat, XP curves, inventory, quests, jobs, crafting, world navigation, rune magic — while staying completely ignorant of how (or whether) any of it gets drawn on screen.
+
+It was extracted from Myria, a WPF desktop RPG with an ASP.NET Core multiplayer server, where the exact same MyriaLib code runs unmodified in both the single-player client process and the authoritative server process. That split is the core design idea: **write your rules once, run them anywhere** — a WPF app, a Unity/MonoGame client, a console prototype, or a server that needs to be the final authority over what "really" happened in a fight.
+
+MyriaLib is [MIT licensed](LICENSE) — use it freely in your own projects, commercial or not.
+
+This document is a practical guide for using MyriaLib in your own project. If you're looking for the thesis-oriented architecture writeup for the original Myria project, see `DocMyriaLib.odt` in the repository root instead — this file is aimed at you, a developer who wants to build a different game on top of this library.
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
-2. [Quick Start](#2-quick-start)
-3. [Initialization & Load Order](#3-initialization--load-order)
-4. [Configuration (GameConfig)](#4-configuration-gameconfig)
-5. [Data Files — JSON Reference](#5-data-files--json-reference)
-6. [Character & Character](#6-player--character)
-7. [Inventory & Economy](#7-inventory--economy)
-8. [Combat](#8-combat)
-9. [Skills](#9-skills)
-10. [Jobs](#10-jobs)
-11. [Quests](#11-quests)
-12. [World — Rooms, NPCs, Maps](#12-world--rooms-npcs-maps)
-13. [Time Cycle & Ticks](#13-time-cycle--ticks)
-14. [Gathering & Crafting](#14-gathering--crafting)
-15. [Rune Magic](#15-rune-magic)
-16. [Progression — XP & Levels](#16-progression--xp--levels)
-17. [Authentication & Persistence](#17-authentication--persistence)
+1. [Is this for you?](#1-is-this-for-you)
+2. [Installation](#2-installation)
+3. [Quick Start](#3-quick-start)
+4. [Initialization & Load Order](#4-initialization--load-order)
+5. [Configuration (GameConfig)](#5-configuration-gameconfig)
+6. [The Content Model — JSON Data Files](#6-the-content-model--json-data-files)
+7. [Character & Progression](#7-character--progression)
+8. [Inventory & Economy](#8-inventory--economy)
+9. [Combat](#9-combat)
+10. [Skills — Three Tiers](#10-skills--three-tiers)
+11. [Jobs](#11-jobs)
+12. [Quests](#12-quests)
+13. [World — Rooms, NPCs, Maps](#13-world--rooms-npcs-maps)
+14. [Time & Ticks](#14-time--ticks)
+15. [Gathering & Crafting](#15-gathering--crafting)
+16. [Rune Magic](#16-rune-magic)
+17. [Accounts & Persistence](#17-accounts--persistence)
 18. [Events Reference](#18-events-reference)
-19. [Enum Registries](#19-enum-registries)
-20. [Localization](#20-localization)
-21. [Mod System](#21-mod-system)
+19. [Mod System](#19-mod-system)
+20. [Building a Multiplayer Server (IGameDataSource)](#20-building-a-multiplayer-server-igamedatasource)
+21. [Known Limitations](#21-known-limitations)
+22. [License](#license)
 
 ---
 
-## 1. Overview
+## 1. Is this for you?
 
-MyriaLib is a self-contained game engine library. It defines all entity types (Character, Monster, Item, Room, NPC, Quest, Skill, Rune…), the services that operate on them, and the static managers that coordinate system-level rules (XP curves, daily decay, combat formulas, etc.).
+MyriaLib is a good fit if you're building:
 
-**What the library handles:**
-- Character creation, progression, class and job switching
-- Inventory management, stacking, selling, equipment
-- Turn-based single and group combat
-- Three-tier skill system: regular, combined, and fusion skills
-- Rune magic with a word-pair relationship engine
-- Quest system with full gating (level, class, race, job aspects, party, prerequisites)
-- Job system with three independent aspects (Skill, Knowledge, Fame) and daily mechanics
-- World graph (rooms, exits, NPCs, gathering spots, dungeon spawning)
-- In-game time (tick-driven day/night cycle)
-- JSON-file persistence for users, characters, and game state
-- Localization (English, German)
+- A **turn-based or tick-based RPG** — combat is round-based (attack / cast / use item, then the enemy replies), not real-time.
+- Something **text-based, hybrid, or fully graphical** — the library has no rendering code at all, so it's equally usable from a console app, a WPF/Avalonia desktop client, a Unity or MonoGame game, or a headless server.
+- A game where you'd rather **author content in JSON than recompile** — items, monsters, rooms, quests, skills, jobs, races, classes, loot tables, and rune words are all data files, not code.
+- Something that might eventually need **authoritative multiplayer** — the same rules that run locally in a single-player process can run inside a server process that multiple clients talk to, with no duplicated logic.
 
-**What the library does NOT handle:**
-- UI rendering of any kind
-- Networking / multiplayer transport
-- Audio
-- Asset loading beyond JSON data files
+It's *not* a fit if you need real-time/physics-driven combat, or if you want a fully code-first content pipeline (everything here assumes JSON authoring, with the mod system built on the same assumption).
+
+MyriaLib targets **.NET 8**.
 
 ---
 
-## 2. Quick Start
+## 2. Installation
 
-### Prerequisites
-- .NET 8 or later
-- A `Data/` directory tree with the JSON content files (see §5)
+MyriaLib isn't published as a NuGet package yet — reference the project directly:
 
-### Minimal setup
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\MyriaLib\MyriaLib.csproj" />
+</ItemGroup>
+```
+
+You also need a `Data/` folder next to your executable containing the JSON content files described in [§6](#6-the-content-model--json-data-files). The easiest way to get a working set is to copy `MyriaLib/Data/common/` from this repository as a starting point and edit from there — every ID, stat, and relationship in those files is just data, so replacing the content replaces the game.
+
+---
+
+## 3. Quick Start
 
 ```csharp
-using MyriaLib.Systems;
+using MyriaLib.Entities;
+using MyriaLib.Entities.Characters;
+using MyriaLib.Services;
+using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
+using MyriaLib.Systems;
+using MyriaLib.Systems.Mods;
 
-// 0. Load mods (optional — silently skips if Mods/ does not exist)
+// 1. Load mods (optional — silently does nothing if the folder doesn't exist)
 ModLoader.Load("Mods");
 
-// 1. Tune any values you want to change before loading data
-GameConfig.SetCurrencyRatios(1000, 1000, 100, 100);   // defaults — optional
+// 2. Tune any values you want to change before content loads (all optional, see §5)
 GameConfig.SetClassProgression(maxLevel: 50, xpCostBase: 5_000);
 
-// 2. Initialize the game world — every data file is automatically resolved
-//    through ModLoader.ResolvePath(), so mod overrides are applied transparently.
+// 3. Load every content file — items, monsters, rooms, quests, skills, jobs, runes...
 GameService.InitializeGame();
 
-// 4. Log a user in
-var result = await LoginManager.Login("username", "password");
-if (result.Success)
+// 4. Create a character. Base stats normally come from the chosen race's profile.
+var raceProfile = RaceProfile.All["Myralu"];
+var stats = new Stats
 {
-    var player = await CharacterService.LoadCharacter("HeroName", result.Account);
-    DayCycleManager.StartInactivityTimer(); // optional passive time
-}
-```
-
----
-
-## 3. Initialization & Load Order
-
-`GameService.InitializeGame()` calls all sub-loaders in the correct order. You do not need to call individual loaders manually for runtime data. Every path is resolved through `ModLoader.ResolvePath()` before loading, so any active mod overrides are applied transparently.
-
-**Call `ModLoader.Load()` before `InitializeGame()`** so the path resolver is populated in time.
-
-The load sequence inside `InitializeGame()` is:
-
-1. `RaceProfile.Load()` — race stat profiles
-2. `ClassProfile.Load()` — class stat profiles
-3. `LootGenerator.Load()` — type-based loot tables
-4. `ItemFactory.LoadItems()`
-5. `MonsterService.LoadMonsters()`
-6. `NpcService.LoadNpcs()`
-7. `RoomService.LoadRooms()` — also links exits, wires monsters and NPCs to rooms
-8. `DayCycleManager.Initialize()` — rolls daily gather limits
-9. `CraftingService.LoadRecipes()`
-10. `JobManager.LoadJobs()`
-11. `QuestManager.LoadQuests()`
-12. `SkillFactory.LoadSkills()`
-13. Map registries (Cave, City, Dungeon, Forest)
-14. `RuneWordService.Load()` — rune words, families, pairs
-15. `BaseRuneService.Load()`
-16. `BaseSkillLoader.Load()`
-17. `FusionRecipeService.Load()`
-18. `SkillCombinationService.Load()`
-
-**Enum registries** (optional display-name overlays) are not loaded by `InitializeGame()` — call these manually if your UI uses them:
-- `GameConfig.LoadEquipmentSlots(path)`, `LoadItemRarities(path)`, `LoadTimeSegments(path)`, `LoadGatheringTypes(path)`
-
-**Multiplayer mode**: before entering a server session, set `ModLoader.MultiplayerMode = true` and re-call `InitializeGame()`. Gameplay mod overrides will be bypassed automatically; visual mods remain active. Reset to `false` and re-call on disconnect to restore mods.
-
----
-
-## 4. Configuration (GameConfig)
-
-`GameConfig` (in `MyriaLib.Systems`) is the single entry point for all tunable values. Call these methods once at application startup before `InitializeGame()`.
-
-### Currency ratios
-
-```csharp
-GameConfig.SetCurrencyRatios(
-    bronzePerSilver:    1_000,   // default
-    silverPerGold:      1_000,
-    goldPerPlatinum:    100,
-    platinumPerCrystal: 100
-);
-```
-
-Modifies `Money.BRONZE_PER_SILVER` etc. All derived ratios (`BRONZE_PER_GOLD`, `BRONZE_PER_PLATINUM`, `BRONZE_PER_CRYSTAL`) recompute automatically.
-
-### Inventory page size
-
-```csharp
-GameConfig.SetInventoryPageSize(49); // default — 7×7 grid
-```
-
-### Class progression
-
-```csharp
-GameConfig.SetClassProgression(
-    maxLevel:    50,     // default
-    xpCostBase:  5_000   // XP to advance from level N = N × xpCostBase
-);
-```
-
-### Job progression
-
-```csharp
-GameConfig.SetJobProgression(
-    maxLevel:      100,   // default
-    xpCostBase:    1_000,
-    maxFameBonus:  1.5,   // fame multiplier: ×1.0 → ×(1.0 + maxFameBonus) = ×2.5
-    maxSkillBonus: 2.0    // skill multiplier: ×1.0 → ×3.0
-);
-```
-
-### Gather bonus thresholds
-
-Knowledge-level thresholds that grant extra daily gather charges. Sorted ascending.
-
-```csharp
-GameConfig.SetGatherBonusThresholds(new[] {
-    (Level: 10,  Bonus: 1),
-    (Level: 30,  Bonus: 2),
-    (Level: 60,  Bonus: 3),
-    (Level: 100, Bonus: 4),
-});
-```
-
-### Equipment upgrade gates
-
-Knowledge-level gates controlling max equipment upgrade level.
-
-```csharp
-GameConfig.SetUpgradeGates(
-    defaultMax: 2,
-    gates: new[] {
-        (Level: 10,  MaxUpgrade: 4),
-        (Level: 30,  MaxUpgrade: 6),
-        (Level: 60,  MaxUpgrade: 8),
-        (Level: 100, MaxUpgrade: 10),
-    }
-);
-```
-
-### Cooldowns
-
-```csharp
-GameConfig.SetClassCooldown(TimeSpan.FromDays(7));   // default
-GameConfig.SetJobCooldown(TimeSpan.FromDays(7));
-```
-
-### Class penalty
-
-```csharp
-GameConfig.SetClassPenaltyPerDay(500L); // XP lost per day from inactive classes
-```
-
-### Job daily mechanics
-
-```csharp
-GameConfig.SetJobDailyMechanics(
-    fameTickPerDay:         5,    // passive Fame XP/day for active job
-    skillDecayCap:          50,   // max Skill XP lost/day when unused
-    fameDecayDivisor:       200,  // Fame decay = FameXp / this (~0.5%/day)
-    activeJobBonusFraction: 0.5   // Skill XP bonus for active job (0.5 = +50%)
-);
-```
-
-### Action tick costs
-
-```csharp
-GameTick.RoomTraversal = 2;   // ticks spent moving between rooms
-GameTick.NpcInteraction = 5;
-GameTick.CombatVictory  = 8;
-GameTick.Gather         = 6;
-GameTick.Rest           = 50;
-```
-
-### Loading enum profiles
-
-```csharp
-GameConfig.LoadRaces("Data/common/races.json");
-GameConfig.LoadClasses("Data/common/classes.json");
-GameConfig.LoadEquipmentSlots("Data/common/equipment_slots.json");
-GameConfig.LoadItemRarities("Data/common/item_rarities.json");
-GameConfig.LoadTimeSegments("Data/common/time_segments.json");
-GameConfig.LoadGatheringTypes("Data/common/gathering_types.json");
-LootGenerator.Load("Data/common/loot_tables.json");
-```
-
----
-
-## 5. Data Files — JSON Reference
-
-All data files use camelCase keys. Deserialization is case-insensitive. Default base paths are `Data/common/` and `Data/users/`, `Data/saves/`. Override any path via the corresponding `Load(path)` method.
-
----
-
-### 5.1 `items.json`
-
-Array of item definitions.
-
-```json
-[
-  {
-    "id":          "iron_sword",
-    "name":        "Iron Sword",
-    "description": "A sturdy iron blade.",
-    "type":        "equipment",
-    "rarity":      "Common",
-    "buyPrice":    500,
-    "stackSize":   1,
-    "maxStackSize": 1,
-    "slotType":    "Weapon",
-    "upgradeCategory": "blacksmith",
-    "allowedClasses": ["Fighter", "Knight", "Barbarian"],
-    "baseBonusATK": 12,
-    "baseBonusDEF": 0,
-    "baseBonusSTR": 2
-  },
-  {
-    "id":          "health_potion",
-    "type":        "consumable",
-    "rarity":      "Common",
-    "buyPrice":    100,
-    "maxStackSize": 20,
-    "healAmount":  50,
-    "manaRestore": 0
-  },
-  {
-    "id":          "iron_ore",
-    "type":        "material",
-    "rarity":      "Common",
-    "buyPrice":    20,
-    "maxStackSize": 99,
-    "toolType":    "Ore"
-  },
-  {
-    "id":          "page_expansion",
-    "type":        "inventory_expansion",
-    "buyPrice":    2000
-  }
-]
-```
-
-**Item types:** `equipment`, `consumable`, `material`, `inventory_expansion`
-
-**Equipment-specific fields:** `slotType` (Weapon/Armor/Accessory), `upgradeCategory` (blacksmith/tailor/artificer), `baseBonusHP`, `baseBonusMP`, `baseBonusSTR`, `baseBonusDEX`, `baseBonusEND`, `baseBonusINT`, `baseBonusSPR`, `baseBonusATK`, `baseBonusDEF`, `baseBonusMATK`, `baseBonusMDEF`, `baseBonusAim`, `baseBonusEvasion`, `baseBonusCrit`, `baseBonusBlock`
-
-**Tool items:** Set `toolType` to `Ore`, `Tree`, or `Herb` to mark a gathering tool.
-
-**Optional:** `jobId` — links an item to a job (applies fame bonus on sell).
-
----
-
-### 5.2 `monsters.json`
-
-Array of monster templates.
-
-```json
-[
-  {
-    "id":          "goblin",
-    "name":        "Goblin",
-    "description": "A small green creature.",
-    "type":        "Humanoid",
-    "level":       5,
-    "exp":         80,
-    "minLoot":     10,
-    "maxLoot":     50,
-    "dropsCorpse": true,
-    "stats": {
-      "strength":    8,
-      "dexterity":   10,
-      "endurance":   6,
-      "intelligence":3,
-      "spirit":      2,
-      "baseHealth":  120,
-      "baseMana":    20
-    },
-    "uniqueLootTable": [
-      { "itemId": "goblin_ear", "dropChance": 0.4 }
-    ]
-  }
-]
-```
-
-**Monster types:** `Beast`, `Spirit`, `Elemental`, `Shadow`, `Undead`, `Humanoid`
-
-`dropsCorpse`: set `false` for incorporeal types (Spirit, Shadow) — no looting UI is shown.
-
-`uniqueLootTable`: per-monster individual drops, rolled independently from the type-based table.
-
----
-
-### 5.3 `rooms.json`
-
-Array of room definitions.
-
-```json
-[
-  {
-    "id":          "town_square",
-    "name":        "Town Square",
-    "description": "The heart of the town.",
-    "isCity":      true,
-    "exits": {
-      "north": "north_gate",
-      "east":  "market_street"
-    },
-    "npcs":     ["merchant_jan", "healer_mira"],
-    "monsters": [],
-    "gatheringSpots": [],
-    "requirementType": "None"
-  },
-  {
-    "id":            "iron_mine_entrance",
-    "name":          "Iron Mine Entrance",
-    "isCaveRoom":    true,
-    "requirementType": "Level",
-    "accessLevel":   10,
-    "exits": { "south": "town_square" },
-    "gatheringSpots": [
-      {
-        "id":             "vein_1",
-        "name":           "Iron Vein",
-        "type":           "Ore",
-        "gatheredItemId": "iron_ore",
-        "requiredToolId": "iron_pickaxe"
-      }
-    ],
-    "encounterable_monsters": {
-      "mine_bat": 3,
-      "rock_crab": 1
-    }
-  }
-]
-```
-
-**Room flags:** `isCity`, `isCaveRoom`, `isDungeonRoom`, `isBossRoom`
-
-**Access gating:**
-- `requirementType`: `None`, `Level`, `Quest`, `Party`
-- `accessLevel`: minimum player level (for Level type)
-- `requiredQuestId`: quest that must be completed (for Quest type)
-
-**`encounterable_monsters`:** dict of monster ID → spawn weight. Used for random encounter selection.
-
----
-
-### 5.4 `npcs.json`
-
-```json
-[
-  {
-    "id":          "healer_mira",
-    "nameKey":     "npc.healer_mira.name",
-    "descriptionKey": "npc.healer_mira.desc",
-    "type":        "Healer",
-    "services":    ["heal", "buy_items"],
-    "itemNames":   ["health_potion", "mana_potion"]
-  },
-  {
-    "id":          "master_smith",
-    "type":        "Smith",
-    "services":    ["upgrade", "craft"],
-    "upgradeCategory": "blacksmith",
-    "masterJobId": "blacksmith"
-  }
-]
-```
-
-**NPC services:** `heal`, `buy_items`, `sell_items`, `upgrade`, `craft`, `talk`
-
-`masterJobId`: If set, completing quests from this NPC grants Knowledge XP for that job.
-
----
-
-### 5.5 `jobs.json`
-
-```json
-[
-  {
-    "id":          "miner",
-    "name":        "Miner",
-    "description": "Masters of ore extraction.",
-    "type":        "Gathering"
-  },
-  {
-    "id":          "blacksmith",
-    "name":        "Blacksmith",
-    "type":        "Crafting"
-  }
-]
-```
-
-Job types are informational — they control which NPC master grants Knowledge XP, and the `type` field is available for UI filtering.
-
----
-
-### 5.6 `quests.json`
-
-```json
-[
-  {
-    "id":          "q_first_ore",
-    "name":        "First Steps",
-    "description": "Collect some ore for the smith.",
-    "giverNpcId":  "master_smith",
-    "returnNpcId": "master_smith",
-    "requiredLevel": 5,
-    "isTalkOnly":  false,
-    "requiredItems":  { "iron_ore": 5 },
-    "requiredKills":  {},
-    "rewardXp":    200,
-    "rewardGold":  150,
-    "rewardItems": ["iron_ingot"],
-    "jobKnowledgeRewardJobId":    "miner",
-    "jobKnowledgeRewardAmount":   500,
-    "acceptDialog": [
-      { "speaker": "npc",    "text": "quest.first_ore.accept_1" },
-      { "speaker": "player", "text": "quest.first_ore.accept_2" }
-    ],
-    "returnDialog": [
-      { "speaker": "npc", "text": "quest.first_ore.return_1" }
-    ],
-    "prerequisiteQuestIds": [],
-    "isRepeatable":  false
-  }
-]
-```
-
-**Gating fields** (all optional):
-- `requiredLevel`, `requiredClass`, `requiredRace`
-- `requiredAspectJobId` + `requiredSkillLevel` / `requiredKnowledgeLevel` / `requiredFameLevel`
-- `requiredActiveJobId` — player must have this job active
-- `requiresParty: true` + `requiredPartySize: 3`
-- `prerequisiteQuestIds: ["q_intro"]`
-
-**Repeatable quests:**
-```json
-{
-  "isRepeatable":      true,
-  "repeatMaxLevel":    50,
-  "repeatDailyLimit":  3,
-  "repeatTotalLimit":  0
-}
-```
-
-`repeatTotalLimit: 0` = unlimited.
-
----
-
-### 5.7 `skills.json`
-
-```json
-[
-  {
-    "id":            "power_strike",
-    "name":          "Power Strike",
-    "description":   "A heavy physical blow.",
-    "class":         "Fighter",
-    "manaCost":      15,
-    "type":          "Physical",
-    "target":        "SingleEnemy",
-    "scalingFactor": 1.8,
-    "statToScaleFrom": "ATK",
-    "minLevel":      1,
-    "isHealing":     false,
-    "castTime":      0,
-    "recoveryTime":  1
-  }
-]
-```
-
-**Types:** `Physical`, `Magical`
-
-**Targets:** `SingleEnemy`, `AllEnemies`, `Self`, `SingleAlly`
-
----
-
-### 5.8 `base_skills.json`
-
-Fusible skill components for the fusion system.
-
-```json
-[
-  {
-    "id":            "fire_core",
-    "name":          "Fire Core",
-    "description":   "A base fire skill component.",
-    "class":         "ElementalMage",
-    "componentType": ["Fire", "Magic"],
-    "manaCost":      10,
-    "scalingFactor": 1.2,
-    "statToScaleFrom": "MATK",
-    "requiredLevel": 1
-  }
-]
-```
-
-**Component types:** `Fire`, `Water`, `Earth`, `Wind`, `AOE`, `Heal`, `Magic`, `Physical`, `Self`, `Area`, `MultiHit`, etc.
-
----
-
-### 5.9 `base_runes.json`
-
-```json
-[
-  {
-    "id":              "fire_rune",
-    "name":            "Ignis",
-    "description":     "A rune of fire.",
-    "coreWordId":      "word_ignis",
-    "class":           "RunicMage",
-    "baseManaCost":    20,
-    "baseScalingFactor": 1.0,
-    "statToScaleFrom": "MATK",
-    "target":          "SingleEnemy",
-    "isHealing":       false
-  }
-]
-```
-
----
-
-### 5.10 Rune Word Files
-
-#### `rune_words.json`
-```json
-[
-  {
-    "id":          "word_ignis",
-    "englishName": "Ignis",
-    "runicScript": "ᛁᚷᚾᛁᛋ",
-    "familyId":    "family_fire"
-  }
-]
-```
-
-#### `rune_families.json`
-```json
-[
-  {
-    "id":   "family_fire",
-    "name": "Fire",
-    "familyRelations": {
-      "family_water": "Contradiction",
-      "family_amplify": "Support"
-    }
-  }
-]
-```
-
-#### `rune_word_pairs.json`
-Explicit word-pair overrides (take precedence over family defaults).
-```json
-[
-  {
-    "wordIdA":     "word_ignis",
-    "wordIdB":     "word_aqua",
-    "relationship": "Transform",
-    "transformResultRuneId": "steam_rune"
-  }
-]
-```
-
-**Relationships:** `Support` (boosts scaling), `Contradiction` (also boosts scaling, different flavor), `Neutral` (adds mana cost), `Transform` (unlocks a new rune when both words are present).
-
----
-
-### 5.11 `skill_combinations.json`
-
-Named overrides for combined skills. Without an entry, the algorithm generates a fallback.
-
-```json
-[
-  {
-    "inputSkillIds":   ["power_strike", "battle_cry"],
-    "resultId":        "war_shout",
-    "resultName":      "War Shout",
-    "resultDescription": "A battle cry that empowers your strike.",
-    "scalingFactorOverride": 2.1,
-    "manaCostOverride": 25
-  }
-]
-```
-
----
-
-### 5.12 `fusion_recipes.json`
-
-Named overrides for fusion skills.
-
-```json
-[
-  {
-    "resultId":          "inferno",
-    "resultName":        "Inferno",
-    "resultDescription": "A devastating fusion of fire components.",
-    "componentIds":      ["fire_core", "heat_amplifier"],
-    "scalingFactorOverride": 2.5,
-    "targetOverride":    "AllEnemies"
-  }
-]
-```
-
----
-
-### 5.13 `recipes.json` (Crafting)
-
-```json
-[
-  {
-    "npcId":       "master_smith",
-    "outputItemId":"iron_sword",
-    "ingredients": [
-      { "itemId": "iron_ingot", "amount": 3 }
-    ]
-  }
-]
-```
-
----
-
-### 5.14 `races.json`
-
-Loaded via `GameConfig.LoadRaces()`. Defines all playable races.
-
-```json
-[
-  {
-    "race":         "Myralu",
-    "baseStatBonus": { "STR": 3, "DEX": 1, "END": 7, "INT": 3, "SPR": 3 },
-    "baseHpBonus":  30,
-    "baseManaBonus": 20,
-    "statGrowth":   { "STR": 1, "DEX": 1, "END": 2, "INT": 2, "SPR": 2 },
-    "hpPerLevel":   6,
-    "manaPerLevel": 5,
-    "forbiddenClasses": ["RunicMage"]
-  }
-]
-```
-
-`forbiddenClasses` lists `CharacterClass` enum names that this race cannot select.
-
----
-
-### 5.15 `classes.json`
-
-Loaded via `GameConfig.LoadClasses()`. Defines all playable classes.
-
-```json
-[
-  {
-    "class":       "Fighter",
-    "statGrowth":  { "STR": 4, "DEX": 2, "END": 2, "INT": 1, "SPR": 2 },
-    "hpPerLevel":  8,
-    "manaPerLevel": 5
-  }
-]
-```
-
----
-
-### 5.16 `loot_tables.json`
-
-Loaded via `LootGenerator.Load()`. Defines type-based drop tables for monster types.
-
-```json
-[
-  {
-    "monsterType": "Beast",
-    "drops": [
-      { "itemId": "beast_flesh",   "dropChance": 0.6 },
-      { "itemId": "feral_leather", "dropChance": 0.4 },
-      { "itemId": "beast_fang",    "dropChance": 0.2 }
-    ]
-  },
-  {
-    "monsterType": "Spirit",
-    "drops": [
-      { "itemId": "spirit_dust", "dropChance": 0.7 }
-    ]
-  }
-]
-```
-
-`dropChance` is 0.0–1.0, rolled independently for each entry.
-
----
-
-### 5.17 Enum Definition Files
-
-Used to supply display names and ordering for enum values. All share the same format:
-
-```json
-[
-  { "id": "Weapon",    "displayName": "Weapon Slot", "order": 0 },
-  { "id": "Armor",     "displayName": "Armor Slot",  "order": 1 },
-  { "id": "Accessory", "displayName": "Accessory",   "order": 2 }
-]
-```
-
-| File | Default path | Registry class |
-|------|-------------|----------------|
-| Equipment slots | `Data/common/equipment_slots.json` | `EquipmentTypeRegistry` |
-| Item rarities | `Data/common/item_rarities.json` | `ItemRarityRegistry` |
-| Time segments | `Data/common/time_segments.json` | `TimeSegmentRegistry` |
-| Gathering types | `Data/common/gathering_types.json` | `GatheringTypeRegistry` |
-
-The `id` field must match the C# enum name exactly.
-
----
-
-## 6. Character & Character
-
-### Character entity (`MyriaLib.Entities.Characters.Character`)
-
-`Character` inherits from `CombatEntity` and aggregates all character state.
-
-**Core state:**
-```
-player.Name        // character name
-player.Race        // CharacterRace enum
-player.Class       // CharacterClass enum
-player.Level       // current character level
-player.Experience  // total accumulated XP
-player.Stats       // Stats object (STR, DEX, END, INT, SPR + bonuses)
-player.CurrentHealth / CurrentMana
-player.MaxHealth   / MaxMana
-```
-
-**Equipment:**
-```
-player.WeaponSlot     // EquipmentItem? (null if empty)
-player.ArmorSlot
-player.AccessorySlot
-```
-
-**Combat totals** (read-only computed properties):
-```
-player.TotalPhysicalAttack   // base ATK + gear + stat scaling
-player.TotalMagicAttack
-player.TotalPhysicalDefense
-player.TotalMagicDefense
-player.TotalAim / TotalEvasion
-player.CritChance / BlockChance
-```
-
-**Skills:**
-```
-player.Skills            // List<Skill>  — learned base skills
-player.CombinedSkills    // List<CombinedSkill>
-player.CompositeSkills   // List<CompositeSkill>
-player.KnownRunes        // List<CompositeRune>
-player.SkillSlots        // List<SkillSlot>  — combat bar
-```
-
-**Jobs:**
-```
-player.Jobs         // List<CharacterJob>  — one entry per job the player has touched
-player.ActiveJobId  // string?
-```
-
-**Quests:**
-```
-player.ActiveQuests     // List<Quest>
-player.CompletedQuests  // List<Quest>
-```
-
-**Navigation:**
-```
-player.CurrentRoom    // Room
-player.CurrentRoomId  // int
-```
-
-### Key player methods
-
-```csharp
-player.GainXp(long amount);               // may trigger level-up
-player.Heal(int amount);                  // capped at MaxHealth
-player.ApplyDamage(int amount);           // fires HealthChanged event
-player.SpendMana(int amount);             // fires ManaChanged event
-player.RestoreMana(int amount);
-player.LearnSkill(Skill skill);           // no-op if already known
-player.HasToolFor(GatheringType type);    // checks inventory + weapon slot
-```
-
-### Creating a new character
-
-```csharp
-var player = new Character
-{
-    Name       = "Hero",
-    Race       = CharacterRace.Myralu,
-    Class      = CharacterClass.Fighter,
-    Level      = 1,
-    Experience = 0,
+    Strength     = 10 + raceProfile.BaseStatBonus["STR"],
+    Dexterity    = 10 + raceProfile.BaseStatBonus["DEX"],
+    Endurance    = 10 + raceProfile.BaseStatBonus["END"],
+    Intelligence = 10 + raceProfile.BaseStatBonus["INT"],
+    Spirit       = 10 + raceProfile.BaseStatBonus["SPR"],
+    BaseHealth   = 30 + raceProfile.BaseHpBonus,
+    BaseMana     = 30 + raceProfile.BaseManaBonus,
 };
+var character = new Character("Aria", stats) { Race = "Myralu", RaceSelected = true, Class = "Fighter" };
 
-// Apply race base stats
-// (done internally by Character.LevelUp() on first level or by your creation flow)
+StartingEquipmentService.GrantStartingEquipment(character);
+SkillFactory.UpdateSkills(character);              // grants level/class-appropriate skills
+character.CurrentRoom = RoomService.GetRoomById(1);
+character.CurrentRoomId = character.CurrentRoom.Id;
 
-SkillFactory.UpdateSkills(player);         // grants class skills at level 1
-BaseRuneService.GrantBaseRunes(player);    // grants runic class starting runes
+// 5. Tell the library the session is live (starts per-session bookkeeping — see §4)
+GameService.StartSession(character);
 
-await characterRepository.SaveAsync(username, player);
+// 6. Fight something
+var monster = MonsterService.GetMonsterById(1)!.Clone();
+var fight = new MyriaLib.Systems.CombatEncounter(character, monster);
+fight.CharacterAttack();
+while (fight.Phase != MyriaLib.Systems.Enums.CombatPhase.Finished)
+    fight.Tick();
+
+foreach (var line in fight.Log)
+    Console.WriteLine(line);   // localization key + args — format however your UI needs
+
+// 7. Persist the character
+var account = new MyriaLib.Models.UserAccount { Username = "player1" };
+CharacterService.SaveCharacter(account, character);
 ```
 
-### Loading an existing character
+A few things worth calling out immediately:
 
-```csharp
-var player = await CharacterService.LoadCharacter("HeroName", userAccount);
-// CharacterService.ResolveAdvancedSystems() is called automatically,
-// restoring rune, fusion, combination, and slot data.
-```
+- **Everything is a static service.** There is no `IServiceProvider`/DI container anywhere in MyriaLib — `GameService`, `RoomService`, `SkillFactory`, `JobManager`, and friends are all static classes holding process-wide state. This is deliberate (see [§21](#21-known-limitations) for the implications) and keeps the library trivial to call from anywhere without wiring up a container.
+- **Nothing here is async.** Loading is synchronous file I/O; combat and other actions are synchronous method calls. If you're building a server, wrap calls at your API boundary as needed — MyriaLib itself won't get in the way.
+- **`GameService.InitializeGame()` loads world content once, process-wide** — not per character. Call it once at startup (or once per hot-reload after a mod change), then create/load as many characters as you want against that loaded world.
 
 ---
 
-## 7. Inventory & Economy
+## 4. Initialization & Load Order
 
-### Inventory
+`GameService.InitializeGame(IProgress<string>? progress = null, bool skipGameState = false, IGameDataSource? source = null)` runs every loader in this exact order (later steps depend on earlier ones — e.g. rooms link up monster and NPC references, so monsters and NPCs must already be loaded):
 
-```csharp
-var inv = player.Inventory;
+1. `GameStatusService.Load()` — persisted day/time state (skipped if `skipGameState: true`)
+2. `RaceProfile.Load()`, `ClassProfile.Load()`, `LootGenerator.Load()`
+3. `ItemFactory.LoadItems()`
+4. `MonsterService.LoadMonsters()`
+5. `NpcService.LoadNpcs()`
+6. `RoomService.LoadRooms()` — then rooms are cross-linked to their monsters and NPCs
+7. `DayCycleManager.Initialize()` (skipped if `skipGameState: true`)
+8. `CraftingService.LoadRecipes()`
+9. `JobManager.LoadJobs()`
+10. `QuestManager.LoadQuests()`
+11. `SkillFactory.LoadSkills()`, `EffectFactory.LoadEffects()`
+12. Map registries: `DungeonRegistry`, `CaveRegistry`, `CityRegistry`, `ForestRegistry`
+13. `RuneWordService.Load()`, `BaseRuneService.Load()`, `BaseSkillLoader.Load()`, `FusionRecipeService.Load()`, `SkillCombinationService.Load()`, `StartingEquipmentService.Load()`
 
-// Add an item
-bool added = inv.AddItem(item, player);
+Call `ModLoader.Load(...)` **before** `InitializeGame()` — every loader above resolves its file path through `ModLoader.ResolvePath()`, so mods need to be registered first for overrides to take effect.
 
-// Remove an item
-bool removed = inv.RemoveItem(item);
+Once a character is ready to play, call `GameService.StartSession(character)`. This is separate from `InitializeGame()` on purpose: `InitializeGame` is a one-time, world-level "server start" step, while `StartSession` is a per-character/per-connection step that fires the `SessionStarted` event (both the instance-style `GameService.SessionStarted` and the mod-facing `GameEvents.SessionStarted` — see [§18](#18-events-reference)) so your app can do things like start an inactivity timer or push initial UI state.
 
-// Use a consumable by name
-bool used = inv.UseItem("health potion", player);
+**Hot-reloading content** (e.g. after a mod is toggled) — call `GameService.InitializeGame(null, skipGameState: true)` again. This reloads every content file without touching the persisted day/time state or restarting the day-cycle system.
 
-// Equip/unequip
-bool equipped = inv.SwapEquipment("iron sword", player);
-
-// Sell (charges money to NPC, applies fame bonus)
-bool sold = inv.SellItem("iron ore", quantity: 5, ref player);
-
-// Page access (for 7×7 UI grids)
-Item?[] page0 = inv.GetPage(0);   // 49 slots, nulls for empty
-int usedPages  = inv.UsedPages;
-int capacity   = inv.Capacity;     // Pages × PageSize
-```
-
-**Events:**
-```csharp
-inv.ItemReceived += (_, e) => Console.WriteLine($"Got {e.Item.Name} ×{e.StackSize}");
-inv.ItemRemoved  += (_, e) => { };
-inv.ItemSold     += (_, e) => { };
-```
-
-### Money
-
-`Money` is an immutable struct stored in base Bronze units.
-
-```csharp
-// Construct
-var m = new Money(5_000);                            // 5,000 Bronze
-var m = Money.FromComponents(crystals:1, platinum:0, gold:0, silver:0, bronze:0);
-
-// Display
-m.ToString("S");  // "5 S" (short — skips zero groups)
-m.ToString("L");  // "0 Coin Crystals 0 Platinum 0 Gold 5 Silver 0 Bronze"
-m.ToString("C");  // "5 Silver" (compact — top two non-zero)
-m.ToString("B");  // "5,000 Bronze"
-
-// Parse
-Money parsed = MoneyFormatter.Parse("2 G 500 S");
-
-// Arithmetic
-Money total = money1 + money2;
-bool affordable = money1 >= money2;
-```
-
-### MoneyBag (player wallet)
-
-```csharp
-var wallet = player.Money;
-
-bool ok     = wallet.CanAfford(bronzeAmount);
-bool added  = wallet.TryAdd(bronzeAmount);
-bool spent  = wallet.TrySpend(bronzeAmount);
-long balance = wallet.Balance.BronzeTotal;
-```
+**Enum display registries** (`equipment_slots.json`, `item_rarities.json`, `time_segments.json`, `gathering_types.json` — display names and sort order for UI dropdowns) are *not* loaded automatically, since not every host needs them. Call the relevant `GameConfig.Load...()` method yourself if you want them — see the caveat in [§21](#21-known-limitations), though: these four files aren't included in the sample `Data/` folder, so you'll need to author them yourself if you use this feature.
 
 ---
 
-## 8. Combat
+## 5. Configuration (`GameConfig`)
 
-### Single combat (`CombatEncounter`)
+`MyriaLib.Systems.GameConfig` centralizes every tunable numeric/behavioral value so balancing changes don't require hunting through multiple classes. Call these once at startup, before `InitializeGame()`. Every value has a sensible default — you only need to call the setter if you want something different.
 
-```csharp
-// Start encounter with a monster in the current room
-var encounter = new CombatEncounter(player, monster);
-
-// Character turn — one of:
-encounter.CharacterAttack();                    // basic attack
-encounter.CharacterBeginCast(skill);            // start casting a skill
-encounter.CharacterUseItem("health_potion");    // use a consumable
-
-// If casting, advance each game tick until cast is complete
-encounter.Tick();                            // decrements cast/recovery counters
-
-// Check state
-encounter.Phase     // CombatPhase: CharacterTurn | Casting | Recovery | Finished
-encounter.Log       // List<CombatLogEntry>  — localization keys + args
-encounter.InventoryFull  // true if loot couldn't fit
-
-// On victory, loot is already in player.Inventory
-// Quest kill progress is updated automatically via MonsterKilled event
-```
-
-**Events:**
-```csharp
-encounter.MonsterKilled += (_, e) => Console.WriteLine($"{e.MonsterId} defeated");
-```
-
-### Group combat (`GroupCombatEncounter`)
-
-Follows the same API but accepts `List<Character>` and `List<Monster>`.
-
-```csharp
-var encounter = new GroupCombatEncounter(players, monsters);
-string currentCharacter = encounter.CurrentTurnCharacterName;
-// actions are attributed to the current player
-```
-
-### Combat formulas (read-only)
-
-`CombatSystem` exposes the raw calculation methods for display/preview:
-
-```csharp
-bool hits  = CombatSystem.TryHit(attacker, defender);
-int damage = CombatSystem.CalculateDamage(attacker, defender);
-```
+| Area | Method | Purpose |
+|---|---|---|
+| Currency | `SetCurrencyRatios(silver, gold, platinum, crystal)` | Conversion rates between the five currency tiers (bronze is always 1) |
+| Inventory | `SetInventoryPageSize(int)` | Grid page size (default 49 = 7×7) |
+| Class progression | `SetClassProgression(maxLevel, xpCostBase)` | Level cap and per-level XP cost base |
+| Job progression | `SetJobProgression(...)` | Job level cap, XP cost base, max Fame/Skill multipliers |
+| Gathering bonus | `SetGatherBonusThresholds((int Level, int Bonus)[])` | Knowledge-level thresholds for bonus daily gather attempts |
+| Equipment upgrades | `SetUpgradeGates(defaultMax, (int Level, int MaxUpgrade)[])` | Knowledge-level thresholds for max upgrade tier |
+| Cooldowns | `SetClassCooldown(TimeSpan)`, `SetJobCooldown(TimeSpan)` | Lockout period after switching class/job |
+| Inactivity penalty | `SetClassPenaltyPerDay(long)` | Daily XP loss for an inactive class |
+| Job daily mechanics | `SetJobDailyMechanics(...)` | Fame gain rate, skill decay cap, fame decay divisor, active-job bonus fraction |
+| Action costs | `GameTick.RoomTraversal`, `.NpcInteraction`, `.CombatVictory`, `.Gather`, `.Rest` | Tick cost of individual player actions |
+| Enum display data | `GameConfig.LoadEquipmentSlots(path)`, `.LoadItemRarities(path)`, `.LoadTimeSegments(path)`, `.LoadGatheringTypes(path)` | Optional, not auto-loaded — see [§21](#21-known-limitations) |
 
 ---
 
-## 9. Skills
+## 6. The Content Model — JSON Data Files
 
-### Three skill tiers
+Nearly all game content lives in `Data/common/*.json`, loaded once at startup. This buys you two things: you can rebalance or add content without recompiling, and the [mod system](#19-mod-system) works "for free" — mods just point the loader at a different file.
 
-| Tier | Class | How created |
-|------|-------|-------------|
-| Regular | `Skill` | Learned automatically by `SkillFactory.UpdateSkills()` on level-up or class change |
-| Combined | `CombinedSkill` | Character combines 2–5 regular skills |
-| Fusion | `CompositeSkill` | Character fuses base skill components |
+Deserialization is case-insensitive; the samples below use the casing actually written in this repo's JSON files (camelCase).
 
-Rune magic is a separate fourth system (§15).
+| File | Contains | Loaded by |
+|---|---|---|
+| `items.json` | Equipment, consumables, materials, inventory expansions | `ItemFactory.LoadItems()` |
+| `monsters.json` | Monster templates with stats and loot ranges | `MonsterService.LoadMonsters()` |
+| `rooms.json` | Rooms, exits, gathering spots, access requirements | `RoomService.LoadRooms()` |
+| `npcs.json` | NPCs and the services they offer (heal, trade, upgrade, craft) | `NpcService.LoadNpcs()` |
+| `jobs.json` | Job definitions (gathering/crafting) | `JobManager.LoadJobs()` |
+| `quests.json` | Quests — objectives, gating, dialog, rewards | `QuestManager.LoadQuests()` |
+| `skills.json` | Class-bound regular skills | `SkillFactory.LoadSkills()` |
+| `effects.json` | Status-effect definitions (poison, buffs, etc.) used by skills/items | `EffectFactory.LoadEffects()` |
+| `base_skills.json`\* | Fusion-skill components | `BaseSkillLoader.Load()` |
+| `base_runes.json` | Base runes for the runic-magic system | `BaseRuneService.Load()` |
+| `rune_words.json` / `rune_families.json` / `rune_word_pairs.json` | Runic vocabulary, families, explicit pair relationships | `RuneWordService.Load()` |
+| `skill_combinations.json` | Named overrides for combined skills | `SkillCombinationService.Load()` |
+| `fusion_recipes.json`\* | Named overrides for fusion skills | `FusionRecipeService.Load()` |
+| `recipes.json` | Crafting recipes, keyed by NPC | `CraftingService.LoadRecipes()` |
+| `starting_items.json` | Starting equipment per class | `StartingEquipmentService.Load()` |
+| `races.json` | Playable races — stat bonuses and growth | `RaceProfile.Load()` |
+| `classes.json` | Playable classes — stat growth | `ClassProfile.Load()` |
+| `loot_tables.json` | Type-based loot tables per monster type | `LootGenerator.Load()` |
+| `caves.json` / `cities.json` / `dungeons.json` / `forests.json` | Map-area registries | `CaveRegistry` / `CityRegistry` / `DungeonRegistry` / `ForestRegistry` |
+| `shops.json` | Shop buy/sell multipliers and stock lists | — (read directly by host app; not part of `InitializeGame`) |
+| `equipment_slots.json` / `item_rarities.json` / `time_segments.json` / `gathering_types.json`\* | Display names/sort order for enum values | Individual `GameConfig.Load...()` calls (opt-in) |
 
-### Regular skills
+\* **Not included in this repository's sample `Data/` folder.** `base_skills.json` and `fusion_recipes.json` are loaded unconditionally by `InitializeGame()`, but the loaders fail soft (log a warning, load an empty set) rather than throwing — see [§21](#21-known-limitations) before relying on the fusion-skill system.
 
-```csharp
-// Update player's known skills (call on level-up or class change)
-SkillFactory.UpdateSkills(player);
+### Field reference for the most-used files
 
-// List skills available at current class/level
-var available = SkillFactory.GetSkillsFor(player);
-```
+**`items.json`** (→ `EquipmentItem` / `ConsumableItem` / `MaterialItem` / `InventoryExpansion`, picked by `type`)
 
-### Combined skills
+| Field | Notes |
+|---|---|
+| `id`, `name`, `description` | |
+| `type` | `"equipment"`, `"consumable"`, `"material"`, or `"inventory_expansion"` |
+| `rarity` | Free-form string, default `"Common"` |
+| `buyPrice`, `stackSize`, `maxStackSize` | |
+| `toolType` | Gathering tool type for materials (`Ore`, `Tree`, `Herb`, …) |
+| `allowedClasses` | Equipment-only: which classes may equip it |
+| `upgradeCategory` | Equipment-only: which upgrade material category applies |
+| `slotType` | Equipment-only: `Weapon` / `Armor` / `Accessory` |
+| `baseBonusHP/MP/STR/DEX/END/INT/SPR/ATK/DEF/MATK/MDEF/Aim/Evasion/Crit/Block` | Equipment-only stat bonuses |
+| `healAmount`, `manaRestore`, `useEffect` | Consumable-only |
 
-```csharp
-// Combine two or more skills
-var result = SkillCombinationService.TryCreateForCharacter(
-    player,
-    skillIds: new[] { "power_strike", "battle_cry" }
-);
-// result contains the new CombinedSkill, or null if already exists / invalid
-```
+**`quests.json`** (→ `Quest`)
 
-Rules: 2–5 skills, all from the same class, unique combination. AoE combinations take a –10% scaling penalty; single-target get +10%.
-
-### Fusion skills (composite)
-
-```csharp
-// Fuse base skill components
-bool created = SkillFusionSystem.TryCreateForCharacter(
-    player,
-    componentIds: new[] { "fire_core", "heat_amplifier" }
-);
-```
-
-### Skill bar (SkillSlots)
-
-The combat skill bar holds slotted skills across all tiers.
-
-```csharp
-// Slot a regular skill
-SkillSlotService.TryAddSlot(player, SlottedSkillSource.Regular, "power_strike");
-
-// Slot a combined skill
-SkillSlotService.TryAddSlot(player, SlottedSkillSource.Combined, combinedSkill.Id);
-
-// Remove
-SkillSlotService.RemoveSlot(player, SlottedSkillSource.Regular, "power_strike");
-
-// Reorder (swap positions)
-SkillSlotService.ReorderSlots(player, fromIndex: 0, toIndex: 2);
-
-// Get all combat skills with resolved Skill objects
-var slots = SkillSlotService.GetCombatSkills(player);
-```
-
-`player.SkillSlotCount` is the maximum number of slots (grows with level). `player.FusionSlotCount` caps fusion skill slots separately.
-
----
-
-## 10. Jobs
-
-### Overview
-
-Each player can have multiple jobs. Only one is "active" at a time. Each job tracks three independent aspects:
-
-| Aspect | Gained by | Lost by |
-|--------|-----------|---------|
-| **Skill XP** | Gathering / crafting (+50% when active) | Daily decay if unused (up to 50 XP/day) |
-| **Knowledge XP** | Job master quests | Resets to level floor daily (levels preserved) |
-| **Fame XP** | Active-job activities + 5 XP/day passive | ~0.5%/day decay when not active |
-
-### Job API
-
-```csharp
-// Switch active job (7-day cooldown enforced)
-bool ok = JobManager.SetActiveJob(player, "miner");
-bool ok = JobManager.SetActiveJob(player, null);  // clear job (always free)
-
-// Grant XP (handles active-job bonus automatically)
-JobManager.GrantSkillXp(player, "miner", amount: 200);
-JobManager.GrantKnowledgeXp(player, "miner", amount: 500);
-JobManager.GrantFameXp(player, "miner", amount: 100);  // only if active
-
-// Derived benefits
-double sellMult = JobXpService.GetFameMultiplierFromXp(entry.FameXp);  // e.g. ×1.7
-double gatherMult = JobXpService.GetSkillMultiplierFromXp(entry.SkillXp);
-int    extraGathers = JobManager.GetGatherKnowledgeBonus(player);
-int    maxUpgrade   = JobXpService.GetMaxUpgradeLevel(knowledgeLevel);
-
-// Daily tick (call from DayCycleManager.DayAdvanced event)
-JobManager.ApplyDailyTicks(player, gameDay);
-
-// Level info
-int level = JobXpService.GetLevel(entry.SkillXp);
-string progress = JobXpService.FormatProgress(entry.SkillXp); // "1,200 / 5,000 XP"
-```
-
-### Cooldown checks
-
-```csharp
-bool canSwitch = JobManager.CanChangeJob(player);
-TimeSpan remaining = JobManager.GetCooldownRemaining(player);
-```
-
----
-
-## 11. Quests
-
-### Quest lifecycle
-
-1. `QuestManager.GetAcceptableForNpc(player, npcId, partySize)` — quests available at this NPC
-2. Character accepts → `quest.Clone()` is added to `player.ActiveQuests`; `quest.GrantAcceptItems(player)` fires
-3. Quest tracks progress automatically:
-   - Kill progress: updated by `CombatEncounter.MonsterKilled` event (wired internally)
-   - Item progress: updated by `Inventory.AddItem` (wired internally)
-4. Quest auto-completes when all objectives are met (status → `QuestStatus.Completed`)
-5. `QuestManager.GetReturnableForNpc(player, npcId)` — quests ready to turn in
-6. Character turns in → `quest.GrantRewards(player)` fires
-
-### Quest API
-
-```csharp
-// Get available quests at an NPC
-var available = QuestManager.GetAvailableForCharacter(player, partySize: 1);
-var npcQuests  = QuestManager.GetAcceptableForNpc(player, "master_smith", partySize: 1);
-
-// Accept
-var questCopy = questTemplate.Clone();
-questCopy.GrantAcceptItems(player);
-player.ActiveQuests.Add(questCopy);
-
-// Turn in
-questCopy.GrantRewards(player);
-player.ActiveQuests.Remove(questCopy);
-player.CompletedQuests.Add(questCopy);
-```
-
-### Quest gating summary
-
-All gating fields are optional. Omit or set to 0/null to skip that gate.
-
-| Field | Effect |
-|-------|--------|
-| `requiredLevel` | Minimum player level |
-| `requiredClass` | Must be this class |
-| `requiredRace` | Must be this race |
+| Field | Notes |
+|---|---|
+| `id`, `name`, `description`, `giverNpcId`, `returnNpcId` | `returnNpcId` defaults to `giverNpcId` if omitted |
+| `requiredLevel`, `requiredClass`, `requiredRace` | Optional base gates |
 | `requiredActiveJobId` | Must have this job active |
-| `requiredAspectJobId` + `requiredSkillLevel` / `requiredKnowledgeLevel` / `requiredFameLevel` | Job aspect gate |
-| `requiresParty` + `requiredPartySize` | Party size gate |
-| `prerequisiteQuestIds` | Must have completed those quests first |
+| `requiredAspectJobId` + `requiredSkillLevel` / `requiredKnowledgeLevel` / `requiredFameLevel` | Job-aspect gate |
+| `requiresParty`, `requiredPartySize` | Party gate (`0` = any size, just must be in one) |
+| `prerequisiteQuestIds` | Must already be completed |
+| `requiredKills`, `requiredItems` | `{ id: amount }` maps — omit both for a talk-only quest |
+| `acceptItems` | Granted immediately on accept |
+| `rewardXp`, `rewardGold`, `rewardItems` | |
+| `jobKnowledgeRewardJobId` / `Amount`, `jobFameRewardJobId` / `Amount` | Optional job-aspect rewards on turn-in |
+| `acceptDialog`, `returnDialog` | Lists of `{ speaker, text }` lines |
+| `isRepeatable`, `repeatMaxLevel`, `repeatDailyLimit`, `repeatTotalLimit` | `0` = unlimited |
+
+**`skills.json`** (→ `SkillData`)
+
+`id`, `name`, `description`, `class`, `manaCost`, `type` (`Physical`/`Magical`), `target` (`SingleEnemy`/`AllEnemies`/`Self`/`SingleAlly`), `scalingFactor`, `statToScaleFrom`, `minLevel`, `isHealing`, `aggroModifier`, `effects` (data-driven status effects the skill applies).
+
+**`rooms.json`** (→ `Room`)
+
+`id`, `name`, `description`, `isCity`/`isCaveRoom`/`isDungeonRoom`/`isBossRoom`, `exits` (direction → room id), `npcs`, `gatheringSpots`, `requirementType` (`None`/`Level`/`Quest`/`Party`), `accessLevel`, `requiredQuestId`, `encounterableMonsters` (monster id → spawn weight).
+
+**`races.json`** / **`classes.json`** — `race`/`class` name, `baseStatBonus` (races only), `statGrowth`, `baseHpBonus`/`baseManaBonus`/`hpPerLevel`/`manaPerLevel`, `forbiddenClasses` (races only), `group` (classes only — controls XP-transfer bonus on same-group class switches).
+
+For the remaining files (NPCs, jobs, runes, combinations/fusion overrides, crafting recipes, loot tables), the shapes are small and mirror their model classes 1:1 (`MyriaLib.Models*`) — the fastest way to get the exact contract is to open the corresponding class, since every field maps directly with camelCase JSON keys.
 
 ---
 
-## 12. World — Rooms, NPCs, Maps
+## 7. Character & Progression
 
-### Navigation
-
-```csharp
-// Get adjacent rooms
-var exits = player.CurrentRoom.Exits;  // Dictionary<string, Room>
-
-// Move (update player state; add ticks if desired)
-Room next = player.CurrentRoom.Exits["north"];
-if (RoomService.CanEnterRoom(next, player))
-{
-    player.CurrentRoom   = next;
-    player.CurrentRoomId = next.Id;
-    DayCycleManager.AddTicks(GameTick.RoomTraversal);
-}
-```
-
-### Spawning monsters
+`Character` (in `MyriaLib.Entities.Characters`) extends `CombatEntity`, the shared base for anything that fights (`Character` and `Monster` both derive from it). `CombatEntity` computes all the "total" stats you actually use in combat — `TotalSTR`, `MaxHealth`, `TotalPhysicalAttack`, `CritChance`, etc. — by layering race/class base stats, player-invested stat points, equipped-gear bonuses, and active status effects. You should almost never read `Stats.Strength` directly; read `character.TotalSTR` instead so gear and buffs are included.
 
 ```csharp
-// Dungeon rooms — populate on entry
-player.CurrentRoom.SpawnDungeonMonsters();
-var monsters = player.CurrentRoom.CurrentMonsters; // List<Monster>
-
-// Random encounter from template pool
-var monster = MonsterService.PickMonsterForFight(
-    room.EncounterableMonsters,
-    room.Monsters
-);
+character.GainXp(150);           // levels up automatically in a loop if enough XP was granted at once
+character.Equip(sword);          // equips into the correct slot based on EquipmentItem.SlotType
+character.LearnSkill(fireball);  // no-ops if already known
+bool canGather = character.HasToolFor(GatheringType.Ore);
 ```
 
-### NPC interaction
-
-```csharp
-// Get NPCs in current room
-var npcs = player.CurrentRoom.NpcRefs;  // List<Npc>
-
-// Execute a service
-NpcActionResult result = NpcInteractionService.Execute(
-    player, npc,
-    serviceId: "heal",   // "heal" | "buy_items" | "sell_items" | "upgrade" | "craft" | "talk"
-    item: null,
-    amount: 0
-);
-
-if (result.Success)
-    Console.WriteLine(Localization.T(result.MessageKey, result.MessageArgs));
-```
-
-### Map rendering
-
-```csharp
-// Build a 2D map layout starting from the player's room
-var layout = MapBuilder.BuildRoomMap(player.CurrentRoom);
-// layout is a Dictionary<(int x, int y), Room> for grid rendering
-```
+Class progression runs on a separate curve from character level (`ClassManager.GrantClassXp`), lets a player switch class every `ClassCooldown` (default 7 days), and refunds 50% of accumulated class XP when switching within the same `Group` (e.g. `Physical` → `Physical`) to avoid punishing a same-playstyle swap as hard as a full reinvention. `ClassManager.ApplyDailyPenalty` should be wired to your day-advance handling (see [§14](#14-time--ticks)) to apply the inactivity XP decay.
 
 ---
 
-## 13. Time Cycle & Ticks
+## 8. Inventory & Economy
 
-The in-game clock advances by "ticks." Every `TicksPerSegment` ticks = one time segment. Four segments = one game day.
+`Inventory` manages items page-by-page (`PageSize`, default 49 = 7×7) with `AddItem`, `RemoveItem`, `UseItem`, `SwapEquipment`, and `SellItem`. Subscribe to `ItemReceived` / `ItemRemoved` / `ItemSold` instead of polling — quest kill/collect progress is wired through these same events internally, so you get that behavior for free.
 
-```
-Morning → Midday → Evening → Night → (new day) → Morning → …
-```
-
-### Adding ticks
-
-```csharp
-DayCycleManager.AddTicks(GameTick.CombatVictory);  // 8 ticks
-DayCycleManager.AddTicks(GameTick.Gather);          // 6 ticks
-```
-
-### Events
-
-```csharp
-DayCycleManager.SegmentChanged += (segment) =>
-{
-    // Update UI clocks, trigger day-specific spawns, etc.
-};
-
-DayCycleManager.DayAdvanced += (gameDay) =>
-{
-    // Apply daily penalties and ticks for all online players
-    foreach (var player in onlineCharacters)
-    {
-        ClassManager.ApplyDailyPenalty(player);
-        JobManager.ApplyDailyTicks(player, gameDay);
-    }
-};
-```
-
-### Inactivity timer
-
-Slowly advances time while the player is idle.
-
-```csharp
-DayCycleManager.StartInactivityTimer(ticksPerInterval: 1, intervalMs: 10_000);
-// adds 1 tick every 10 seconds
-DayCycleManager.StopInactivityTimer();
-```
-
-### Current time
-
-```csharp
-TimeSegment current = DayCycleManager.CurrentTimeSegment;
-int day = DayCycleManager.GameDay;
-int ticks = DayCycleManager.CurrentTicks; // within current segment
-```
+Currency uses the immutable `Money` value type stored in the smallest denomination (bronze) to avoid rounding errors across the five tiers (bronze/silver/gold/platinum/crystal). `MoneyBag` wraps a character's balance with `CanAfford`, `TryAdd`, and `TrySpend`. `MoneyFormatter` renders it in several styles (`"S"` short, `"L"` long, `"C"` compact, `"B"` raw) and parses user-typed amounts back.
 
 ---
 
-## 14. Gathering & Crafting
+## 9. Combat
 
-### Gathering
+A one-on-one fight is a `CombatEncounter(character, monster)`. Each of your turn's actions is one call — `CharacterAttack()`, `CharacterBeginCast(skill)`, or `CharacterUseItem(consumable)` — and if the chosen skill has a cast or recovery time, you keep calling `Tick()` to advance until the pending action resolves. `Phase` (`CharacterTurn` / `Casting` / `Recovery` / `Finished`) and the localized `Log` (a list of `CombatLogEntry` — a localization key plus format args, so you render it however your UI needs) are readable at any time. On victory, loot is added to inventory automatically; if there's no room, `InventoryFull` is set instead of silently dropping items. `MonsterKilled` fires for both quest-progress tracking (handled internally) and anything else you want to hook.
 
-```csharp
-// Attempt a gather in the current room
-GatherActionResult result = GatherService.Gather(player, player.CurrentRoom);
-
-if (result.Success)
-{
-    Console.WriteLine($"Gathered {result.Amount}× {result.ItemId}");
-    Console.WriteLine($"Skill XP gained: {result.SkillXpGained}");
-    Console.WriteLine($"Gathers remaining today: {result.RemainingGathers}");
-}
-else
-{
-    // result.Reason: "no_spots" | "depleted" | "no_tool" | "inventory_full"
-}
-```
-
-Gathering automatically:
-- Checks the player has the correct tool for the spot's `GatheringType`
-- Consumes a daily gather charge from the room
-- Grants Skill XP for the active job (if any)
-- Applies the skill multiplier (more items at higher skill levels)
-- Adds ticks (`GameTick.Gather`)
-
-### Daily gather limit
-
-Each room rolls 1–5 daily gathers on day start. Knowledge level adds bonus charges:
-
-```csharp
-int bonus = JobManager.GetGatherKnowledgeBonus(player); // extra charges for today
-```
-
-### Crafting
-
-Crafting is data-driven. The library provides the recipe registry; execution is in your UI:
-
-```csharp
-// List recipes for an NPC
-var recipes = CraftingService.GetRecipes("master_smith");
-
-// Get a specific recipe
-var recipe = CraftingService.GetRecipe("master_smith", outputItemId: "iron_sword");
-
-// Check ingredients (recipe.Ingredients is list of {ItemId, Amount})
-bool hasAll = recipe.Ingredients.All(ing =>
-    player.Inventory.Items.Where(i => i.Id == ing.ItemId).Sum(i => i.StackSize) >= ing.Amount
-);
-
-// If yes, remove ingredients, create item, add to inventory
-```
+`GroupCombatEncounter` extends the same idea to multiple characters vs. multiple monsters with round-robin turns; loot goes to the first living character, and quest progress updates for every participant. Both combat types share the same underlying `CombatSystem` (`TryHit`, `CalculateDamage`) if you just need the raw formulas — e.g. to show a damage-range tooltip without starting a real fight.
 
 ---
 
-## 15. Rune Magic
+## 10. Skills — Three Tiers
 
-Rune magic is exclusive to the `RunicMage` class. Each rune starts from a base definition and gains power by adding runic words. Word pairs interact via Support, Contradiction, Neutral, or Transform relationships.
+| Tier | Class | How it's created |
+|---|---|---|
+| Regular | `Skill` | Auto-granted on level-up/class-change via `SkillFactory.UpdateSkills()` |
+| Combined | `CombinedSkill` | Player combines 2–5 learned regular skills of the same class via `SkillCombinationService.TryCreateForCharacter(character, skillIds)` |
+| Fusion | `CompositeSkill` | Player fuses base-skill components (from `base_skills.json`) via `SkillFusionSystem.TryCreateForCharacter(character, components)` |
 
-### Rune structure
+Combined skills apply a balance rule: AoE combinations get a 10% scaling penalty, single-target combinations get a 10% bonus, so combining doesn't make AoE skills disproportionately strong. `SkillSlotService` manages the combat skill bar across all three tiers — `TryAddSlot`, `RemoveSlot`, `ReorderSlots`, `GetCombatSkills(character)` — with slot count scaling by level (`SkillSlotCount`) and a separately-capped fusion slot count (`FusionSlotCount`) so fusion skills stay a deliberately scarce resource.
 
-```
-BaseRune (template)
-  └─ CompositeRune (player's instance)
-       ├─ BaseRuneId  → BaseRuneData (stats, target, scaling)
-       └─ AddedWordIds → List of RuneWord IDs
-```
+> **Before you build on fusion skills:** the *display and combat-use* code (`SkillSlotService`, skill-bar UI hooks) fully supports `CompositeSkill`, but nothing in this library calls `SkillFusionSystem.TryCreateForCharacter` for you — you need to build your own "combine these components" UI/API that calls it, the same way you'd build one for `SkillCombinationService`. See [§21](#21-known-limitations).
 
-When words are added, `RuneEvaluator.Evaluate()` recomputes the skill's stats.
+---
 
-### Word pair effects
+## 11. Jobs
+
+Jobs are independent of class — a character can hold several jobs over time but only one *active* job at once. Each job tracks three independent progress axes via `CharacterJob`:
+
+| Axis | Gained from | Lost from |
+|---|---|---|
+| Skill XP | Gathering/crafting (+50% while the job is active) | Daily decay if unused (up to 50 XP/day) |
+| Knowledge XP | Job-master quests | Resets to the current level floor each day (levels already reached are kept) |
+| Fame XP | Activity in the active job + 5 XP/day passively | ~0.5%/day decay while the job is inactive |
+
+`JobManager.SetActiveJob`, `.CanChangeJob`, and `.GetCooldownRemaining` gate job switching the same way class switching is gated (default 7-day cooldown). Call `JobManager.ApplyDailyTicks(character, gameDay)` from your day-advance handler to apply all daily job mechanics in one call.
+
+---
+
+## 12. Quests
+
+Once accepted (`quest.Clone()` gives the character their own copy of the template), progress tracks itself with zero extra work from you: kill progress updates from the `MonsterKilled` event, item-collection progress from `ItemReceived`. When every objective is met, `Status` flips to `Completed` automatically and the quest can be turned in. Gating conditions (level, class, race, active job, a specific job-aspect level, party membership/size, prerequisite quests) are all optional and freely combinable — new gating combinations are pure data changes, never code changes. `QuestManager.GetAvailableForCharacter` and `GetAcceptableForNpc`/`GetReturnableForNpc` do the gating checks for you.
+
+---
+
+## 13. World — Rooms, NPCs, Maps
+
+Rooms form a graph via their `Exits` dictionary (direction → room). Before moving a character, check `RoomService.CanEnterRoom(room, character)` — it enforces the room's `RequirementType` (`Level`, `Quest`, or `Party`; note the `Party` case currently checks *membership only*, not a minimum size — see [§21](#21-known-limitations)). Dungeon rooms spawn their monsters lazily via `room.SpawnDungeonMonsters()` on entry; random encounters are picked from `Room.EncounterableMonsters` (a weighted id→chance map) via `MonsterService.PickMonsterForFight`.
+
+NPC interactions route through a single entry point, `NpcInteractionService.Execute(character, npc, serviceId, item, amount)`, dispatching on `serviceId` (`heal`, `buy_items`, `sell_items`, `upgrade`, `talk`; note `craft` is a stub that always fails — see [§15](#15-gathering--crafting) for the actual crafting path). This keeps your UI from needing a separate method per NPC service type.
+
+For map rendering, `MapBuilder.BuildRoomMap()` lays out the known rooms around the current one as a 2D grid via breadth-first search — feed that straight into a UI grid.
+
+---
+
+## 14. Time & Ticks
+
+Game time is a tick counter: a fixed number of ticks (`DayCycleManager.TicksPerSegment`, default 50) makes a segment (Morning → Noon → Evening → Night), four segments make a day. Actions cost varying ticks (`GameTick.RoomTraversal`, `.CombatVictory`, `.Gather`, `.Rest`, …) via `DayCycleManager.AddTicks(int)`. Subscribe to `SegmentChanged` and `DayAdvanced` to react to time passing — `DayAdvanced` in particular is where you should hook job decay, class inactivity penalties, and gather-limit resets. `DayCycleManager.StartInactivityTimer()` optionally advances time passively even without player action (useful for a desktop client; a server might drive this differently, or not at all).
+
+---
+
+## 15. Gathering & Crafting
+
+`GatherService.Gather(character, room)` checks for the right tool, consumes one of the room's daily gather charges, grants job skill XP, and applies the job's skill multiplier to the yield. Each room rolls 1–5 base daily gather attempts; a higher job Knowledge level grants bonus charges (`JobManager.GetGatherKnowledgeBonus`). Failures return a specific `GatherResult` (`NoSpots`, `Depleted`, `NoTool`, `InventoryFull`) so your UI can react precisely instead of guessing.
+
+Crafting is intentionally split: `CraftingService.GetRecipes(npcId)` / `GetRecipe(npcId, outputId)` give you the recipe (output item, ingredients, required job-knowledge level) and you check the character has the ingredients yourself — **actually consuming ingredients and creating the output item is left to your app**, since single-player (local) and multiplayer (server-authoritative) hosts need to execute that step differently. Do **not** route through `NpcInteractionService.Execute(character, npc, "craft", item)` / `Npc.CraftItem()` — that path is an unfinished stub that always returns failure (see [§21](#21-known-limitations)).
+
+---
+
+## 16. Rune Magic
+
+Rune magic is a fourth skill system, separate from the three tiers in [§10](#10-skills--three-tiers), and it's fully functional at the library level (a specific consuming app might choose to gate it behind a particular class — that's an app-level UI decision, not a library limitation). A `CompositeRune` starts from a `BaseRuneData` template; the player adds any number of `RuneWord`s to it, and each addition triggers `RuneEvaluator.Evaluate()` to recompute its stats based on the relationship between the words already present:
 
 | Relationship | Effect |
 |---|---|
-| **Support** | Increases scaling factor |
-| **Contradiction** | Also increases scaling (different flavor) |
-| **Neutral** | Adds mana cost penalty |
-| **Transform** | Unlocks a completely new rune (the transform result) |
+| Support | Increases the scaling factor |
+| Contradiction | Also increases the scaling factor (different thematic flavor) |
+| Neutral | Increases mana cost instead |
+| Transform | Unlocks an entirely new rune |
 
-Relationships are looked up in this priority order:
-1. Explicit `WordPairRelation` entry for this exact pair
-2. Family-level default (`WordFamily.FamilyRelations`)
-3. Neutral (fallback)
-
-### Rune management API
-
-```csharp
-// Add a word to a rune
-bool ok = RuneManager.AddWord(player, rune, wordId, out var newRunes);
-// newRunes: any runes unlocked via Transform (add these to player.KnownRunes)
-
-// Remove a word
-RuneManager.RemoveWord(player, rune, wordId);
-
-// Character's translation dictionary
-RuneManager.SetCharacterLabel(player, wordId, label: "Fire");   // user's guess
-RuneManager.LearnWord(player, wordId);                        // officially learned (NPC/lore)
-
-// Display a word as the player sees it
-string display = RuneManager.GetDisplayName(player, wordId);
-// → official name if learned, player's label if set, runic script otherwise
-```
-
-### Evaluating a rune
-
-Called automatically when words change. You can call it manually for preview:
-
-```csharp
-Skill skill = RuneEvaluator.Evaluate(baseRune, addedWordIds);
-```
+The relationship between two words is resolved in this order: an explicit `WordPairRelation` entry first, then the word families' default relationship, then `Neutral` as the fallback. `RuneManager` also tracks a per-character translation system — until a word is officially learned, the player can assign it a personal guessed label (`SetCharacterLabel`) that displays in place of the raw runic script (`GetDisplayName`), supporting a "the language is being decoded gradually" narrative if you want one.
 
 ---
 
-## 16. Progression — XP & Levels
+## 17. Accounts & Persistence
 
-### Character XP
+`LoginManager.Register(username, password)` / `.Login(username, password)` are the built-in file-based account system — passwords are hashed with PBKDF2-SHA512 (16-byte salt, 32-byte hash, 200,000 iterations), never stored in plaintext. Both methods are synchronous and **not** thread-safe against concurrent writes to the same account file, so if you're building a server, add your own locking or swap in a database-backed alternative.
 
-```csharp
-// Grant XP (fires LeveledUp event if threshold crossed)
-player.GainXp(500L);
+`CharacterService.SaveCharacter(account, character)` / `LoadCharacter(name, account)` handle file-based character persistence under `Data/saves/{username}-{charactername}.json`, including restoring extended state (runes, fusion/combination skills, skill slots) on load via `SkillFusionSystem.ResolveCompositeSkills`.
 
-// Inspect
-int level = player.Level;
-long xp    = player.Experience;
-long next  = player.ExpForNextLvl;
-```
-
-Level-up grants stat points (tracked in `Stats.UnusedPoints`) and unlocks new skills.
-
-### Class XP
-
-```csharp
-// Grant class XP
-ClassManager.GrantClassXp(player, amount: 1000L);
-ClassManager.GrantClassXp(player, CharacterClass.Knight, amount: 500L); // specific class
-
-// Query
-int classLevel = ClassManager.GetClassLevel(player, player.Class);
-long classXp   = ClassManager.GetClassXp(player, player.Class);
-string progress = ClassXpService.FormatProgress(classXp);
-
-// Switch class (7-day cooldown, race restrictions enforced)
-bool ok = ClassManager.SetClass(player, CharacterClass.Knight);
-// Skills for old class are stashed; skills for new class are restored
-// 50% XP transfer within the same ClassGroup
-
-// Check allowed classes
-IEnumerable<CharacterClass> allowed = ClassManager.GetAllowedClasses(player.Race);
-
-// Daily penalty (call on DayAdvanced)
-ClassManager.ApplyDailyPenalty(player);
-```
-
-**Class groups** (used for 50% XP transfer on in-group switch):
-- `Physical` — Fighter, Knight, Barbarian
-- `RangerRogue` — Archer, Hunter, Rogue
-- `Mage` — ElementalMage, ArcanMage, RunicMage
-- `DivineHybrid` — Cleric, SoulsKnight, Druid
-
-### Job XP (see §10)
-
----
-
-## 17. Authentication & Persistence
-
-### User accounts
-
-```csharp
-// Register
-LoginResult result = await LoginManager.Register("username", "password");
-
-// Login
-LoginResult result = await LoginManager.Login("username", "password");
-if (result.Success)
-{
-    var account = result.Account; // UserAccount
-    UserAccoundService.CurrentUser = account;
-}
-```
-
-Passwords are hashed with PBKDF2-SHA512 (salt 16 bytes, hash 32 bytes, 200,000 iterations). Never stored in plain text.
-
-### Character persistence
-
-```csharp
-// Save
-await CharacterService.SaveCharacter(userAccount, player);
-
-// Load
-Character player = await CharacterService.LoadCharacter("HeroName", userAccount);
-
-// List character names for account
-string[] names = await characterRepository.GetNamesAsync("username");
-
-// Delete
-await characterRepository.DeleteAsync("username", "HeroName");
-```
-
-Files are stored at `Data/saves/{username}-{characterName}.json`. Accounts at `Data/users/{username}.json`.
-
-### Settings
-
-```csharp
-SettingsService.Load();           // loads Data/Misc/settings.json
-var settings = Settings.Current;
-
-settings.LanguageSettings.Local = GameLanguage.German;
-settings.VisualSettings.DarkMode = true;
-
-SettingsService.Save();
-```
+This file-based persistence sits behind `ICharacterRepository` / `IUserRepository` interfaces, so you can swap in your own database-backed implementation without touching the rest of the library — this is exactly what MyriaServer (the reference project's ASP.NET Core backend) does with a SQL-backed repository.
 
 ---
 
 ## 18. Events Reference
 
-### Character events
+MyriaLib has no UI, so it uses .NET events instead of polling to tell you when something worth reacting to happened.
 
-```csharp
-player.XpGained     += (_, e) => { /* e.Amount, e.TotalXp, e.NextLevelXp */ };
-player.LeveledUp    += (_, e) => { /* e.OldLevel, e.NewLevel */ };
-player.HealthChanged += (_, e) => { /* e.OldHp, e.NewHp, e.Source */ };
-player.ManaChanged  += (_, e) => { /* e.OldMana, e.NewMana, e.Source */ };
-player.SkillLearned += (_, e) => { /* e.Skill */ };
-```
+**On `Character`:** `XpGained`, `LeveledUp`, `HealthChanged`, `ManaChanged`, `SkillLearned`
 
-### Inventory events
+**On `Inventory`:** `ItemReceived`, `ItemRemoved`, `ItemSold`
 
-```csharp
-player.Inventory.ItemReceived += (_, e) => { /* e.Item, e.StackSize, e.Source */ };
-player.Inventory.ItemRemoved  += (_, e) => { };
-player.Inventory.ItemSold     += (_, e) => { };
-```
+**On `CombatEncounter` / `GroupCombatEncounter`:** `MonsterKilled`
 
-### Combat events
+**On `DayCycleManager`:** `SegmentChanged`, `DayAdvanced`
 
-```csharp
-encounter.MonsterKilled += (_, e) => { /* e.MonsterId */ };
-```
+**`GameLog`** additionally keeps a general diagnostic event log (`EntryAdded`, `RecentEntries` for the last 20) independent of the above, useful for debugging/dev builds.
 
-### World events
-
-```csharp
-DayCycleManager.SegmentChanged += (segment) => { /* TimeSegment */ };
-DayCycleManager.DayAdvanced    += (day) => { /* int */ };
-```
-
-### Game log
-
-```csharp
-GameLog.EntryAdded += (_, entry) =>
-{
-    if (entry.IsError)
-        Console.Error.WriteLine(entry.Message);
-    else
-        Console.WriteLine(entry.Message);
-};
-
-// Recent entries (last 20)
-foreach (var e in GameLog.RecentEntries) { }
-```
+**`GameEvents` (static, `MyriaLib.Systems`)** is a second, mod-oriented event hub, distinct from the instance events above: `SessionStarted`, `LevelUp`, `ClassChanged`, `RoomEntered`, `DayAdvanced`, `MonsterKilled`, `ItemUsed`. It exists specifically so DLL mods have one static place to subscribe from inside `IModLoaderExtender.AfterModsLoaded` without needing a reference to a specific character instance — and without needing to unsubscribe, since mod assemblies are unloaded wholesale between sessions. Note `GameEvents.SessionStarted` and `GameService.SessionStarted` are two distinct events fired together by `GameService.StartSession` — the former for mod code, the latter for your application code.
 
 ---
 
-## 19. Enum Registries
+## 19. Mod System
 
-The simple enum registries (`EquipmentTypeRegistry`, `ItemRarityRegistry`, `TimeSegmentRegistry`, `GatheringTypeRegistry`) provide display names and ordering loaded from JSON. The C# enums remain the source of truth for game logic.
+A mod is a folder under `Mods/` with a `mod.json` manifest (`id`, `name`, `version`, `enabled`, `loadOrder`) and a data tree mirroring `Data/`. `ModLoader.Load()` classifies every file a mod provides as visual or gameplay-relevant based on its path prefix (`Data/locales/`, `Assets/`, icon paths → visual; `Data/common/` → gameplay); if a mod contributes at least one gameplay file, the whole mod counts as gameplay-relevant. Overlapping files are resolved by `loadOrder` (higher wins) — full-file replacement only, no field-level merging. `ModLoader.ResolvePath(defaultPath)` is what every loader in [§4](#4-initialization--load-order) actually calls to get its real file path.
 
-```csharp
-// After GameConfig.LoadEquipmentSlots()
-string name = EquipmentTypeRegistry.GetDisplayName(EquipmentType.Weapon); // "Weapon Slot"
-var allSlots = EquipmentTypeRegistry.All; // IReadOnlyList<EnumDefinition>
+If you're building a networked game and want to guarantee clients can't gain an advantage from gameplay mods, call `ModLoader.ApplyMultiplayerMode(true)` before connecting — gameplay mods are skipped (visual-only mods stay active) so the client loads the same unmodified data as the server. `ModLoader.GetModInfo()` reports the client's active mods (including a SHA-256 fingerprint per gameplay mod) if your server wants to allowlist specific mods instead of blocking all of them.
 
-// ItemRarityRegistry also has ordering
-int order = ItemRarityRegistry.GetOrder(ItemRarity.Legendary); // e.g. 5
-string rareName = ItemRarityRegistry.GetDisplayName(ItemRarity.Legendary);
-
-// Same pattern for Time and Gathering
-string segName = TimeSegmentRegistry.GetDisplayName(TimeSegment.Morning);
-string typeName = GatheringTypeRegistry.GetDisplayName(GatheringType.Ore);
-```
-
-Race and class profiles are accessed via:
-
-```csharp
-// After GameConfig.LoadRaces() / GameConfig.LoadClasses()
-if (RaceProfile.All.TryGetValue(player.Race, out var profile))
-{
-    int hpGrowth = profile.HpPerLevel;
-    var forbidden = profile.ForbiddenClasses; // HashSet<CharacterClass>
-}
-
-if (ClassProfile.All.TryGetValue(player.Class, out var profile))
-{
-    int statGain = profile.StatGrowth["STR"];
-}
-```
+For app-specific reactions to mod loading (e.g. swapping a WPF `ResourceDictionary` when a visual mod loads — something MyriaLib itself must never know about), implement `IModLoaderExtender` and register it with `ModLoader.RegisterExtender()`. If an extender throws during load, only that mod is unloaded — a single bad mod never blocks the rest of your game from starting.
 
 ---
 
-## 20. Localization
+## 20. Building a Multiplayer Server (`IGameDataSource`)
+
+By default, every loader in `GameService.InitializeGame()` reads its JSON file straight off disk. If you're building a server that keeps its own authoritative copy of content — in a database, for example — implement `IGameDataSource` instead:
 
 ```csharp
-// Load at startup (already called by GameService.InitializeGame)
-Localization.Load(GameLanguage.English);
-
-// Translate a key
-string text = Localization.T("npc.healer_mira.name");
-
-// With format arguments
-string text = Localization.T("combat.dealt_damage", playerName, damageAmount);
-```
-
-Locale files live at `Data/locales/en.json` and `Data/locales/de.json`. Format is a flat JSON object:
-```json
+public interface IGameDataSource
 {
-  "npc.healer_mira.name": "Healer Mira",
-  "combat.dealt_damage":  "{0} deals {1} damage."
+    List<RaceProfile> GetRaces();
+    List<ClassProfile> GetClasses();
+    List<MonsterLootTable> GetLootTables();
+    List<GameItem> GetItems();
+    List<Monster> GetMonsters();
+    List<Npc> GetNpcs();
+    List<Room> GetRooms();
+    Dictionary<string, CraftingRecipe[]> GetRecipes();
+    List<Job> GetJobs();
+    List<Quest> GetQuests();
+    List<SkillData> GetSkills();
+    List<EffectDefinition> GetEffects();
+    Dictionary<string, string[]> GetStartingItems();
+    List<City> GetCities();
+    List<Cave> GetCaves();
+    List<Dungeon> GetDungeons();
+    List<Forest> GetForests();
+    (List<RuneWord> Words, List<WordFamily> Families, List<WordPairRelation> Pairs) GetRuneWords();
+    List<BaseRuneData> GetBaseRunes();
+    List<BaseSkillData> GetBaseSkills();
+    List<FusionRecipe> GetFusionRecipes();
+    List<SkillCombinationRecipe> GetSkillCombinations();
 }
 ```
+
+Pass an instance to `GameService.InitializeGame(progress: null, source: myDataSource)` and every loader calls the matching data-based overload instead of touching JSON at all — mod path resolution is skipped entirely in that case. The load order (documented in [§4](#4-initialization--load-order)) is identical either way, since both branches go through the same method — you only ever need to get the *data* right, not re-derive the *order*.
+
+This is exactly the pattern the reference Myria project uses: MyriaLib has zero database-specific code; the server project owns a `SqlGameDataSource` that reads from SQL and hands MyriaLib plain in-memory lists, keeping persistence technology entirely outside the library.
+
+For character save data specifically (rather than static world content), implement `ICharacterRepository`/`IUserRepository` instead — see [§17](#17-accounts--persistence).
 
 ---
 
-## 21. Mod System
+## 21. Known Limitations
 
-The mod system lives in `MyriaLib.Systems.Mods` and allows any consuming application to overlay custom game data on top of the base JSON files without touching source code. Visual assets (icons, images, locale strings) are always applied; gameplay data (items, monsters, rooms, etc.) is automatically suppressed when the client connects to a multiplayer server.
+Being upfront about the rough edges so you don't lose time rediscovering them:
 
-### How mods work
-
-A mod is a folder placed inside a `Mods/` directory next to the game executable. Each mod folder must contain a `mod.json` manifest and may contain any number of data-file overrides that mirror the base `Data/` tree.
-
-```
-Mods/
-├── dark_icons/           ← visual-only mod
-│   ├── mod.json
-│   └── Data/
-│       └── Icons/
-│           └── iron_ore.svg
-└── harder_monsters/      ← gameplay mod
-    ├── mod.json
-    └── Data/
-        └── common/
-            └── monsters.json
-```
-
-### `mod.json` schema
-
-```json
-{
-  "id":          "harder_monsters",
-  "name":        "Harder Monsters",
-  "version":     "1.0.0",
-  "author":      "YourName",
-  "description": "Increases monster stats across the board.",
-  "enabled":     true,
-  "loadOrder":   100,
-  "settings": [
-    {
-      "key":          "accentColor",
-      "label":        "Accent Color",
-      "description":  "Theme accent used by this visual mod.",
-      "type":         "colorSlider",
-      "defaultValue": "#C83232"
-    },
-    {
-      "key":          "accentBrightness",
-      "label":        "Accent Brightness",
-      "description":  "Scales derived theme colors.",
-      "type":         "slider",
-      "defaultValue": "100",
-      "min":          40,
-      "max":          160,
-      "step":         5
-    },
-    {
-      "key":          "animateAccent",
-      "label":        "Animate Accent",
-      "description":  "Cycles the accent color over time.",
-      "type":         "bool",
-      "defaultValue": "false"
-    }
-  ],
-  "settingValues": {
-    "accentColor": "#C83232",
-    "accentBrightness": "100",
-    "animateAccent": "false"
-  },
-  "visualEffects": [
-    {
-      "key":               "accentHueCycle",
-      "target":            "themeAccentPalette",
-      "effect":            "hueCycle",
-      "sourceSetting":     "accentColor",
-      "brightnessSetting": "accentBrightness",
-      "enabledSetting":    "animateAccent",
-      "speed":             0.2
-    }
-  ]
-}
-```
-
-| Field | Default | Description |
-|---|---|---|
-| `id` | folder name | Unique identifier used for multiplayer validation |
-| `name` | — | Display name |
-| `version` | `"1.0.0"` | Shown in mod lists |
-| `author` | — | Optional |
-| `description` | — | Optional |
-| `enabled` | `true` | Disabled mods are visible in settings but do not apply overrides |
-| `loadOrder` | `100` | Lower = loaded first; higher-order mods win conflicts |
-| `settings` | `[]` | Optional mod-specific setting definitions shown by supporting frontends |
-| `settingValues` | `{}` | Persisted values keyed by setting key |
-| `visualEffects` | `[]` | Optional runtime visual effect definitions interpreted by supporting frontends |
-
-Supported generic setting types are `text`, `number`, `color`, `colorSlider`, `slider`, and `bool`. `colorSlider` renders a hue slider while still saving a hex color string such as `#C83232`. Slider definitions can set `min`, `max`, and `step`. Frontends can render these as native controls and extenders can read the resolved values from `LoadedMod.Manifest.SettingValues`.
-
-Visual effects are declarative recipes. `MyriaLib` only parses them; UI projects decide whether and how to run them. A WPF host might support `target: "themeAccentPalette"` with `effect: "hueCycle"`, while another frontend can ignore unknown targets or effects.
-
-### Visual vs gameplay classification
-
-Classification is automatic — no flag needed in `mod.json`.
-
-| Path prefix | Classification |
-|---|---|
-| `Data/locales/` | Visual |
-| `Data/Icons/` | Visual |
-| `Data/images/` | Visual |
-| `Data/Maps/` | Visual |
-| `Assets/` | Visual |
-| `Data/common/` | **Gameplay** |
-
-A mod is marked **visual-only** if every file it contains falls under a visual prefix. One gameplay file anywhere in the mod makes the whole mod gameplay-affecting.
-
-### Override strategy
-
-The last mod in load order that provides a file wins for that file. A mod that overrides `monsters.json` must ship the complete file — partial merging is not supported. Use `loadOrder` to ensure your mod applies after any others it depends on.
-
-### Loading mods in code
-
-```csharp
-using MyriaLib.Systems.Mods;
-
-// Call before GameService.InitializeGame()
-ModLoader.Load("Mods");   // silently returns if Mods/ does not exist
-
-// Inspect what was loaded
-foreach (var mod in ModLoader.ActiveMods)
-    Console.WriteLine($"{mod.Manifest.Name} v{mod.Manifest.Version} — visual-only: {mod.IsVisualOnly}");
-
-// Initialize game — all data paths automatically resolved through mod overrides
-GameService.InitializeGame();
-```
-
-### Multiplayer mode
-
-When the player connects to a server, gameplay mods must be suppressed so the client uses the same unmodified data the server expects.
-
-```csharp
-// On multiplayer connect
-ModLoader.MultiplayerMode = true;
-GameService.InitializeGame();    // reloads everything; gameplay mods are skipped
-
-// On disconnect
-ModLoader.MultiplayerMode = false;
-GameService.InitializeGame();    // restores mod overrides for singleplayer
-```
-
-`ModLoader.ResolvePath(defaultPath)` is the single chokepoint that all loaders call. When `MultiplayerMode` is `true`, it skips gameplay mods and returns the unmodded path.
-
-### Server mod validation
-
-Clients send their mod list to the server immediately after connecting so the server can audit and warn about gameplay mods.
-
-```csharp
-// Client side (GameHubService does this automatically)
-ModInfo info = ModLoader.GetModInfo();
-await hubConnection.InvokeAsync("ReportMods", info);
-
-// Server responds with "ModValidation" event: (bool accepted, string message)
-// accepted = true  → no gameplay mods, or visual-only → ok
-// accepted = false → gameplay mods detected; client should suppress them
-```
-
-`ModInfo` contains:
-- `ActiveMods` — list of `ModEntry` (id, name, version, isVisualOnly, fingerprint)
-- `HasGameplayMods` — computed convenience property
-
-Each gameplay mod carries a `Fingerprint` — a SHA-256 hash of all its gameplay-affecting files. The server can compare fingerprints against an approved allowlist if stricter enforcement is needed.
-
-### `ModLoader` API reference
-
-| Member | Description |
-|---|---|
-| `ModLoader.Load(string dir = "Mods")` | Scan directory, register mods sorted by LoadOrder |
-| `ModLoader.ActiveMods` | `IReadOnlyList<LoadedMod>` — enabled mods that currently apply |
-| `ModLoader.AllMods` | `IReadOnlyList<LoadedMod>` — all discovered mods, including disabled mods |
-| `ModLoader.VisualMods` | Subset of `ActiveMods` where `IsVisualOnly == true` |
-| `ModLoader.GameplayMods` | Subset of `ActiveMods` where `IsVisualOnly == false` |
-| `ModLoader.MultiplayerMode` | `bool` — when true, gameplay overrides are bypassed in `ResolvePath` |
-| `ModLoader.ResolvePath(string path)` | Returns the effective file path after applying mod overrides |
-| `ModLoader.RegisterExtender(IModLoaderExtender)` | Register a project-specific hook for applying UI/visual mod behavior |
-| `ModLoader.GetModInfo()` | Builds a `ModInfo` snapshot for server validation |
-
-### Mod loader extenders
-
-`MyriaLib` stays UI-independent: it can classify visual mods and resolve file paths, but it does not know how a WPF, console, web, or other frontend should apply visual assets.
-
-Frontend projects can register an extender before calling `ModLoader.Load()`:
-
-```csharp
-public sealed class WpfVisualModExtender : ModLoaderExtender
-{
-    public override void BeforeModsReload(ModLoadContext context)
-    {
-        // Remove previously loaded resource dictionaries or clear image caches.
-    }
-
-    public override void AfterModsLoaded(ModLoadContext context)
-    {
-        foreach (var mod in context.VisualMods)
-        {
-            // Apply project-specific visual assets from mod.Directory.
-        }
-    }
-}
-
-ModLoader.RegisterExtender(new WpfVisualModExtender());
-ModLoader.Load("Data/Mods");
-```
-
-If an extender throws, mod loading continues and the failure is stored in `ModLoader.ExtenderErrors` for the host project to display or log.
-
-### `LoadedMod` properties
-
-| Property | Description |
-|---|---|
-| `Manifest` | The parsed `mod.json` content |
-| `Directory` | Absolute path to the mod's root folder |
-| `IsVisualOnly` | True if every file in the mod is under a visual prefix |
-| `OverriddenFiles` | List of relative paths this mod provides |
-| `Fingerprint` | SHA-256 of all gameplay files; empty string for visual-only mods |
+- **Fusion skills have no creation entry point.** `SkillFusionSystem.TryCreateForCharacter` exists and works correctly, but nothing in the library calls it — you must build your own UI/API for it, exactly as you would for skill combination (`SkillCombinationService.TryCreateForCharacter`). The display and combat-slotting code for fusion skills is complete; only "let the player actually make one" is missing.
+- **`base_skills.json` and `fusion_recipes.json` aren't included** in this repo's sample `Data/` folder, even though `InitializeGame()` loads them unconditionally. The loaders fail soft (log + empty collection) rather than crash, so you won't notice unless you try to use fusion skills — at which point there will simply be no components or recipe overrides available. If you want this feature, you'll need to author these files yourself.
+- **`equipment_slots.json`, `item_rarities.json`, `time_segments.json`, `gathering_types.json`** (the enum display-name registries) are likewise not included and not auto-loaded — only relevant if you call the corresponding `GameConfig.Load...()` methods.
+- **NPC crafting via `NpcInteractionService.Execute(..., "craft", ...)` / `Npc.CraftItem()` is an unimplemented stub** that always returns failure. Use `CraftingService` directly instead (see [§15](#15-gathering--crafting)).
+- **Room party-size gating is incomplete.** `Quest` has a `RequiredPartySize` field, but `Room`'s `RequirementType.Party` only checks party *membership*, not a minimum size — there's no equivalent field on `Room` yet.
+- **Everything is a static, process-wide singleton.** There's no way to run two independent "game worlds" in the same process (e.g. two isolated test instances) — every loaded room, item, quest, etc. lives in static state shared across your whole process. Design your hosting accordingly (typically: one process per server instance).
+- **No async I/O anywhere.** Loading and persistence are synchronous. Fine for a desktop client; if you're building a high-throughput server, benchmark before assuming this is a non-issue.
+- **`LoginManager`'s file-based accounts aren't safe for concurrent writes** to the same account file — treat it as a single-player/prototype convenience, not production account storage, unless you add your own locking or replace it with a database via `IUserRepository`.
+- **Test coverage is a foundation, not exhaustive.** `MyriaLib.Tests` (xUnit) covers combat formulas, money/inventory, skill fusion, rune evaluation, class progression, and config forwarding — but quests, jobs, gathering/crafting, world navigation, and full combat-encounter flow have no tests yet. Because MyriaLib leans on static, process-wide state, test parallelization is disabled assembly-wide and any test that touches shared static services (`ClassProfile`, `GameConfig`-backed values, etc.) must snapshot and restore it — see the existing tests for the pattern before adding more.
 
 ---
 
-*MyriaLib — all systems, one library.*
+## License
+
+MIT — see [LICENSE](LICENSE). Use it in your own games, commercial or not, modify it freely; just keep the copyright notice.

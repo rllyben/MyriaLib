@@ -21,8 +21,8 @@ namespace MyriaLib.Services.Regestries
 
         public static IReadOnlyList<EnumDefinition> All => _definitions;
 
-        public static string GetDisplayName(EquipmentType type)
-            => _definitions.FirstOrDefault(d => d.Id.Equals(type.ToString(), StringComparison.OrdinalIgnoreCase))
-                           ?.DisplayName ?? type.ToString();
+        public static string GetDisplayName(string type)
+            => _definitions.FirstOrDefault(d => d.Id.Equals(type, StringComparison.OrdinalIgnoreCase))
+                           ?.DisplayName ?? type;
     }
 }

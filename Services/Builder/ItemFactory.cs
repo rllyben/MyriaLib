@@ -16,6 +16,12 @@ namespace MyriaLib.Services.Builder
         {
             string json = File.ReadAllText(path);
             var list = JsonSerializer.Deserialize<List<GameItem>>(json) ?? [];
+            LoadItems(list);
+        }
+
+        /// <summary>Loads item definitions from already-parsed data (e.g. read from a database).</summary>
+        public static void LoadItems(List<GameItem> list)
+        {
             _itemDefs = list.ToDictionary(i => i.Id, i => i);
         }
 
@@ -47,8 +53,11 @@ namespace MyriaLib.Services.Builder
                 _ => throw new Exception($"Unsupported item type: {def.Type}")
             };
 
-            if (Enum.TryParse<ItemRarity>(def.Rarity, true, out var rarity))
-                item.Rarity = rarity;
+            // def.Rarity is already a plain string (GameItem.Rarity) — assign directly instead of
+            // validating against a closed enum, so mod-defined rarity tiers beyond the 7 built-in
+            // ones (see ItemRarity.AllBuiltIn) work without being silently rejected.
+            if (!string.IsNullOrEmpty(def.Rarity))
+                item.Rarity = def.Rarity;
 
             item.StackSize = stackSize > 1 ? stackSize : (def.StackSize > 0 ? def.StackSize : 1);
             return item;
@@ -140,9 +149,9 @@ namespace MyriaLib.Services.Builder
                 Name             = def.Name,
                 Description      = def.Description,
                 BuyPrice         = def.BuyPrice,
-                SlotType         = def.SlotType,
+                SlotType         = EquipmentType.FromLegacyInt.GetValueOrDefault(def.SlotType, EquipmentType.Weapon),
                 ToolType         = def.ToolType,
-                IsTool           = def.ToolType.HasValue,
+                IsTool           = def.ToolType != null,
                 UpgradeCategory  = def.UpgradeCategory,
                 AllowedClasses   = def.AllowedClasses ?? new(),
                 BaseStats        = baseStats,

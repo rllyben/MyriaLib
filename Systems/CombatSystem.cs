@@ -27,9 +27,13 @@ namespace MyriaLib.Systems
 
             return roll <= hitChance; // True = hit, False = miss
         }
-        // Controls how steeply damage scales with the attack/defense gap.
-        // Higher values make large stat differences more dramatic.
-        private const float DamageSteepness = 0.8f;
+        /// <summary>
+        /// Controls how steeply damage scales with the attack/defense gap. Higher values make
+        /// large stat differences more dramatic. Public/settable like RuneEvaluator's and
+        /// SkillFusionSystem's tuning constants, instead of a private const only editable by
+        /// recompiling — a mod or a meaningfully different game can rebalance this at startup.
+        /// </summary>
+        public static float DamageSteepness { get; set; } = 0.8f;
 
         // Exponential damage formula: baseline is 40% of ATK at equal stats,
         // rises/falls exponentially as the gap grows. Never reaches zero.

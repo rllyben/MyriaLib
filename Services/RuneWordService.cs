@@ -37,6 +37,17 @@ namespace MyriaLib.Services
             _pairs    = LoadPairs(pairsPath);
         }
 
+        /// <summary>Loads rune words, families and pair relations from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<RuneWord> words, List<WordFamily> families, List<WordPairRelation> pairs)
+        {
+            _words    = words.ToDictionary(w => w.Id, w => w, StringComparer.OrdinalIgnoreCase);
+            _families = families.ToDictionary(f => f.Id, f => f, StringComparer.OrdinalIgnoreCase);
+            _pairs    = pairs.ToDictionary(
+                p => MakePairKey(p.WordIdA, p.WordIdB),
+                p => p,
+                StringComparer.OrdinalIgnoreCase);
+        }
+
         /// <summary>Returns a word by ID, or <c>null</c> if not found.</summary>
         public static RuneWord? GetWord(string id) =>
             _words.TryGetValue(id, out var w) ? w : null;

@@ -29,6 +29,19 @@ namespace MyriaLib.Systems
 
         public event EventHandler<MonsterKilledEventArgs>? MonsterKilled;
 
+        /// <summary>
+        /// Total actual (level-scaled) XP granted to each character across this encounter so far,
+        /// accumulated per kill. Read this instead of summing Monsters' raw Exp values for
+        /// anything XP-derived (UI display, bonus calculations) — each character can be scaled
+        /// differently per kill depending on their own level vs. that monster's level.
+        /// </summary>
+        public Dictionary<Character, long> XpGrantedByCharacter { get; } = new();
+
+        /// <summary>Item ids granted to each character across this encounter so far (accumulated
+        /// per kill, one entry per dropped item). Only the single living recipient of a given kill's
+        /// loot gets entries added for that kill.</summary>
+        public Dictionary<Character, List<string>> LootGrantedByCharacter { get; } = new();
+
         public GroupCombatEncounter(IEnumerable<Character> characters, IEnumerable<Monster> enemies)
         {
             var rng = Random.Shared;
@@ -184,6 +197,13 @@ namespace MyriaLib.Systems
                         if (IsFinished) break;
                     }
                     break;
+
+                default:
+                    // Unrecognized/mod-added Target: the resolution switch above already treats
+                    // this as Self (see primaryTargets), so execution matches that instead of
+                    // silently doing nothing (mana already spent) as it would have before.
+                    ExecuteSkillOnCharacter(skill, caster, caster);
+                    break;
             }
 
             // Apply data-driven effects to resolved targets.
@@ -268,24 +288,44 @@ namespace MyriaLib.Systems
 
             Log.Add(new CombatLogEntry("pg.fight.log.win", monster.Name));
             MonsterKilled?.Invoke(this, new MonsterKilledEventArgs(monster.Id));
-            UpdateQuestProgress(monster.Id);
+
+            // Quest kill-credit goes to every party member, alive or not (matches prior behavior);
+            // XP/class-XP is alive-only, handled separately below.
+            foreach (var p in Characters)
+                GameEvents.FireMonsterKilled(p, monster);
 
             foreach (var p in Characters.Where(p => p.IsAlive))
             {
                 long xpGained = ScaleXp(monster.Exp, p.Level, monster.Level);
                 p.GainXp(xpGained);
                 ClassManager.GrantClassXp(p, xpGained);
+                SkillFactory.UpdateSkills(p);
+                XpGrantedByCharacter[p] = XpGrantedByCharacter.GetValueOrDefault(p) + xpGained;
             }
 
             var recipient = Characters.FirstOrDefault(p => p.IsAlive);
             if (recipient != null)
             {
                 var drops = LootGenerator.GetLootFor(monster);
+                if (!LootGrantedByCharacter.TryGetValue(recipient, out var lootList))
+                    LootGrantedByCharacter[recipient] = lootList = new();
                 foreach (var drop in drops)
                 {
                     if (drop.StackSize == 0) drop.StackSize = 1;
                     recipient.Inventory.AddItem(drop, recipient);
+                    lootList.Add(drop.Id);
                 }
+            }
+
+            // Mirrors CombatEncounter.FinishCharacterWon's dungeon room-clearing - previously only
+            // the solo path did this, so dungeon monsters killed via group combat never left the
+            // room and dungeons could never be marked cleared.
+            var room = Characters.FirstOrDefault()?.CurrentRoom;
+            if (room != null && room.IsDungeonRoom)
+            {
+                room.CurrentMonsters.Remove(monster);
+                if (room.CurrentMonsters.Count == 0)
+                    room.IsCleared = true;
             }
 
             if (Monsters.All(m => !m.IsAlive))
@@ -383,24 +423,6 @@ namespace MyriaLib.Systems
             IsFinished = true;
             CharactersWon = false;
             Log.Add(new CombatLogEntry("pg.fight.log.lose"));
-        }
-
-        private void UpdateQuestProgress(int monsterId)
-        {
-            foreach (var player in Characters)
-            {
-                foreach (var quest in player.ActiveQuests.Where(q => q.Status == QuestStatus.InProgress))
-                {
-                    if (!quest.RequiredKills.TryGetValue(monsterId, out int required)) continue;
-                    if (!quest.KillProgress.ContainsKey(monsterId))
-                        quest.KillProgress[monsterId] = 0;
-                    if (quest.KillProgress[monsterId] >= required) continue;
-                    quest.KillProgress[monsterId]++;
-                    if (quest.RequiredKills.All(rk =>
-                            quest.KillProgress.TryGetValue(rk.Key, out int p) && p >= rk.Value))
-                        quest.Status = QuestStatus.Completed;
-                }
-            }
         }
 
         private static long ScaleXp(long baseXp, int playerLevel, int monsterLevel)

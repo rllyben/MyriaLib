@@ -5,6 +5,7 @@ using MyriaLib.Entities.Maps;
 using MyriaLib.Entities.NPCs;
 using MyriaLib.Entities.Skills;
 using MyriaLib.Models.BaseModel;
+using MyriaLib.Models.Dto;
 using MyriaLib.Services.Builder;
 using MyriaLib.Services.Manager;
 using MyriaLib.Systems.Enums;
@@ -19,7 +20,9 @@ namespace MyriaLib.Entities.Characters
         public event EventHandler<LevelUpEventArgs>? LeveledUp;
         public event EventHandler<HealthChangedEventArgs>? HealthChanged;
         public event EventHandler<ManaChangedEventArgs>? ManaChanged;
+        [JsonConverter(typeof(CharacterClassJsonConverter))]
         public string Class { get; set; } = CharacterClass.Fighter;
+        [JsonConverter(typeof(CharacterRaceJsonConverter))]
         public string Race  { get; set; } = CharacterRace.Myralu;
         public int Level { get; set; } = 1;
         public long Experience { get; set; } = 0;
@@ -56,21 +59,29 @@ namespace MyriaLib.Entities.Characters
         /// <summary>Composite skills stashed per class; restored when the player switches back.</summary>
         public Dictionary<string, List<CompositeSkill>> StashedCompositeSkills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Level breakpoints shared by <see cref="FusionSlotCount"/> and <see cref="SkillSlotCount"/>
+        /// (both use the same curve by default). Base is 1 slot; each entry raises the cap once
+        /// Level reaches it. Pass entries sorted ascending by level — mirrors the shape and the
+        /// same ordering assumption as JobXpService.GatherBonusThresholds/UpgradeGates. A mod or a
+        /// differently-paced game can replace this instead of being stuck with a hardcoded curve.
+        /// </summary>
+        public static (int Level, int Slots)[] SkillSlotBreakpoints { get; set; } =
+        {
+            (3, 2), (9, 3), (18, 4), (27, 5), (36, 6), (45, 7), (54, 8), (63, 9), (72, 10)
+        };
+
+        private static int ResolveSlotCount(int level)
+        {
+            int slots = 1;
+            foreach (var (breakLevel, breakSlots) in SkillSlotBreakpoints)
+                if (level >= breakLevel) slots = breakSlots;
+            return slots;
+        }
+
         /// <summary>Maximum number of fusion skills the player can have active, based on level.</summary>
         [JsonIgnore]
-        public int FusionSlotCount => Level switch
-        {
-            >= 72 => 10,
-            >= 63 => 9,
-            >= 54 => 8,
-            >= 45 => 7,
-            >= 36 => 6,
-            >= 27 => 5,
-            >= 18 => 4,
-            >= 9  => 3,
-            >= 3  => 2,
-            _     => 1
-        };
+        public int FusionSlotCount => ResolveSlotCount(Level);
 
         // ── Skill Combination (combining 2–5 learned base skills) ─────────────────
         /// <summary>All combined skills the player has created by pairing their learned skills.</summary>
@@ -88,22 +99,10 @@ namespace MyriaLib.Entities.Characters
 
         /// <summary>
         /// Maximum number of skills the player can slot for combat, based on level.
-        /// Follows the rule: base 1 slot, then +1 at levels 3, 9, 18, 27, 36, 45, 54, 63, 72.
+        /// See <see cref="SkillSlotBreakpoints"/> for the level curve.
         /// </summary>
         [JsonIgnore]
-        public int SkillSlotCount => Level switch
-        {
-            >= 72 => 10,
-            >= 63 => 9,
-            >= 54 => 8,
-            >= 45 => 7,
-            >= 36 => 6,
-            >= 27 => 5,
-            >= 18 => 4,
-            >= 9  => 3,
-            >= 3  => 2,
-            _     => 1
-        };
+        public int SkillSlotCount => ResolveSlotCount(Level);
 
         // ── Race ─────────────────────────────────────────────────────────────────
         /// <summary>
@@ -211,6 +210,76 @@ namespace MyriaLib.Entities.Characters
             return actual;
         }
 
+        /// <summary>
+        /// Sets health to an absolute value (e.g. server-authoritative multiplayer combat
+        /// results) and fires <see cref="HealthChanged"/> if it actually changed — unlike
+        /// assigning <see cref="CurrentHealth"/> directly, which UI listeners never see.
+        /// </summary>
+        public void SetHealth(int newValue, string? source = null)
+        {
+            int old = CurrentHealth;
+            newValue = Math.Clamp(newValue, 0, MaxHealth);
+            if (newValue == old) return;
+            CurrentHealth = newValue;
+            HealthChanged?.Invoke(this, new HealthChangedEventArgs(old, newValue, source));
+        }
+
+        /// <summary>Mana counterpart to <see cref="SetHealth"/>.</summary>
+        public void SetMana(int newValue, string? source = null)
+        {
+            int old = CurrentMana;
+            newValue = Math.Clamp(newValue, 0, MaxMana);
+            if (newValue == old) return;
+            CurrentMana = newValue;
+            ManaChanged?.Invoke(this, new ManaChangedEventArgs(old, newValue, source));
+        }
+
+        /// <summary>
+        /// Overwrites this character's level-derived state (Level/Experience/ExpForNextLvl,
+        /// base stats, unused stat points, base health/mana) with the server's authoritative
+        /// values, fired after any action that might have granted XP - replacing the old
+        /// approach of the client replaying GainXp()/LevelUp() locally, which drifts whenever
+        /// a rookie bonus, level-gap XP scaling, or anything else server-side doesn't match
+        /// the client's own math exactly. Fires LeveledUp if Level actually changed, same as
+        /// SetHealth/SetMana do for their own events.
+        /// </summary>
+        public void ApplySyncedProgress(CharacterProgressResult p)
+        {
+            int oldLevel = Level;
+
+            Level         = p.Level;
+            Experience    = p.Experience;
+            ExpForNextLvl = p.ExpForNextLvl;
+
+            Stats.Strength     = p.Strength;
+            Stats.Dexterity    = p.Dexterity;
+            Stats.Endurance    = p.Endurance;
+            Stats.Intelligence = p.Intelligence;
+            Stats.Spirit       = p.Spirit;
+            Stats.UnusedPoints = p.UnusedPoints;
+            Stats.BaseHealth   = p.BaseHealth;
+            Stats.BaseMana     = p.BaseMana;
+
+            if (Level != oldLevel)
+                LeveledUp?.Invoke(this, new LevelUpEventArgs(oldLevel, Level));
+        }
+
+        /// <summary>
+        /// Overwrites kill/item objective progress on matching active quests with the server's
+        /// authoritative counters. Quests are matched by Id; anything the client doesn't
+        /// currently have active (e.g. already turned in) is ignored.
+        /// </summary>
+        public void ApplySyncedQuestProgress(IEnumerable<QuestProgressState> progress)
+        {
+            foreach (var p in progress)
+            {
+                var quest = ActiveQuests.FirstOrDefault(q => q.Id == p.QuestId);
+                if (quest is null) continue;
+                quest.KillProgress = new Dictionary<int, int>(p.KillProgress);
+                quest.ItemProgress = new Dictionary<string, int>(p.ItemProgress);
+            }
+        }
+
         public int SpendMana(int amount, string? source = null)
         {
             if (amount <= 0) return 0;
@@ -257,22 +326,9 @@ namespace MyriaLib.Entities.Characters
         /// <param name="item">item to equip</param>
         public void Equip(EquipmentItem item)
         {
-            switch (item.SlotType)
-            {
-                case EquipmentType.Weapon:
-                    if (WeaponSlot != null) Inventory.AddItem(WeaponSlot, this);
-                    WeaponSlot = item;
-                    break;
-                case EquipmentType.Armor:
-                    if (ArmorSlot != null) Inventory.AddItem(ArmorSlot, this);
-                    ArmorSlot = item;
-                    break;
-                case EquipmentType.Accessory:
-                    if (AccessorySlot != null) Inventory.AddItem(AccessorySlot, this);
-                    AccessorySlot = item;
-                    break;
-            }
-
+            if (Equipped.GetValueOrDefault(item.SlotType) is { } previous)
+                Inventory.AddItem(previous, this);
+            Equipped[item.SlotType] = item;
         }
         /// <summary>
         /// updates stats for an Level up
@@ -282,11 +338,8 @@ namespace MyriaLib.Entities.Characters
             var profile = RaceProfile.All[Race];
 
             Level++;
-            Stats.Strength += profile.StatGrowth["STR"];
-            Stats.Dexterity += profile.StatGrowth["DEX"];
-            Stats.Endurance += profile.StatGrowth["END"];
-            Stats.Intelligence += profile.StatGrowth["INT"];
-            Stats.Spirit += profile.StatGrowth["SPR"];
+            foreach (var (statId, growth) in profile.StatGrowth)
+                Stats.SetBase(statId, Stats.GetBase(statId) + growth);
             Stats.UnusedPoints++;
 
             Stats.BaseHealth += profile.HpPerLevel;
@@ -314,7 +367,7 @@ namespace MyriaLib.Entities.Characters
         /// Returns true if the player has a tool that enables the given gathering type —
         /// checks both the inventory bag and the equipped weapon slot.
         /// </summary>
-        public bool HasToolFor(GatheringType type)
+        public bool HasToolFor(string type)
         {
             if (type == GatheringType.Herb) return true;
             return Inventory.Items.Any(i => i.ToolType == type)
@@ -348,8 +401,7 @@ namespace MyriaLib.Entities.Characters
             // 1 point per level starting from level 2 (level 1 has 0 points)
             int totalPointsEarned = Math.Max(0, Level - 1);
 
-            int pointsSpent = Stats.StrengthBonus + Stats.DexterityBonus + Stats.EnduranceBonus
-                            + Stats.IntelligenceBonus + Stats.SpiritBonus;
+            int pointsSpent = Stats.BonusValues.Values.Sum();
 
             Stats.UnusedPoints = Math.Max(0, totalPointsEarned - pointsSpent);
         }

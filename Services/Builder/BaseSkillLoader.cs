@@ -31,7 +31,12 @@ namespace MyriaLib.Services.Builder
                            File.ReadAllText(filePath),
                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                        ?? new();
+            Load(list);
+        }
 
+        /// <summary>Loads base skill component definitions from already-parsed data (e.g. read from a database).</summary>
+        public static void Load(List<BaseSkillData> list)
+        {
             _skills = list.ToDictionary(s => s.Id, s => s, StringComparer.OrdinalIgnoreCase);
         }
 

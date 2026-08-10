@@ -15,7 +15,14 @@ namespace MyriaLib.Services
                 return new List<Monster>();
 
             string json = File.ReadAllText(filePath);
-            _monsterList = JsonSerializer.Deserialize<List<Monster>>(json) ?? new();
+            var monsters = JsonSerializer.Deserialize<List<Monster>>(json) ?? new();
+            return LoadMonsters(monsters);
+        }
+
+        /// <summary>Loads monster templates from already-parsed data (e.g. read from a database).</summary>
+        public static List<Monster> LoadMonsters(List<Monster> monsters)
+        {
+            _monsterList = monsters;
             return _monsterList;
         }
 

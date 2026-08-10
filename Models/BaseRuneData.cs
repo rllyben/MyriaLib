@@ -26,7 +26,7 @@ namespace MyriaLib.Models
         /// <summary>"ATK", "MATK", "INT", "SPR", etc. — same keys as <see cref="Skill.StatToScaleFrom"/>.</summary>
         public string StatToScaleFrom { get; set; } = "MATK";
 
-        public string Target { get; set; } = "SingleEnemy";  // serialized as string, parsed to SkillTarget
+        public string Target { get; set; } = "SingleEnemy";
         public bool IsHealing { get; set; } = false;
     }
 }

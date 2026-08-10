@@ -13,7 +13,7 @@ namespace MyriaLib.Models.BaseModel
         public int BuyPrice { get; set; }
         public int StackSize { get; set; } = 1;
         public int MaxStackSize { get; set; } = 1;
-        public GatheringType? ToolType { get; set; } = null;
+        public string? ToolType { get; set; } = null;
         public List<string> AllowedClasses { get; set; } = new();
         public string? UpgradeCategory { get; set; }
 
@@ -23,7 +23,9 @@ namespace MyriaLib.Models.BaseModel
         public string? UseEffect { get; set; }
 
         // Equipment fields
-        public EquipmentType SlotType { get; set; }
+        // Raw JSON value (items.json stores this as a plain int, e.g. 2) — converted to the new
+        // string-based EquipmentType via EquipmentType.FromLegacyInt when building an EquipmentItem.
+        public int SlotType { get; set; }
         public int BaseBonusHP { get; set; }
         public int BaseBonusMP { get; set; }
         public int BaseBonusSTR { get; set; }

@@ -34,6 +34,12 @@ namespace MyriaLib.Entities.Characters
             if (!File.Exists(path)) return;
             var profiles = JsonSerializer.Deserialize<List<RaceProfile>>(File.ReadAllText(path), _opts);
             if (profiles == null) return;
+            Load(profiles);
+        }
+
+        /// <summary>Loads race profiles from already-parsed data (e.g. read from a database). Replaces any previously loaded data.</summary>
+        public static void Load(List<RaceProfile> profiles)
+        {
             _all = profiles
                 .Where(p => !string.IsNullOrWhiteSpace(p.Race))
                 .ToDictionary(p => p.Race, StringComparer.OrdinalIgnoreCase);
