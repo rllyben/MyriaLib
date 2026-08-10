@@ -12,6 +12,44 @@ namespace Myria.Lib.Core.Systems
 
         public static event EventHandler? LanguageChanged;
 
+        // ── Per-project locale additions ────────────────────────────────────────
+        // Lets each consuming project (Wpf, Console, ...) contribute its own UI-only
+        // translations on top of the shared base strings here, instead of forking a whole
+        // separate localization system. Register once at startup (order doesn't matter —
+        // additions are (re)applied on every Load call, including language switches).
+        private static readonly List<string> _additionalLocaleDirectories = new();
+
+        /// <summary>
+        /// Registers a directory containing per-language addition files (<c>en.json</c>,
+        /// <c>de.json</c>, ...) that get merged on top of the base <c>Data/locales/</c> set
+        /// every time a language is loaded. Later registrations and mod locales (applied after)
+        /// take precedence over earlier ones for the same key.
+        /// </summary>
+        public static void RegisterAdditionalLocaleDirectory(string directory)
+        {
+            if (!_additionalLocaleDirectories.Contains(directory))
+                _additionalLocaleDirectories.Add(directory);
+        }
+
+        private static void ApplyRegisteredAdditions(string localeKey)
+        {
+            foreach (var dir in _additionalLocaleDirectories)
+            {
+                var file = Path.Combine(dir, localeKey + ".json");
+                if (!File.Exists(file)) continue;
+
+                try
+                {
+                    var json      = File.ReadAllText(file);
+                    var additions = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                    if (additions == null) continue;
+                    foreach (var kv in additions)
+                        _strings[kv.Key] = kv.Value;
+                }
+                catch { /* malformed addition file — skip it, base strings still apply */ }
+            }
+        }
+
         // ── Built-in language loading ─────────────────────────────────────────
 
         /// <summary>Loads a built-in language by enum value.</summary>
@@ -38,6 +76,7 @@ namespace Myria.Lib.Core.Systems
             }
 
             var localeKey = lang == GameLanguage.De ? "de" : "en";
+            ApplyRegisteredAdditions(localeKey);
             ApplyModLocaleAdditions(localeKey);
 
             Culture = lang switch
