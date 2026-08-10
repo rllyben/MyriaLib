@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.2.0</Version>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <FileVersion>0.2.0.0</FileVersion>
+  </PropertyGroup>
+
+  <!--
+    Canonical, version-controlled copy of the shared static game-content JSON files
+    (Data\common) and locale strings (Data\locales). MyriaRPG and MyriaServer link
+    these same files into their own build output instead of keeping independent
+    copies, so the three projects can no longer drift out of sync with each other.
+    Myria.Lib.Core itself does not read these at its own assembly location; they only
+    need to exist here so the other two projects have exactly one physical source
+    to link against, consistent with how they already reference Myria.Lib.Core's code
+    via ProjectReference.
+  -->
+  <ItemGroup>
+    <None Include="Data\**\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Myria.Lib.Economy\Myria.Lib.Economy.csproj" />
+    <ProjectReference Include="..\Myria.Lib.Enums\Myria.Lib.Enums.csproj" />
+    <ProjectReference Include="..\Myria.Lib.Progression\Myria.Lib.Progression.csproj" />
+    <ProjectReference Include="..\Myria.Lib.Crafting\Myria.Lib.Crafting.csproj" />
+  </ItemGroup>
+
+</Project>

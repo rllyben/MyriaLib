@@ -1,0 +1,16 @@
+using Myria.Lib.Core.Entities.Maps;
+
+namespace Myria.Lib.Core.Services.Regestries
+{
+    public static class CaveRegistry
+    {
+        private static readonly MapAreaRegistry<Cave> _registry = new();
+
+        public static void Load(string path = "Data/common/caves.json") => _registry.Load(path);
+        public static void Load(List<Cave> data) => _registry.Load(data);
+        public static Cave? GetCaveByRoom(Room room) => _registry.GetByRoom(room);
+        public static Cave? GetCaveById(string id) => _registry.GetById(id);
+        public static Cave? GetCaveByName(string name) => _registry.GetByName(name);
+        public static IReadOnlyCollection<Cave> GetAll() => _registry.GetAll();
+    }
+}

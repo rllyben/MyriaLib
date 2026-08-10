@@ -1,0 +1,27 @@
+﻿using System.Text.Json;
+using Myria.Lib.Core.Systems;
+
+namespace Myria.Lib.Core.Services
+{
+    public static class GameStatusService
+    {
+        private static string path = Path.Combine("Data/common", "gameStatus.json");
+
+        public static GameStatus Load()
+        {
+            if (!File.Exists(path))
+                return new GameStatus { LastSavedAt = DateTime.Now };
+
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<GameStatus>(json);
+        }
+
+        public static void Save(GameStatus status)
+        {
+            var json = JsonSerializer.Serialize(status, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
+        }
+
+    }
+
+}

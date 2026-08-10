@@ -1,0 +1,52 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11723.231
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Core", "Myria.Lib.Core\Myria.Lib.Core.csproj", "{5410E26F-8734-4A81-84FA-FA52B0298DCD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Enums", "Myria.Lib.Enums\Myria.Lib.Enums.csproj", "{B188FB64-FB07-9A1B-51AF-AAF1970309C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Crafting", "Myria.Lib.Crafting\Myria.Lib.Crafting.csproj", "{382F973C-A4BB-1BB3-4C3A-0BF3245E37EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Economy", "Myria.Lib.Economy\Myria.Lib.Economy.csproj", "{222DF83E-7250-3E2C-8B54-F28E798C9764}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Progression", "Myria.Lib.Progression\Myria.Lib.Progression.csproj", "{7B8D791E-D046-BC22-1C95-D4120A907A1D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Myria.Lib.Tests", "Myria.Lib.Tests\Myria.Lib.Tests.csproj", "{B0A320FF-FC97-9851-C54E-CDA3759FF896}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5410E26F-8734-4A81-84FA-FA52B0298DCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5410E26F-8734-4A81-84FA-FA52B0298DCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5410E26F-8734-4A81-84FA-FA52B0298DCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5410E26F-8734-4A81-84FA-FA52B0298DCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B188FB64-FB07-9A1B-51AF-AAF1970309C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B188FB64-FB07-9A1B-51AF-AAF1970309C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B188FB64-FB07-9A1B-51AF-AAF1970309C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B188FB64-FB07-9A1B-51AF-AAF1970309C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{382F973C-A4BB-1BB3-4C3A-0BF3245E37EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{382F973C-A4BB-1BB3-4C3A-0BF3245E37EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{382F973C-A4BB-1BB3-4C3A-0BF3245E37EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{382F973C-A4BB-1BB3-4C3A-0BF3245E37EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{222DF83E-7250-3E2C-8B54-F28E798C9764}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{222DF83E-7250-3E2C-8B54-F28E798C9764}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{222DF83E-7250-3E2C-8B54-F28E798C9764}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{222DF83E-7250-3E2C-8B54-F28E798C9764}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B8D791E-D046-BC22-1C95-D4120A907A1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B8D791E-D046-BC22-1C95-D4120A907A1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B8D791E-D046-BC22-1C95-D4120A907A1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B8D791E-D046-BC22-1C95-D4120A907A1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0A320FF-FC97-9851-C54E-CDA3759FF896}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A320FF-FC97-9851-C54E-CDA3759FF896}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A320FF-FC97-9851-C54E-CDA3759FF896}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A320FF-FC97-9851-C54E-CDA3759FF896}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
