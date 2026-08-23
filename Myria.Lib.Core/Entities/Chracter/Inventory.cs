@@ -1,5 +1,7 @@
 ﻿using Myria.Lib.Core.Utils;
 using Myria.Lib.Core.Entities.Items;
+using Myria.Lib.Core.Models.Dto;
+using Myria.Lib.Core.Services.Builder;
 using Myria.Lib.Core.Services.Manager;
 using Myria.Lib.Core.Systems;
 using Myria.Lib.Core.Systems.Enums;
@@ -315,6 +317,60 @@ namespace Myria.Lib.Core.Entities.Characters
             else
                 return false;
         }
+        /// <summary>
+        /// Reconciles this inventory against the server's authoritative item list (item id +
+        /// total owned amount, no slot positions) - used by the generic CharacterUpdated sync
+        /// push. Only items whose total owned quantity actually differs are touched, and the
+        /// same ItemReceived/ItemRemoved events a local pickup/deposit would fire are fired here
+        /// too (including on a partial-stack decrement, which RemoveItem alone doesn't cover),
+        /// so existing UI listeners (e.g. InventoryGridViewModel) refresh exactly as if the
+        /// change had happened locally - no explicit RefreshInventory() call needed by callers.
+        /// </summary>
+        public void ApplySnapshot(IReadOnlyList<InventoryItemSnapshot> snapshot, Character character)
+        {
+            var target = snapshot
+                .GroupBy(s => s.ItemId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.StackSize), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var itemId in Items.Select(i => i.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToList())
+            {
+                int have = Items.Where(i => i.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase)).Sum(i => i.StackSize);
+                int toRemove = have - target.GetValueOrDefault(itemId);
+                if (toRemove <= 0) continue;
+
+                foreach (var stack in Items.Where(i => i.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    if (toRemove <= 0) break;
+                    int take = Math.Min(toRemove, stack.StackSize);
+                    if (stack.StackSize == take)
+                    {
+                        RemoveItem(stack);
+                    }
+                    else
+                    {
+                        stack.StackSize -= take;
+                        ItemRemoved?.Invoke(this, new ItemReceivedEventArgs(stack.CloneOne(), take));
+                    }
+                    toRemove -= take;
+                }
+            }
+
+            foreach (var (itemId, want) in target)
+            {
+                int have = Items.Where(i => i.Id.Equals(itemId, StringComparison.OrdinalIgnoreCase)).Sum(i => i.StackSize);
+                int toAdd = want - have;
+                if (toAdd <= 0) continue;
+
+                if (ItemFactory.TryCreateItem(itemId, out var item) && item is not null)
+                {
+                    item.StackSize = toAdd;
+                    AddItem(item, character);
+                }
+            }
+
+            Restack();
+        }
+
         public void Restack()
         {
             var grouped = Items

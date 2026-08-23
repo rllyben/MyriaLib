@@ -1,5 +1,13 @@
 [
   {
+    "Id": "merchant_seal",
+    "Name": "item.merchant_seal",
+    "Description": "item.merchant_seal.desc",
+    "Type": "material",
+    "BuyPrice": 500,
+    "MaxStackSize": 1
+  },
+  {
     "Id": "t1_healing_potion",
     "Name": "item.t1_healing_potion",
     "Description": "item.t1_healing_potion.desc",

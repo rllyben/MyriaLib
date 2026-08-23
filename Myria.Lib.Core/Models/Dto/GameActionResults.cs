@@ -55,6 +55,38 @@ namespace Myria.Lib.Core.Models.Dto
         int  UnusedPoints,
         int  BaseHealth,
         int  BaseMana);
+    public record InventoryItemSnapshot(string ItemId, int StackSize);
+
+    /// <summary>One job's full progress (skill/knowledge/fame XP) - id-keyed, so the client
+    /// reconciles by JobId rather than assuming list order/count matches.</summary>
+    public record JobProgressSnapshot(string JobId, long SkillXp, long KnowledgeXp, long FameXp);
+
+    /// <summary>One rune the player knows, as its base rune id + added word ids -
+    /// <c>ResolvedSkill</c> isn't sent (never serialized server-side either); the client
+    /// recomputes it locally via RuneManager.Reevaluate after applying.</summary>
+    public record RuneSnapshot(string Id, string BaseRuneId, List<string> AddedWordIds);
+
+    /// <summary>
+    /// Generic "something about your character changed" push - sent after any session mutation
+    /// that isn't already covered by a dedicated result DTO (shop deposit/withdraw, NPC buy/sell,
+    /// gather/craft/upgrade, equip/unequip, stat allocation, non-combat heal), so the client's
+    /// InventoryGridViewModel/HUD stays correct without hand-rolling a local mirror at every call
+    /// site. Combat keeps its own DTOs (CombatTurnResult / GroupCombatSnapshot) since those
+    /// already carry precise HP/MP/loot - this fills the gaps everywhere else. Every field is
+    /// optional; only sections that actually changed on this action are populated.
+    /// </summary>
+    public record CharacterUpdateDto(
+        List<InventoryItemSnapshot>? InventoryItems,
+        long? Gold,
+        int? Hp,
+        int? MaxHp,
+        int? Mp,
+        int? MaxMp,
+        CharacterProgressResult? Progress,
+        List<QuestProgressState>? QuestProgress = null,
+        List<JobProgressSnapshot>? Jobs = null,
+        List<RuneSnapshot>? Runes = null);
+
     public record StartGroupCombatResult(
         bool Success,
         string? Reason,

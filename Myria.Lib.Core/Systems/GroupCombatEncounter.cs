@@ -22,6 +22,21 @@ namespace Myria.Lib.Core.Systems
 
         private int _currentCharacterIndex;
 
+        // ── DEX-driven bonus turns ──────────────────────────────────────────────
+        // Turn order itself is still the initiative roll from the constructor (unchanged) - this
+        // only lets a character who's fast *relative to this fight's other participants* earn
+        // extra actions back-to-back on top of their normal turn, instead of a flat one-action-
+        // per-character-per-round cadence regardless of DEX. Each character accumulates a gauge
+        // by their own TotalDEX every time their normal turn comes up; once it crosses
+        // _speedGaugeThreshold (set once, from this encounter's average DEX, so it self-scales to
+        // whatever level/gear range the party is actually at) they immediately get another action
+        // before play moves on, consuming the gauge. A capped number of bonus actions per arrival
+        // keeps one extreme DEX outlier from monopolizing the whole round.
+        private readonly Dictionary<Character, double> _speedGauge = new();
+        private readonly double _speedGaugeThreshold;
+        private const int MaxBonusActionsPerTurn = 3;
+        private int _bonusActionsRemaining;
+
         public string CurrentTurnCharacterName =>
             IsFinished || _currentCharacterIndex >= Characters.Count
                 ? ""
@@ -57,6 +72,13 @@ namespace Myria.Lib.Core.Systems
             // Reset aggro for all participants at encounter start.
             foreach (var c in Characters)
                 c.AggroLevel = 0f;
+
+            // 2.5x the party's own average DEX: an exactly-average character earns one bonus
+            // action roughly every 2-3 of their normal turns, a character at 2x average roughly
+            // every turn, and one well below average essentially never - self-scales to whatever
+            // level/gear range this specific fight's participants are at rather than a flat
+            // magic number that would be trivial at high level and unreachable at low level.
+            _speedGaugeThreshold = Math.Max(1.0, Characters.Average(c => c.TotalDEX) * 2.5);
 
             Log.Add(new CombatLogEntry("pg.fight.log.start",
                 string.Join(", ", Monsters.Select(m => m.Name))));
@@ -334,6 +356,15 @@ namespace Myria.Lib.Core.Systems
 
         private void AdvanceAfterCharacterAction()
         {
+            // A DEX-earned bonus action keeps the turn on the same character instead of moving
+            // on - CurrentTurnCharacterName is unchanged, so no protocol/client change is needed
+            // for this to work; the client just gets prompted for the same character's action again.
+            if (_bonusActionsRemaining > 0)
+            {
+                _bonusActionsRemaining--;
+                return;
+            }
+
             int next = _currentCharacterIndex + 1;
             while (next < Characters.Count && !Characters[next].IsAlive) next++;
 
@@ -347,6 +378,7 @@ namespace Myria.Lib.Core.Systems
             else
             {
                 _currentCharacterIndex = next;
+                GrantGaugeForCurrentCharacter();
             }
         }
 
@@ -355,7 +387,29 @@ namespace Myria.Lib.Core.Systems
             int idx = 0;
             while (idx < Characters.Count && !Characters[idx].IsAlive) idx++;
             _currentCharacterIndex = idx;
-            if (_currentCharacterIndex >= Characters.Count) FinishCharactersLost();
+            if (_currentCharacterIndex >= Characters.Count) { FinishCharactersLost(); return; }
+            GrantGaugeForCurrentCharacter();
+        }
+
+        /// <summary>Adds this round's DEX to the current character's speed gauge and queues
+        /// however many bonus actions (capped) that crosses the threshold for.</summary>
+        private void GrantGaugeForCurrentCharacter()
+        {
+            var character = Characters[_currentCharacterIndex];
+            double gauge = _speedGauge.GetValueOrDefault(character) + character.TotalDEX;
+
+            int bonus = 0;
+            while (gauge >= _speedGaugeThreshold && bonus < MaxBonusActionsPerTurn)
+            {
+                gauge -= _speedGaugeThreshold;
+                bonus++;
+            }
+
+            _speedGauge[character] = gauge;
+            _bonusActionsRemaining = bonus;
+
+            if (bonus > 0)
+                Log.Add(new CombatLogEntry("pg.fight.log.bonusTurn", character.Name, bonus));
         }
 
         private void MonstersTurn()

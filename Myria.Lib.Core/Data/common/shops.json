@@ -5,7 +5,8 @@
       "iron_ore",
       "shadow_remnant",
       "t1_healing_potion",
-      "t1_mana_potion"
+      "t1_mana_potion",
+      "merchant_seal"
     ],
     "buyMultiplier": 1,
     "sellMultiplier": 0.75

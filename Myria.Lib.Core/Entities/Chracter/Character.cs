@@ -265,6 +265,86 @@ namespace Myria.Lib.Core.Entities.Characters
         }
 
         /// <summary>
+        /// Reconciles <see cref="Jobs"/> against the server's authoritative per-job XP - id-keyed
+        /// (updates an existing entry in place, adds one if the job is new to this character),
+        /// so job/skill XP granted server-side (Gather/Craft/Upgrade) actually reaches the client
+        /// instead of only ever existing in the client's own local GrantSkillXp replay.
+        /// </summary>
+        public void ApplySyncedJobs(IEnumerable<JobProgressSnapshot> jobs)
+        {
+            foreach (var snap in jobs)
+            {
+                var job = Jobs.FirstOrDefault(j => j.JobId == snap.JobId);
+                if (job is null)
+                {
+                    job = new CharacterJob { JobId = snap.JobId };
+                    Jobs.Add(job);
+                }
+                job.SkillXp     = snap.SkillXp;
+                job.KnowledgeXp = snap.KnowledgeXp;
+                job.FameXp      = snap.FameXp;
+            }
+        }
+
+        /// <summary>
+        /// Overwrites <see cref="KnownRunes"/> with the server's authoritative rune collection -
+        /// whole-list replace (runes can be granted/transformed/lost in ways more complex than a
+        /// per-id XP bump), recomputing each <see cref="CompositeRune.ResolvedSkill"/> locally
+        /// afterward since that field is never sent over the wire (it isn't serialized
+        /// server-side either - see CompositeRune's own remarks).
+        /// </summary>
+        public void ApplySyncedRunes(IEnumerable<RuneSnapshot> runes)
+        {
+            KnownRunes = runes.Select(r =>
+            {
+                var rune = new CompositeRune
+                {
+                    Id = r.Id,
+                    BaseRuneId = r.BaseRuneId,
+                    AddedWordIds = new List<string>(r.AddedWordIds)
+                };
+                Myria.Lib.Core.Services.Manager.RuneManager.Reevaluate(rune);
+                return rune;
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Applies a generic server-authoritative <see cref="CharacterUpdateDto"/> push - each
+        /// section is optional and only touched if present, routed to the same
+        /// SetHealth/SetMana/ApplySyncedProgress/Inventory.ApplySnapshot methods a dedicated
+        /// sync path would use, so every existing UI listener (HealthChanged, ManaChanged,
+        /// LeveledUp, ItemReceived/ItemRemoved) reacts exactly as if the change happened locally.
+        /// </summary>
+        public void ApplyCharacterUpdate(CharacterUpdateDto update, string? source = null)
+        {
+            if (update.InventoryItems is not null)
+                Inventory.ApplySnapshot(update.InventoryItems, this);
+
+            if (update.Gold is long gold)
+                Money.SetBalance(gold);
+
+            // MaxHp/MaxMp on the DTO are informational only (what the server computed at send
+            // time) - MaxHealth/MaxMana are derived properties here (Stats + gear), so there's
+            // nothing to "set"; they'll already be correct once Progress (below) is applied.
+            if (update.Hp is int hp)
+                SetHealth(hp, source);
+            if (update.Mp is int mp)
+                SetMana(mp, source);
+
+            if (update.Progress is not null)
+                ApplySyncedProgress(update.Progress);
+
+            if (update.QuestProgress is not null)
+                ApplySyncedQuestProgress(update.QuestProgress);
+
+            if (update.Jobs is not null)
+                ApplySyncedJobs(update.Jobs);
+
+            if (update.Runes is not null)
+                ApplySyncedRunes(update.Runes);
+        }
+
+        /// <summary>
         /// Overwrites kill/item objective progress on matching active quests with the server's
         /// authoritative counters. Quests are matched by Id; anything the client doesn't
         /// currently have active (e.g. already turned in) is ignored.

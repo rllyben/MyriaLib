@@ -6,6 +6,11 @@ namespace Myria.Lib.Core.Entities.Characters
     /// </summary>
     public class MoneyBag
     {
+        // (oldBronzeTotal, newBronzeTotal) - kept as a plain Action rather than a dedicated
+        // EventArgs type since this project (Myria.Lib.Economy) doesn't reference Myria.Lib.Core
+        // (where the Health/Mana *ChangedEventArgs types live).
+        public event Action<long, long>? BalanceChanged;
+
         public Money Balance { get; set; } = new(0);
         public long Capacity { get; set; } = 300_000;
         public bool IsUnlimited => Capacity == long.MaxValue;
@@ -16,15 +21,30 @@ namespace Myria.Lib.Core.Entities.Characters
         public bool TryAdd(long amount)
         {
             if (!CanHold(amount)) return false;
+            long old = Balance.BronzeTotal;
             Balance += new Money(amount);
+            BalanceChanged?.Invoke(old, Balance.BronzeTotal);
             return true;
         }
 
         public bool TrySpend(long amount)
         {
             if (!CanAfford(amount)) return false;
+            long old = Balance.BronzeTotal;
             Balance -= new Money(amount);
+            BalanceChanged?.Invoke(old, Balance.BronzeTotal);
             return true;
+        }
+
+        /// <summary>Sets the balance to an absolute value (server-authoritative sync) and fires
+        /// <see cref="BalanceChanged"/> if it actually changed - unlike assigning
+        /// <see cref="Balance"/> directly, which UI listeners never see.</summary>
+        public void SetBalance(long total)
+        {
+            long old = Balance.BronzeTotal;
+            if (total == old) return;
+            Balance = new Money(total);
+            BalanceChanged?.Invoke(old, total);
         }
 
         public override string ToString() => Balance.ToString();

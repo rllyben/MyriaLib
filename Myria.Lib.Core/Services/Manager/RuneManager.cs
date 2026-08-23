@@ -142,6 +142,19 @@ namespace Myria.Lib.Core.Services.Manager
             return string.IsNullOrWhiteSpace(word.RunicScript) ? "???" : word.RunicScript;
         }
 
+        /// <summary>
+        /// Recomputes <see cref="CompositeRune.ResolvedSkill"/> from a rune's BaseRuneId +
+        /// AddedWordIds - used after loading/deserializing a rune (ResolvedSkill isn't
+        /// serialized) or after a server-authoritative sync overwrites AddedWordIds directly.
+        /// No-ops (leaves ResolvedSkill null) if the base rune definition can't be resolved.
+        /// </summary>
+        public static void Reevaluate(CompositeRune rune)
+        {
+            var baseDef = BaseRuneService.Get(rune.BaseRuneId);
+            if (baseDef == null) return;
+            rune.ResolvedSkill = RuneEvaluator.Evaluate(baseDef, ResolveWords(rune.AddedWordIds));
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────────
 
         private static List<RuneWord> ResolveWords(IEnumerable<string> ids) =>
