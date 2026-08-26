@@ -3,6 +3,7 @@ using Myria.Lib.Core.Models;
 using Myria.Lib.Core.Services.Builder;
 using Myria.Lib.Core.Systems;
 using Myria.Lib.Core.Systems.Mods;
+using Myria.Lib.Core.Utils;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -34,7 +35,7 @@ namespace Myria.Lib.Core.Services
         private const int CurrentSaveVersion = 1;
 
         private static string SavePath(UserAccount user, string characterName)
-            => Path.Combine("Data/saves", $"{user.Username}-{characterName}.json");
+            => Path.Combine("Data/saves", $"{SafeFileName.Sanitize(user.Username)}-{SafeFileName.Sanitize(characterName)}.json");
 
         public static void DeleteCharacter(string name, UserAccount user)
         {

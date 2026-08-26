@@ -3,6 +3,7 @@ using Myria.Lib.Core.Entities.Characters;
 using Myria.Lib.Core.Services;
 using Myria.Lib.Core.Services.Builder;
 using Myria.Lib.Core.Systems;
+using Myria.Lib.Core.Utils;
 
 namespace Myria.Lib.Core.Repositories
 {
@@ -16,7 +17,7 @@ namespace Myria.Lib.Core.Repositories
         };
 
         private static string SavePath(string username, string characterName) =>
-            Path.Combine("Data", "saves", $"{username}-{characterName}.json");
+            Path.Combine("Data", "saves", $"{SafeFileName.Sanitize(username)}-{SafeFileName.Sanitize(characterName)}.json");
 
         public Task<List<string>> GetNamesAsync(string username)
         {
@@ -24,8 +25,12 @@ namespace Myria.Lib.Core.Repositories
             if (!Directory.Exists(dir))
                 return Task.FromResult(new List<string>());
 
-            var prefix = $"{username}-";
-            var names = Directory.GetFiles(dir, $"{username}-*.json")
+            // Sanitizing here isn't just traversal defense: an unsanitized "*"/"?" in username
+            // would turn this Directory.GetFiles prefix filter into a wildcard that lists every
+            // other player's save files instead of just this user's.
+            var safeUsername = SafeFileName.Sanitize(username);
+            var prefix = $"{safeUsername}-";
+            var names = Directory.GetFiles(dir, $"{safeUsername}-*.json")
                 .Select(f => Path.GetFileNameWithoutExtension(f)[prefix.Length..])
                 .ToList();
 
