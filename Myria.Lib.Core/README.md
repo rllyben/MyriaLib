@@ -6,7 +6,9 @@ It was extracted from Myria, a WPF desktop RPG with an ASP.NET Core multiplayer 
 
 MyriaLib is [MIT licensed](LICENSE) — use it freely in your own projects, commercial or not.
 
-This document is a practical guide for using MyriaLib in your own project. If you're looking for the thesis-oriented architecture writeup for the original Myria project, see `DocMyriaLib.odt` in the repository root instead — this file is aimed at you, a developer who wants to build a different game on top of this library.
+MyriaLib is designed to be shared across every Myria client and server. In the reference project it's consumed, unmodified, by the WPF desktop client (`MyriaGames/MyriaRPG`), the text-based Console client (`MyriaGames/ConsoleWorldRPG`), and the in-development MonoGame client (`MyriaGames/MyriaWorld`), as well as by the authoritative world/game server (`MyriaGames/MyriaServer`) — all four reference the same `Myria.Lib.Core.csproj` via `ProjectReference`. The one exception is `MyriaGames/MyriaAuthServer`: it handles account authentication as a fully separate ASP.NET Core service with its own database and does **not** depend on MyriaLib at all — see [§17](#17-accounts--persistence) for how that split actually works.
+
+This document is a practical guide for using MyriaLib in your own project — this file is aimed at you, a developer who wants to build a different game on top of this library.
 
 ---
 
@@ -58,24 +60,26 @@ MyriaLib isn't published as a NuGet package yet — reference the project direct
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\MyriaLib\MyriaLib.csproj" />
+  <ProjectReference Include="..\Myria.Lib\Myria.Lib.Core\Myria.Lib.Core.csproj" />
 </ItemGroup>
 ```
 
-You also need a `Data/` folder next to your executable containing the JSON content files described in [§6](#6-the-content-model--json-data-files). The easiest way to get a working set is to copy `MyriaLib/Data/common/` from this repository as a starting point and edit from there — every ID, stat, and relationship in those files is just data, so replacing the content replaces the game.
+`Myria.Lib.Core.csproj` itself carries `ProjectReference`s to the library's other packages (`Myria.Lib.Economy`, `Myria.Lib.Enums`, `Myria.Lib.Progression`, `Myria.Lib.Crafting`), so referencing just this one project is enough — the rest come along transitively. All of them compile into the same `Myria.Lib.Core.*` namespace, so from your code it reads as a single library.
+
+You also need a `Data/` folder next to your executable containing the JSON content files described in [§6](#6-the-content-model--json-data-files). The easiest way to get a working set is to copy `Myria.Lib.Core/Data/common/` from this repository as a starting point and edit from there — every ID, stat, and relationship in those files is just data, so replacing the content replaces the game.
 
 ---
 
 ## 3. Quick Start
 
 ```csharp
-using MyriaLib.Entities;
-using MyriaLib.Entities.Characters;
-using MyriaLib.Services;
-using MyriaLib.Services.Builder;
-using MyriaLib.Services.Manager;
-using MyriaLib.Systems;
-using MyriaLib.Systems.Mods;
+using Myria.Lib.Core.Entities;
+using Myria.Lib.Core.Entities.Characters;
+using Myria.Lib.Core.Services;
+using Myria.Lib.Core.Services.Builder;
+using Myria.Lib.Core.Services.Manager;
+using Myria.Lib.Core.Systems;
+using Myria.Lib.Core.Systems.Mods;
 
 // 1. Load mods (optional — silently does nothing if the folder doesn't exist)
 ModLoader.Load("Mods");
@@ -110,22 +114,22 @@ GameService.StartSession(character);
 
 // 6. Fight something
 var monster = MonsterService.GetMonsterById(1)!.Clone();
-var fight = new MyriaLib.Systems.CombatEncounter(character, monster);
+var fight = new Myria.Lib.Core.Systems.CombatEncounter(character, monster);
 fight.CharacterAttack();
-while (fight.Phase != MyriaLib.Systems.Enums.CombatPhase.Finished)
+while (fight.Phase != Myria.Lib.Core.Systems.Enums.CombatPhase.Finished)
     fight.Tick();
 
 foreach (var line in fight.Log)
     Console.WriteLine(line);   // localization key + args — format however your UI needs
 
 // 7. Persist the character
-var account = new MyriaLib.Models.UserAccount { Username = "player1" };
+var account = new Myria.Lib.Core.Models.UserAccount { Username = "player1" };
 CharacterService.SaveCharacter(account, character);
 ```
 
 A few things worth calling out immediately:
 
-- **Everything is a static service.** There is no `IServiceProvider`/DI container anywhere in MyriaLib — `GameService`, `RoomService`, `SkillFactory`, `JobManager`, and friends are all static classes holding process-wide state. This is deliberate (see [§21](#21-known-limitations) for the implications) and keeps the library trivial to call from anywhere without wiring up a container.
+- **Everything is a static service.** There is no `IServiceProvider`/DI container anywhere in MyriaLib — `GameService`, `RoomService`, `SkillFactory`, `JobManager`, and friends are all static classes holding process-wide state. This is deliberate (see [§21](#21-known-limitations) for the implications) and keeps the library trivial to call from anywhere without wiring up a container. All of it lives under the `Myria.Lib.Core.*` namespace tree — the sub-namespace mirrors the folder it's in (`Myria.Lib.Core.Entities.Characters`, `Myria.Lib.Core.Services.Builder`, `Myria.Lib.Core.Systems.Mods`, etc.), so if you're not sure where a type lives, its namespace is a good first guess.
 - **Nothing here is async.** Loading is synchronous file I/O; combat and other actions are synchronous method calls. If you're building a server, wrap calls at your API boundary as needed — MyriaLib itself won't get in the way.
 - **`GameService.InitializeGame()` loads world content once, process-wide** — not per character. Call it once at startup (or once per hot-reload after a mod change), then create/load as many characters as you want against that loaded world.
 
@@ -133,7 +137,7 @@ A few things worth calling out immediately:
 
 ## 4. Initialization & Load Order
 
-`GameService.InitializeGame(IProgress<string>? progress = null, bool skipGameState = false, IGameDataSource? source = null)` runs every loader in this exact order (later steps depend on earlier ones — e.g. rooms link up monster and NPC references, so monsters and NPCs must already be loaded):
+`GameService.InitializeGame()` (or the fuller `InitializeGame(IProgress<string>? progress, bool skipGameState = false, IGameDataSource? source = null)` overload if you want load-progress reporting, a hot-reload, or a custom data source) runs every loader in this exact order (later steps depend on earlier ones — e.g. rooms link up monster and NPC references, so monsters and NPCs must already be loaded):
 
 1. `GameStatusService.Load()` — persisted day/time state (skipped if `skipGameState: true`)
 2. `RaceProfile.Load()`, `ClassProfile.Load()`, `LootGenerator.Load()`
@@ -161,16 +165,17 @@ Once a character is ready to play, call `GameService.StartSession(character)`. T
 
 ## 5. Configuration (`GameConfig`)
 
-`MyriaLib.Systems.GameConfig` centralizes every tunable numeric/behavioral value so balancing changes don't require hunting through multiple classes. Call these once at startup, before `InitializeGame()`. Every value has a sensible default — you only need to call the setter if you want something different.
+`Myria.Lib.Core.Systems.GameConfig` centralizes every tunable numeric/behavioral value so balancing changes don't require hunting through multiple classes. Call these once at startup, before `InitializeGame()`. Every value has a sensible default — you only need to call the setter if you want something different.
 
 | Area | Method | Purpose |
 |---|---|---|
-| Currency | `SetCurrencyRatios(silver, gold, platinum, crystal)` | Conversion rates between the five currency tiers (bronze is always 1) |
+| Currency | `SetCurrencyRatios(bronzePerSilver, silverPerGold, goldPerPlatinum, platinumPerCrystal)` | Conversion rates between the five currency tiers, from the smallest unit up (default 1,000 / 1,000 / 100 / 100) |
 | Inventory | `SetInventoryPageSize(int)` | Grid page size (default 49 = 7×7) |
 | Class progression | `SetClassProgression(maxLevel, xpCostBase)` | Level cap and per-level XP cost base |
 | Job progression | `SetJobProgression(...)` | Job level cap, XP cost base, max Fame/Skill multipliers |
 | Gathering bonus | `SetGatherBonusThresholds((int Level, int Bonus)[])` | Knowledge-level thresholds for bonus daily gather attempts |
 | Equipment upgrades | `SetUpgradeGates(defaultMax, (int Level, int MaxUpgrade)[])` | Knowledge-level thresholds for max upgrade tier |
+| Skill/fusion slots | `SetSkillSlotBreakpoints((int Level, int Slots)[])` | Level breakpoints for combat skill-bar and fusion-skill slot counts (both share this curve) |
 | Cooldowns | `SetClassCooldown(TimeSpan)`, `SetJobCooldown(TimeSpan)` | Lockout period after switching class/job |
 | Inactivity penalty | `SetClassPenaltyPerDay(long)` | Daily XP loss for an inactive class |
 | Job daily mechanics | `SetJobDailyMechanics(...)` | Fame gain rate, skill decay cap, fame decay divisor, active-job bonus fraction |
@@ -255,13 +260,13 @@ Deserialization is case-insensitive; the samples below use the casing actually w
 
 **`races.json`** / **`classes.json`** — `race`/`class` name, `baseStatBonus` (races only), `statGrowth`, `baseHpBonus`/`baseManaBonus`/`hpPerLevel`/`manaPerLevel`, `forbiddenClasses` (races only), `group` (classes only — controls XP-transfer bonus on same-group class switches).
 
-For the remaining files (NPCs, jobs, runes, combinations/fusion overrides, crafting recipes, loot tables), the shapes are small and mirror their model classes 1:1 (`MyriaLib.Models*`) — the fastest way to get the exact contract is to open the corresponding class, since every field maps directly with camelCase JSON keys.
+For the remaining files (NPCs, jobs, runes, combinations/fusion overrides, crafting recipes, loot tables), the shapes are small and mirror their model classes 1:1 — the fastest way to get the exact contract is to open the corresponding class, since every field maps directly with camelCase JSON keys. Note these classes aren't all in one namespace: most rune/combination/fusion data types (`RuneWord`, `BaseRuneData`, `WordFamily`, `SkillCombinationRecipe`, `FusionRecipe`, …) live under `Myria.Lib.Core.Models`, while `Npc`/`Quest` are under `Myria.Lib.Core.Entities.NPCs` and `Job`/`CharacterJob` under `Myria.Lib.Core.Entities.Jobs`.
 
 ---
 
 ## 7. Character & Progression
 
-`Character` (in `MyriaLib.Entities.Characters`) extends `CombatEntity`, the shared base for anything that fights (`Character` and `Monster` both derive from it). `CombatEntity` computes all the "total" stats you actually use in combat — `TotalSTR`, `MaxHealth`, `TotalPhysicalAttack`, `CritChance`, etc. — by layering race/class base stats, player-invested stat points, equipped-gear bonuses, and active status effects. You should almost never read `Stats.Strength` directly; read `character.TotalSTR` instead so gear and buffs are included.
+`Character` (in `Myria.Lib.Core.Entities.Characters`) extends `CombatEntity` (in `Myria.Lib.Core.Entities`), the shared base for anything that fights (`Character` and `Monster` both derive from it). `CombatEntity` computes all the "total" stats you actually use in combat — `TotalSTR`, `MaxHealth`, `TotalPhysicalAttack`, `CritChance`, etc. — by layering race/class base stats, player-invested stat points, equipped-gear bonuses, and active status effects. You should almost never read `Stats.Strength` directly; read `character.TotalSTR` instead so gear and buffs are included.
 
 ```csharp
 character.GainXp(150);           // levels up automatically in a loop if enough XP was granted at once
@@ -278,7 +283,7 @@ Class progression runs on a separate curve from character level (`ClassManager.G
 
 `Inventory` manages items page-by-page (`PageSize`, default 49 = 7×7) with `AddItem`, `RemoveItem`, `UseItem`, `SwapEquipment`, and `SellItem`. Subscribe to `ItemReceived` / `ItemRemoved` / `ItemSold` instead of polling — quest kill/collect progress is wired through these same events internally, so you get that behavior for free.
 
-Currency uses the immutable `Money` value type stored in the smallest denomination (bronze) to avoid rounding errors across the five tiers (bronze/silver/gold/platinum/crystal). `MoneyBag` wraps a character's balance with `CanAfford`, `TryAdd`, and `TrySpend`. `MoneyFormatter` renders it in several styles (`"S"` short, `"L"` long, `"C"` compact, `"B"` raw) and parses user-typed amounts back.
+Currency uses the immutable `Money` value type stored in the smallest denomination (bronze) to avoid rounding errors across the five tiers (bronze/silver/gold/platinum/crystal). `MoneyBag` wraps a character's balance with `CanAfford`, `TryAdd`, and `TrySpend`. `Money` implements `IFormattable`, so `money.ToString(style)` renders it in several styles (`"S"` short, the default — skips leading zero groups, always shows bronze; `"L"` long, full denomination names; `"C"` compact, most-significant two units; `"B"` raw bronze total); `MoneyFormatter.Parse`/`.TryParse` parse user-typed amounts (e.g. `"2pt 5g"`) back into a `Money`.
 
 ---
 
@@ -326,11 +331,11 @@ Once accepted (`quest.Clone()` gives the character their own copy of the templat
 
 ## 13. World — Rooms, NPCs, Maps
 
-Rooms form a graph via their `Exits` dictionary (direction → room). Before moving a character, check `RoomService.CanEnterRoom(room, character)` — it enforces the room's `RequirementType` (`Level`, `Quest`, or `Party`; note the `Party` case currently checks *membership only*, not a minimum size — see [§21](#21-known-limitations)). Dungeon rooms spawn their monsters lazily via `room.SpawnDungeonMonsters()` on entry; random encounters are picked from `Room.EncounterableMonsters` (a weighted id→chance map) via `MonsterService.PickMonsterForFight`.
+Rooms form a graph via their `Exits` dictionary (direction → room). Before moving a character, check `RoomService.CanEnterRoom(room, character)` — it enforces the room's `RequirementType` (`Level`, `Quest`, or `Party`). Note that the `Party` case is currently an unconditional no-op that always returns true (the source marks it `// TODO: enforce party check once multicharacter is implemented`) — in single-character play there's nothing to gate, but if you build multi-character parties on top of MyriaLib, this check does not yet enforce membership or size for you — see [§21](#21-known-limitations). Dungeon rooms spawn their monsters lazily via `room.SpawnDungeonMonsters()` on entry; random encounters are picked from `Room.EncounterableMonsters` (a weighted id→chance map) via `MonsterService.PickMonsterForFight`.
 
-NPC interactions route through a single entry point, `NpcInteractionService.Execute(character, npc, serviceId, item, amount)`, dispatching on `serviceId` (`heal`, `buy_items`, `sell_items`, `upgrade`, `talk`; note `craft` is a stub that always fails — see [§15](#15-gathering--crafting) for the actual crafting path). This keeps your UI from needing a separate method per NPC service type.
+NPC interactions route through a single entry point, `NpcInteractionService.Execute(character, npc, serviceId, item, amount)`, dispatching on `serviceId` (`heal`, `buy_items`, `sell_items`, `upgrade`, `talk`, plus the UI-only `shop_equipment`/`shop_general` which just return an "open this shop" result for your client to act on; note `craft` is a stub that always fails — see [§15](#15-gathering--crafting) for the actual crafting path). This keeps your UI from needing a separate method per NPC service type.
 
-For map rendering, `MapBuilder.BuildRoomMap()` lays out the known rooms around the current one as a 2D grid via breadth-first search — feed that straight into a UI grid.
+For map rendering, `MapBuilder.BuildRoomMap(startingRoom)` lays out the known rooms around the given room as a 2D grid via breadth-first search — feed that straight into a UI grid.
 
 ---
 
@@ -342,7 +347,7 @@ Game time is a tick counter: a fixed number of ticks (`DayCycleManager.TicksPerS
 
 ## 15. Gathering & Crafting
 
-`GatherService.Gather(character, room)` checks for the right tool, consumes one of the room's daily gather charges, grants job skill XP, and applies the job's skill multiplier to the yield. Each room rolls 1–5 base daily gather attempts; a higher job Knowledge level grants bonus charges (`JobManager.GetGatherKnowledgeBonus`). Failures return a specific `GatherResult` (`NoSpots`, `Depleted`, `NoTool`, `InventoryFull`) so your UI can react precisely instead of guessing.
+`GatherService.Gather(character, room)` checks for the right tool, consumes one of the room's daily gather charges, grants job skill XP, and applies the job's skill multiplier to the yield. Each room rolls 1–5 base daily gather attempts; a higher job Knowledge level grants bonus charges (`JobManager.GetGatherKnowledgeBonus`). It returns a `GatherOutcome` record struct — `.Result` is a `GatherResult` enum (`Success`, `NoSpots`, `Depleted`, `NoTool`, `InventoryFull`) so your UI can react precisely instead of guessing, and on `Success` the struct also carries `ItemId`, `Amount`, `JobId`, and `XpGranted` for that attempt.
 
 Crafting is intentionally split: `CraftingService.GetRecipes(npcId)` / `GetRecipe(npcId, outputId)` give you the recipe (output item, ingredients, required job-knowledge level) and you check the character has the ingredients yourself — **actually consuming ingredients and creating the output item is left to your app**, since single-player (local) and multiplayer (server-authoritative) hosts need to execute that step differently. Do **not** route through `NpcInteractionService.Execute(character, npc, "craft", item)` / `Npc.CraftItem()` — that path is an unfinished stub that always returns failure (see [§21](#21-known-limitations)).
 
@@ -365,11 +370,14 @@ The relationship between two words is resolved in this order: an explicit `WordP
 
 ## 17. Accounts & Persistence
 
-`LoginManager.Register(username, password)` / `.Login(username, password)` are the built-in file-based account system — passwords are hashed with PBKDF2-SHA512 (16-byte salt, 32-byte hash, 200,000 iterations), never stored in plaintext. Both methods are synchronous and **not** thread-safe against concurrent writes to the same account file, so if you're building a server, add your own locking or swap in a database-backed alternative.
+**MyriaLib does not do authentication.** There is no login/password/registration system in this library — an earlier local-auth implementation (`LoginManager`, `IUserRepository`, PBKDF2 password hashing) was deliberately removed. In the reference project, authenticating a player (username/password, tokens, sessions) is the job of `MyriaAuthServer` (`MyriaGames/MyriaAuthServer`), a completely separate ASP.NET Core service with its own SQLite/EF Core database — it doesn't reference MyriaLib at all. Your own game is free to use that service, a different auth provider, or nothing (a local single-player app has no need for one); MyriaLib only cares about the *account* once you already have one.
 
-`CharacterService.SaveCharacter(account, character)` / `LoadCharacter(name, account)` handle file-based character persistence under `Data/saves/{username}-{charactername}.json`, including restoring extended state (runes, fusion/combination skills, skill slots) on load via `SkillFusionSystem.ResolveCompositeSkills`.
+What MyriaLib does provide is a lightweight, already-authenticated account holder and character persistence:
 
-This file-based persistence sits behind `ICharacterRepository` / `IUserRepository` interfaces, so you can swap in your own database-backed implementation without touching the rest of the library — this is exactly what MyriaServer (the reference project's ASP.NET Core backend) does with a SQL-backed repository.
+- `Myria.Lib.Core.Models.UserAccount` is a small POCO — `Username`, an in-memory-only `Password` (`[JsonIgnore]`, used only to re-authenticate a dropped connection, never written to disk), and `CharacterNames`. It's not a security boundary; it's just "who is this save data for."
+- `Myria.Lib.Core.Services.UserAccoundService` (note: that's the actual class/file name in this codebase, including the typo) holds `CurrentUser`/`CurrentCharacter` for the running session and has one method, `SaveUser()`, which writes the current `UserAccount` to `Data/users/{username}.json`.
+- `CharacterService.SaveCharacter(account, character)` / `LoadCharacter(name, account)` handle file-based character persistence under `Data/saves/{username}-{charactername}.json` (both sanitize username/character name before touching the filesystem). Saves are versioned and wrapped with a snapshot of the mods active when they were written, so loading can detect mod drift; loading also restores extended state (runes, fusion/combination skills, skill slots) via internal calls to `BaseRuneService.ResolveRunes`, `SkillFusionSystem.ResolveCompositeSkills`, `SkillCombinationService.ResolveCombinedSkills`, and `SkillSlotService.ResolveSlots`/`MigrateIfEmpty`.
+- A separate, simpler `ICharacterRepository` interface (with a `JsonCharacterRepository` file-based implementation) also exists under `Myria.Lib.Core.Repositories` for hosts that want an async, swappable character-persistence abstraction instead of calling `CharacterService`'s static methods directly — this is exactly what the reference world/game server, `MyriaServer` (`MyriaGames/MyriaServer`), does with its own `SqlCharacterRepository` implementation backed by a real database. (`MyriaAuthServer`, again, is unrelated to any of this — it never touches character data, only accounts.)
 
 ---
 
@@ -387,17 +395,19 @@ MyriaLib has no UI, so it uses .NET events instead of polling to tell you when s
 
 **`GameLog`** additionally keeps a general diagnostic event log (`EntryAdded`, `RecentEntries` for the last 20) independent of the above, useful for debugging/dev builds.
 
-**`GameEvents` (static, `MyriaLib.Systems`)** is a second, mod-oriented event hub, distinct from the instance events above: `SessionStarted`, `LevelUp`, `ClassChanged`, `RoomEntered`, `DayAdvanced`, `MonsterKilled`, `ItemUsed`. It exists specifically so DLL mods have one static place to subscribe from inside `IModLoaderExtender.AfterModsLoaded` without needing a reference to a specific character instance — and without needing to unsubscribe, since mod assemblies are unloaded wholesale between sessions. Note `GameEvents.SessionStarted` and `GameService.SessionStarted` are two distinct events fired together by `GameService.StartSession` — the former for mod code, the latter for your application code.
+**`GameEvents` (static, `Myria.Lib.Core.Systems`)** is a second, mod-oriented event hub, distinct from the instance events above: `SessionStarted`, `LevelUp`, `ClassChanged`, `RoomEntered`, `DayAdvanced`, `MonsterKilled`, `ItemUsed`, `ItemReceived`. It exists specifically so DLL mods have one static place to subscribe from inside `IModLoaderExtender.AfterModsLoaded` without needing a reference to a specific character instance — and without needing to unsubscribe, since mod assemblies are unloaded wholesale between sessions. Note `GameEvents.SessionStarted` and `GameService.SessionStarted` are two distinct events fired together by `GameService.StartSession` — the former for mod code, the latter for your application code.
 
 ---
 
 ## 19. Mod System
 
-A mod is a folder under `Mods/` with a `mod.json` manifest (`id`, `name`, `version`, `enabled`, `loadOrder`) and a data tree mirroring `Data/`. `ModLoader.Load()` classifies every file a mod provides as visual or gameplay-relevant based on its path prefix (`Data/locales/`, `Assets/`, icon paths → visual; `Data/common/` → gameplay); if a mod contributes at least one gameplay file, the whole mod counts as gameplay-relevant. Overlapping files are resolved by `loadOrder` (higher wins) — full-file replacement only, no field-level merging. `ModLoader.ResolvePath(defaultPath)` is what every loader in [§4](#4-initialization--load-order) actually calls to get its real file path.
+A mod is a folder under `Mods/` with a `mod.json` manifest and a data tree mirroring `Data/`. The manifest carries more than the original basics (`id`, `name`, `version`, `enabled`, `loadOrder`) — it can also declare `minGameVersion`/`maxGameVersion` compatibility gates, a `dependencies` list (with optional per-dependency minimum versions, and mods can be marked as optional dependencies), `completeOverwriteFiles` (paths this mod should fully replace instead of merge), and `languageDefinitions` for mod-added locales. Mods with an unmet version or non-optional dependency requirement are dropped with a warning rather than blocking the rest of the load.
 
-If you're building a networked game and want to guarantee clients can't gain an advantage from gameplay mods, call `ModLoader.ApplyMultiplayerMode(true)` before connecting — gameplay mods are skipped (visual-only mods stay active) so the client loads the same unmodified data as the server. `ModLoader.GetModInfo()` reports the client's active mods (including a SHA-256 fingerprint per gameplay mod) if your server wants to allowlist specific mods instead of blocking all of them.
+`ModLoader.Load()` classifies every file a mod provides as visual or gameplay-relevant based on its path prefix (`Data/locales/`, `Data/icons/`, `Data/images/`, `Data/maps/`, `Assets/` → visual; `Data/common/` → gameplay); if a mod contributes at least one gameplay file, the whole mod counts as gameplay-relevant. `ModLoader.ResolvePath(defaultPath)` is what every loader in [§4](#4-initialization--load-order) actually calls to get its real file path, and **overlapping JSON files are merged, not simply replaced**: for a JSON array file, each mod-provided entry is matched to an existing one by `id`/`name` and patches only the fields it defines (or fully replaces that one entry if it sets `"overwrite": true`); a property key ending in `+` (e.g. `"Npcs+"`) appends to or merges with the existing value instead of overwriting it; and a mod can still force a *whole file* to be discarded and replaced by listing that path in its manifest's `completeOverwriteFiles`. Mods are applied in ascending `loadOrder` (lower loads first, higher wins on conflicts). Non-JSON assets (images, XAML, etc.) still use simple last-mod-wins, not merging.
 
-For app-specific reactions to mod loading (e.g. swapping a WPF `ResourceDictionary` when a visual mod loads — something MyriaLib itself must never know about), implement `IModLoaderExtender` and register it with `ModLoader.RegisterExtender()`. If an extender throws during load, only that mod is unloaded — a single bad mod never blocks the rest of your game from starting.
+If you're building a networked game and want to guarantee clients can't gain an advantage from gameplay mods, call `ModLoader.ApplyMultiplayerMode(true)` before connecting — gameplay mods (and any mod's `plugin.dll`) are skipped (visual-only mods stay active) so the client loads the same unmodified data as the server. `ModLoader.GetModInfo()` reports the client's active mods (including a SHA-256 fingerprint per gameplay mod) if your server wants to allowlist specific mods instead of blocking all of them.
+
+For app-specific reactions to mod loading (e.g. swapping a WPF `ResourceDictionary` when a visual mod loads — something MyriaLib itself must never know about), implement `IModLoaderExtender` and register it with `ModLoader.RegisterExtender()`. A mod folder can *also* ship its own `plugin.dll` containing `IModLoaderExtender` implementations — `ModLoader.Load()` discovers and instantiates those automatically, which is what lets DLL mods react to their own load without your host app knowing about them. If any extender (host-registered or mod-shipped) throws during `BeforeModsReload`/`AfterModsLoaded`, the exception is caught and recorded in `ModLoader.ExtenderErrors` and the rest of loading continues — but the mod itself is *not* automatically unloaded for you; if your host-specific apply step fails for a mod, call `ModLoader.UnloadModAfterError(...)` yourself to remove it from `ActiveMods`.
 
 ---
 
@@ -435,9 +445,9 @@ public interface IGameDataSource
 
 Pass an instance to `GameService.InitializeGame(progress: null, source: myDataSource)` and every loader calls the matching data-based overload instead of touching JSON at all — mod path resolution is skipped entirely in that case. The load order (documented in [§4](#4-initialization--load-order)) is identical either way, since both branches go through the same method — you only ever need to get the *data* right, not re-derive the *order*.
 
-This is exactly the pattern the reference Myria project uses: MyriaLib has zero database-specific code; the server project owns a `SqlGameDataSource` that reads from SQL and hands MyriaLib plain in-memory lists, keeping persistence technology entirely outside the library.
+MyriaLib itself has zero database-specific code for static world content — `IGameDataSource` is the seam a host would implement to serve that content from a database instead of JSON. As of this writing, the reference world/game server (`MyriaServer`) does **not** actually implement this interface: it currently calls `GameService.InitializeGame()` the same way the clients do and reads the same static `Data/common/*.json` files off disk. Where `MyriaServer` *does* use SQL is for per-character save data specifically (via its own `SqlCharacterRepository`, see [§17](#17-accounts--persistence)) — not for static game content. If you want database-backed static content, `IGameDataSource` is there for you to implement; nothing in the reference project currently exercises that path.
 
-For character save data specifically (rather than static world content), implement `ICharacterRepository`/`IUserRepository` instead — see [§17](#17-accounts--persistence).
+For character save data specifically (rather than static world content), implement `ICharacterRepository` instead — see [§17](#17-accounts--persistence).
 
 ---
 
@@ -449,11 +459,11 @@ Being upfront about the rough edges so you don't lose time rediscovering them:
 - **`base_skills.json` and `fusion_recipes.json` aren't included** in this repo's sample `Data/` folder, even though `InitializeGame()` loads them unconditionally. The loaders fail soft (log + empty collection) rather than crash, so you won't notice unless you try to use fusion skills — at which point there will simply be no components or recipe overrides available. If you want this feature, you'll need to author these files yourself.
 - **`equipment_slots.json`, `item_rarities.json`, `time_segments.json`, `gathering_types.json`** (the enum display-name registries) are likewise not included and not auto-loaded — only relevant if you call the corresponding `GameConfig.Load...()` methods.
 - **NPC crafting via `NpcInteractionService.Execute(..., "craft", ...)` / `Npc.CraftItem()` is an unimplemented stub** that always returns failure. Use `CraftingService` directly instead (see [§15](#15-gathering--crafting)).
-- **Room party-size gating is incomplete.** `Quest` has a `RequiredPartySize` field, but `Room`'s `RequirementType.Party` only checks party *membership*, not a minimum size — there's no equivalent field on `Room` yet.
+- **Room party-size (and party-membership) gating is not actually enforced yet.** `Quest` has a `RequiresParty`/`RequiredPartySize` pair that's honored on the quest side, but `Room.RequirementType.Party` is currently a hard-coded no-op (`CanEnterRoom` just returns `true` for it, with a `// TODO: enforce party check once multicharacter is implemented` comment) — it doesn't check membership *or* size. Harmless in single-character play; if you build a multi-character party feature on top of MyriaLib, you'll need to add this check yourself.
 - **Everything is a static, process-wide singleton.** There's no way to run two independent "game worlds" in the same process (e.g. two isolated test instances) — every loaded room, item, quest, etc. lives in static state shared across your whole process. Design your hosting accordingly (typically: one process per server instance).
-- **No async I/O anywhere.** Loading and persistence are synchronous. Fine for a desktop client; if you're building a high-throughput server, benchmark before assuming this is a non-issue.
-- **`LoginManager`'s file-based accounts aren't safe for concurrent writes** to the same account file — treat it as a single-player/prototype convenience, not production account storage, unless you add your own locking or replace it with a database via `IUserRepository`.
-- **Test coverage is a foundation, not exhaustive.** `MyriaLib.Tests` (xUnit) covers combat formulas, money/inventory, skill fusion, rune evaluation, class progression, and config forwarding — but quests, jobs, gathering/crafting, world navigation, and full combat-encounter flow have no tests yet. Because MyriaLib leans on static, process-wide state, test parallelization is disabled assembly-wide and any test that touches shared static services (`ClassProfile`, `GameConfig`-backed values, etc.) must snapshot and restore it — see the existing tests for the pattern before adding more.
+- **No async I/O anywhere.** Loading is synchronous file I/O throughout, and while `ICharacterRepository`/`JsonCharacterRepository` expose `Task`-returning methods, the default implementation still does its file reads/writes synchronously underneath (`Task.FromResult` around plain `File.ReadAllText`/`WriteAllText`) — the async shape is there for you to implement against, not something the library gives you for free. Fine for a desktop client; if you're building a high-throughput server, benchmark before assuming this is a non-issue.
+- **`UserAccoundService.SaveUser()` and the file-based character saves aren't safe for concurrent writes** to the same file — treat them as a single-player/prototype convenience, not production storage, unless you add your own locking or replace them with your own `ICharacterRepository` implementation. (Authentication itself isn't MyriaLib's concern at all — see [§17](#17-accounts--persistence).)
+- **Test coverage is a foundation, not exhaustive.** `Myria.Lib.Tests` (xUnit) covers combat formulas, money/inventory, skill fusion, rune evaluation, class progression, config forwarding, gathering, crafting, and quest-event integration — but job progression (`JobManager`/`JobXpService`) and world navigation (`RoomService`) have no dedicated tests yet. Because MyriaLib leans on static, process-wide state, test parallelization is disabled assembly-wide and any test that touches shared static services (`ClassProfile`, `GameConfig`-backed values, etc.) must snapshot and restore it — see the existing tests for the pattern before adding more.
 
 ---
 
