@@ -34,5 +34,5 @@ cover:
 
 ## Supported Versions
 
-This project is in active alpha development. Only the latest code on each repository's `master`
+This project is in active alpha development. Only the latest code on each repository's `main`
 branch is supported — please confirm an issue still reproduces there before reporting.
