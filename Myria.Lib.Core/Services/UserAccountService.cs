@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Myria.Lib.Core.Services
 {
-    public static class UserAccoundService
+    public static class UserAccountService
     {
         public static UserAccount CurrentUser { get; set; }
         public static Character CurrentCharacter { get; set; }
