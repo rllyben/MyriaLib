@@ -617,6 +617,14 @@ namespace Myria.Lib.Core.Systems.Mods
         {
             try
             {
+                // A plugin.dll runs arbitrary, fully-trusted .NET code - there's no sandboxing.
+                // This is inherent to letting mods extend behavior via code (not just data), the
+                // same trade-off any DLL-moddable game makes - only install mods from sources you
+                // trust. Surfacing this via GameLog (rather than only a doc comment) means any
+                // host UI that displays GameLog entries shows the player exactly when and which
+                // mod is about to run code, not just silently doing it.
+                GameLog.Info($"Loading plugin.dll from mod '{mod.Manifest.Name}' — this runs " +
+                             "arbitrary code with full trust. Only install mods you trust.");
                 var assembly = Assembly.LoadFrom(pluginPath);
                 foreach (var type in assembly.GetExportedTypes())
                 {
