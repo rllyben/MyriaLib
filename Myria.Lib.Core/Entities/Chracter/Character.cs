@@ -245,7 +245,8 @@ namespace Myria.Lib.Core.Entities.Characters
         /// </summary>
         public void ApplySyncedProgress(CharacterProgressResult p)
         {
-            int oldLevel = Level;
+            int  oldLevel      = Level;
+            long oldExperience = Experience;
 
             Level         = p.Level;
             Experience    = p.Experience;
@@ -261,7 +262,27 @@ namespace Myria.Lib.Core.Entities.Characters
             Stats.BaseMana     = p.BaseMana;
 
             if (Level != oldLevel)
+            {
+                // LeveledUp alone is enough to refresh every UI listener (incl. the HUD's XP
+                // bar) for this case - see XpGained's own doc note below for why it isn't also
+                // fired here.
                 LeveledUp?.Invoke(this, new LevelUpEventArgs(oldLevel, Level));
+            }
+            else if (Experience != oldExperience)
+            {
+                // No level boundary crossed, so the exact amount gained is just the delta -
+                // fire XpGained so listeners that only watch HealthChanged/ManaChanged/
+                // LeveledUp (e.g. CharacterHeaderVm's HUD XP bar) actually hear about it too.
+                // A multiplayer combat win otherwise updated Experience with nothing raising
+                // any event the HUD listens to, so the bar visibly lagged behind the real value
+                // until an unrelated HealthChanged/ManaChanged happened to fire later (e.g. at
+                // the Healer). Deliberately skipped on a level-up above: this method only gets
+                // the resulting Level/Experience snapshot, not the raw amount granted, so an
+                // exact delta can't be reconstructed once a level boundary (and its own,
+                // different ExpForNextLvl) was crossed - GainXp (the local/offline path) still
+                // reports an exact amount in that case because it receives the raw grant itself.
+                XpGained?.Invoke(this, new XpGainedEventArgs(Experience - oldExperience, Experience, ExpForNextLvl));
+            }
         }
 
         /// <summary>
@@ -342,6 +363,28 @@ namespace Myria.Lib.Core.Entities.Characters
 
             if (update.Runes is not null)
                 ApplySyncedRunes(update.Runes);
+
+            if (update.Equipment is not null)
+                ApplySyncedEquipment(update.Equipment);
+        }
+
+        /// <summary>
+        /// Overwrites the three equip slots with the server's authoritative item ids (null id =
+        /// empty slot) - reconciles cases where the server's SwapEquipment/unequip result differs
+        /// from what this client's own optimistic mirror already applied (e.g. a rejected swap),
+        /// which would otherwise permanently desync gear-derived stats (MaxHealth/MaxMana/attack/
+        /// defense) from what server-authoritative combat actually uses. Recreates each slot's
+        /// item fresh by id via ItemFactory, same identity-only tradeoff as inventory snapshots -
+        /// see EquippedSnapshot's own remarks on why that's a non-issue for equipped gear.
+        /// </summary>
+        public void ApplySyncedEquipment(EquippedSnapshot equipment)
+        {
+            WeaponSlot    = ResolveEquippedSlot(equipment.WeaponItemId);
+            ArmorSlot     = ResolveEquippedSlot(equipment.ArmorItemId);
+            AccessorySlot = ResolveEquippedSlot(equipment.AccessoryItemId);
+
+            static EquipmentItem? ResolveEquippedSlot(string? itemId) =>
+                itemId is not null && ItemFactory.TryCreateItem(itemId, out var item) ? item as EquipmentItem : null;
         }
 
         /// <summary>

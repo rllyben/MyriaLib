@@ -67,6 +67,15 @@ namespace Myria.Lib.Core.Models.Dto
     public record RuneSnapshot(string Id, string BaseRuneId, List<string> AddedWordIds);
 
     /// <summary>
+    /// Which item id (if any) occupies each equip slot - null slot means empty. Identity-only,
+    /// same tradeoff as <see cref="InventoryItemSnapshot"/>: a slot's UpgradeLevel/CraftQuality
+    /// isn't part of this (equipped items can't be upgraded in this codebase - Upgrade only
+    /// operates on loose Inventory.Items - so that's a non-issue in practice), only which item id
+    /// is in which slot.
+    /// </summary>
+    public record EquippedSnapshot(string? WeaponItemId, string? ArmorItemId, string? AccessoryItemId);
+
+    /// <summary>
     /// Generic "something about your character changed" push - sent after any session mutation
     /// that isn't already covered by a dedicated result DTO (shop deposit/withdraw, NPC buy/sell,
     /// gather/craft/upgrade, equip/unequip, stat allocation, non-combat heal), so the client's
@@ -85,7 +94,8 @@ namespace Myria.Lib.Core.Models.Dto
         CharacterProgressResult? Progress,
         List<QuestProgressState>? QuestProgress = null,
         List<JobProgressSnapshot>? Jobs = null,
-        List<RuneSnapshot>? Runes = null);
+        List<RuneSnapshot>? Runes = null,
+        EquippedSnapshot? Equipment = null);
 
     public record StartGroupCombatResult(
         bool Success,

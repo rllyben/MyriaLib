@@ -264,7 +264,7 @@ namespace Myria.Lib.Core.Systems.Mods
                 .ToList();
 
             if (modsWithFile.Count == 0)
-                return defaultPath;
+                return AnchorToBaseDirectoryIfNeeded(defaultPath);
 
             // All JSON files — including locale files — are merged so multiple mods can
             // each contribute keys/objects without clobbering one another.
@@ -287,6 +287,23 @@ namespace Myria.Lib.Core.Systems.Mods
             return mergedPath;
         }
 
+        /// <summary>
+        /// Game data is loaded via paths like "Data/common/items.json", relative to the process's
+        /// current working directory rather than the running assembly's location. That CWD is not
+        /// guaranteed to be the app's output directory — e.g. Visual Studio's default "Project"
+        /// launch profile for ASP.NET Core apps (MyriaServer) uses the project directory, not
+        /// bin/&lt;config&gt;/&lt;tfm&gt; — so a path that resolves when launched one way can silently fail
+        /// when launched another way. Falls back to resolving against <see cref="AppContext.BaseDirectory"/>
+        /// (always the assembly's own directory, regardless of how the process was started) when the
+        /// bare relative path doesn't exist from the current working directory.
+        /// </summary>
+        private static string AnchorToBaseDirectoryIfNeeded(string relativePath)
+        {
+            if (File.Exists(relativePath)) return relativePath;
+            var anchored = Path.Combine(AppContext.BaseDirectory, relativePath);
+            return File.Exists(anchored) ? anchored : relativePath;
+        }
+
         // ── Merge engine ─────────────────────────────────────────────────────────
 
         /// <summary>
@@ -296,8 +313,9 @@ namespace Myria.Lib.Core.Systems.Mods
         private static string BuildMergedFile(string defaultPath, List<LoadedMod> mods)
         {
             // Start from the base file (may not exist if it's a pure-addition mod target).
-            string currentJson = File.Exists(defaultPath)
-                ? File.ReadAllText(defaultPath)
+            var basePath = AnchorToBaseDirectoryIfNeeded(defaultPath);
+            string currentJson = File.Exists(basePath)
+                ? File.ReadAllText(basePath)
                 : "[]";
 
             foreach (var mod in mods)

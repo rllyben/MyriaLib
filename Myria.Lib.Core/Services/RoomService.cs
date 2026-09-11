@@ -96,8 +96,11 @@ namespace Myria.Lib.Core.Services
                     return !string.IsNullOrEmpty(room.RequiredQuestId)
                         && character.CompletedQuests.Any(q => q.Id == room.RequiredQuestId);
                 case RoomRequirementType.Party:
-                    // TODO: enforce party check once multicharacter is implemented.
-                    // In singlecharacter there are no parties, so this gate is a no-op for now.
+                    // Intentional no-op, not a gap: this shared helper is only called from
+                    // singleplayer navigation (Wpf's ViewModel_PageRoom, Mono's WorldDataService),
+                    // and singleplayer has no party concept at all - there's nothing to check.
+                    // Multiplayer's real party gate is separate and already enforced server-side
+                    // in GameHub.JoinRoom (RoomRequirementType.Party => party.GetPartyId(...) is not null).
                     return true;
             }
             return true;

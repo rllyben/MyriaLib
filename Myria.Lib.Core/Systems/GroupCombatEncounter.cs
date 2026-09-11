@@ -13,7 +13,12 @@ namespace Myria.Lib.Core.Systems
 {
     public sealed class GroupCombatEncounter
     {
-        public IReadOnlyList<Character>  Characters  { get; }
+        // Not readonly, deliberately - see AddCharacter's copy-on-write comment. Every other
+        // action method (CharacterAttack, CharacterCastSkill, HandleMonsterDeath, etc.) reads
+        // this field only via the Characters property below, evaluated fresh at the start of
+        // each foreach/LINQ call.
+        private List<Character> _characters;
+        public IReadOnlyList<Character>  Characters  => _characters;
         public List<Monster>          Monsters { get; }
 
         public bool IsFinished  { get; private set; }
@@ -60,7 +65,7 @@ namespace Myria.Lib.Core.Systems
         public GroupCombatEncounter(IEnumerable<Character> characters, IEnumerable<Monster> enemies)
         {
             var rng = Random.Shared;
-            Characters = characters
+            _characters = characters
                 .Select(p => (character: p, tieBreak: rng.Next()))
                 .OrderByDescending(x => x.character.TotalDEX)
                 .ThenBy(x => x.tieBreak)
@@ -85,6 +90,48 @@ namespace Myria.Lib.Core.Systems
             Log.Add(new CombatLogEntry("pg.fight.log.order",
                 string.Join(", ", Characters.Select(p => p.Name))));
             SkipDeadCharacters();
+        }
+
+        // Guards only AddCharacter's own check-then-write (two late joiners arriving in the same
+        // instant could otherwise both pass the "not already in" check before either writes,
+        // double-adding the same character) - not a general encounter-wide lock. See the
+        // copy-on-write comment below for why the actual list mutation doesn't need one.
+        private readonly object _joinLock = new();
+
+        /// <summary>
+        /// Adds a late-arriving party member to an already-running encounter (a player who steps
+        /// into the room after their party's fight there has already started, or who presses
+        /// "Start Group Fight" themselves while that fight is still going). Appended to the end of
+        /// the turn order rather than reshuffled in, so nobody else's already-decided turn order
+        /// shifts around mid-fight; they simply get their first turn once play reaches the end of
+        /// the (now longer) roster. Uses the encounter's existing <see cref="_speedGaugeThreshold"/>
+        /// rather than recalculating it — a late joiner shouldn't retroactively change everyone
+        /// else's bonus-turn pacing.
+        ///
+        /// GameHub can call this (from a joining player's connection) fully concurrently with
+        /// CharacterAttack/CharacterCastSkill (from an already-fighting player's connection) on
+        /// this same encounter instance - nothing serializes hub calls across different SignalR
+        /// connections. The old in-place `_characters.Add(...)` mutated the exact List<Character>
+        /// another thread could be mid-`foreach` over in HandleMonsterDeath at that moment (e.g. a
+        /// party member joining right as another lands the killing blow), which either throws
+        /// InvalidOperationException ("Collection was modified") or corrupts the enumeration -
+        /// see the 2026-09-10 security audit. Replacing the list wholesale instead of mutating it
+        /// in place fixes this without needing a lock around every read site in the file: a
+        /// `foreach` captures its enumerator once at the start of the loop, so an in-progress
+        /// enumeration keeps safely iterating the *old* list object even after this method
+        /// swaps `_characters` to point at a new one containing the joiner. The next read of the
+        /// `Characters` property anywhere else in the encounter simply sees the new list.
+        /// </summary>
+        public void AddCharacter(Character character)
+        {
+            lock (_joinLock)
+            {
+                if (IsFinished || _characters.Any(c => c == character)) return;
+
+                character.AggroLevel = 0f;
+                _characters = new List<Character>(_characters) { character };
+                Log.Add(new CombatLogEntry("pg.fight.log.joined", character.Name));
+            }
         }
 
         // ── Actions ───────────────────────────────────────────────────────────
@@ -335,7 +382,13 @@ namespace Myria.Lib.Core.Systems
                 {
                     if (drop.StackSize == 0) drop.StackSize = 1;
                     recipient.Inventory.AddItem(drop, recipient);
-                    lootList.Add(drop.Id);
+                    // One list entry per unit (matches the client's ItemFactory.CreateItem-per-
+                    // entry mirror in ApplyServerXpGain) - a plain single Add per drop here used
+                    // to discard drop.StackSize, so a kill dropping e.g. 2x of an item only ever
+                    // granted 1 client-side until the next relog, even though the server's own
+                    // Inventory.AddItem call two lines up already had the correct count.
+                    for (int i = 0; i < drop.StackSize; i++)
+                        lootList.Add(drop.Id);
                 }
             }
 

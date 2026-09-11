@@ -87,12 +87,20 @@ namespace Myria.Lib.Core.Services.Builder
 
         /// <summary>
         /// Grants a single base rune by ID to the player if they don't already have it (no added words).
-        /// Does nothing if the ID is not found or the player already has that rune.
+        /// Does nothing if the ID is not found, the rune's core word hasn't been officially learned yet
+        /// (the actual gate players go through - RuneDrawingViewModel.SubmitWord only calls this after
+        /// confirming that itself, so re-checking it here is what makes this method safe to call
+        /// directly from the multiplayer hub for any rune ID without separately re-deriving that same
+        /// rule server-side), or the player already has that rune.
         /// </summary>
         public static void GrantBaseRune(Character character, string runeId)
         {
             var def = Get(runeId);
             if (def is null) return;
+
+            bool wordLearned = string.IsNullOrEmpty(def.CoreWordId) || character.RuneDictionary.Any(
+                e => e.WordId == def.CoreWordId && e.IsOfficiallyLearned);
+            if (!wordLearned) return;
 
             SeedWordDictionary(character, def);
 
