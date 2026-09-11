@@ -49,6 +49,7 @@
   "pg.fight.log.lose": "Du wurdest besiegt...",
   "pg.fight.log.connection_error": "Verbindung zum Server verloren - versuche es erneut.",
   "pg.fight.log.joined": "{0} schließt sich dem Kampf an!",
+  "pg.fight.log.fled": "{0} flieht aus dem Kampf!",
   "pg.fight.effect.poison": "{0} erleidet {1} Giftschaden.",
   "pg.fight.effect.hpRegen": "{0} regeneriert {1} TP.",
   "pg.fight.effect.manaRegen": "{0} stellt {1} Mana wieder her.",

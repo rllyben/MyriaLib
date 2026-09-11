@@ -134,6 +134,73 @@ namespace Myria.Lib.Core.Systems
             }
         }
 
+        /// <summary>
+        /// Removes a party member who flees mid-fight (multiplayer "Run") from this encounter,
+        /// without ending it for whoever's left - mirrors <see cref="AddCharacter"/>'s late-join
+        /// shape in reverse. Fixes a real bug (2026-09-10, TODO.md item 51): the flee handler
+        /// used to only unregister the fleeing player's own SignalR connection from the fight
+        /// registry, never touching the shared encounter's own turn order/roster at all - if it
+        /// was (or became) the fled character's turn, nobody could ever act for them again, and
+        /// the remaining party member's own actions kept getting silently rejected
+        /// (IsThisCharactersTurn never matched them) with their Attack button stuck disabled.
+        /// <para>
+        /// Nobody else's already-decided turn order shifts because of this - the fled character
+        /// simply drops out of it. If it was (or had just become, mid-removal) their turn, play
+        /// advances to the next living character exactly as if they'd finished a do-nothing
+        /// action. If the last remaining character flees, the fight ends as a loss (mirrors
+        /// <see cref="SkipDeadCharacters"/>/<see cref="MonstersTurn"/>'s "nobody left standing"
+        /// handling) - there's nobody left to keep it going, and nobody left to see the result
+        /// either way.
+        /// </para>
+        /// </summary>
+        public void RemoveCharacter(string characterName)
+        {
+            lock (_joinLock)
+            {
+                if (IsFinished) return;
+
+                int idx = _characters.FindIndex(c => string.Equals(c.Name, characterName, StringComparison.OrdinalIgnoreCase));
+                if (idx < 0) return;
+
+                bool wasCurrentTurn = idx == _currentCharacterIndex;
+                var fled = _characters[idx];
+
+                var newList = new List<Character>(_characters);
+                newList.RemoveAt(idx);
+                _characters = newList;
+                Log.Add(new CombatLogEntry("pg.fight.log.fled", fled.Name));
+
+                if (_characters.Count == 0) { FinishCharactersLost(); return; }
+
+                if (idx < _currentCharacterIndex)
+                {
+                    // An earlier slot was removed - shift down so the index still points at the
+                    // same character whose turn was already correctly in progress.
+                    _currentCharacterIndex--;
+                    return;
+                }
+
+                if (!wasCurrentTurn) return; // idx > _currentCharacterIndex: nothing to adjust
+
+                // The character who just left was up (or next up) - any bonus turns queued for
+                // them are now moot, and removal already shifted everyone after them down by one,
+                // so _currentCharacterIndex (left unchanged) now already points at whoever's next.
+                _bonusActionsRemaining = 0;
+                while (_currentCharacterIndex < _characters.Count && !Characters[_currentCharacterIndex].IsAlive)
+                    _currentCharacterIndex++;
+
+                if (_currentCharacterIndex >= _characters.Count)
+                {
+                    MonstersTurn();
+                    if (!IsFinished) SkipDeadCharacters();
+                }
+                else
+                {
+                    GrantGaugeForCurrentCharacter();
+                }
+            }
+        }
+
         // ── Actions ───────────────────────────────────────────────────────────
 
         public bool CharacterAttack(string playerName, int targetMonsterIndex)

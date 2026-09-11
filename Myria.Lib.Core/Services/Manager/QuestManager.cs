@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Myria.Lib.Core.Entities.NPCs;
 using Myria.Lib.Core.Entities.Characters;
 using Myria.Lib.Core.Services;
@@ -91,7 +92,14 @@ namespace Myria.Lib.Core.Services.Manager
         public static void LoadQuests(string path = "Data/common/quests.json")
         {
             var json = File.ReadAllText(path);
-            var quests = JsonSerializer.Deserialize<List<Quest>>(json)!;
+            // Category (Q14) is the only enum quests.json ever populates - RoomService.LoadRooms
+            // uses the identical JsonStringEnumConverter(CamelCase) pattern for RoomRequirementType,
+            // its own closed-set JSON-facing enum.
+            var options = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+            };
+            var quests = JsonSerializer.Deserialize<List<Quest>>(json, options)!;
             LoadQuests(quests);
         }
 

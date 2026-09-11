@@ -24,6 +24,11 @@ namespace Myria.Lib.Core.Entities.NPCs
         public int RequiredLevel { get; set; } = 1;
         public QuestStatus Status { get; set; } = QuestStatus.NotStarted;
 
+        /// <summary>Section this quest is grouped under in the quest list UI (Q14). Defaults to
+        /// Side so existing/mod-supplied quest data that omits this field still groups sensibly
+        /// without needing every entry updated.</summary>
+        public QuestCategory Category { get; set; } = QuestCategory.Side;
+
         /// <summary>True when the quest has no kill or item objectives; auto-completes on accept.</summary>
         public bool IsTalkOnly => RequiredKills.Count == 0 && RequiredItems.Count == 0;
 
@@ -90,6 +95,7 @@ namespace Myria.Lib.Core.Entities.NPCs
             ReturnDialog = ReturnDialog,
             RequiredLevel = RequiredLevel,
             Status = QuestStatus.NotStarted,
+            Category = Category,
             RequiredKills = new Dictionary<int, int>(RequiredKills),
             KillProgress = new Dictionary<int, int>(),
             RequiredItems = new Dictionary<string, int>(RequiredItems),

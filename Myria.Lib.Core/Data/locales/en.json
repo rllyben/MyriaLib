@@ -89,6 +89,7 @@
   "pg.fight.log.lose": "You were defeated...",
   "pg.fight.log.connection_error": "Lost connection to the server - try again.",
   "pg.fight.log.joined": "{0} joins the fight!",
+  "pg.fight.log.fled": "{0} flees from the fight!",
   "pg.fight.effect.poison": "{0} takes {1} poison damage.",
   "pg.fight.effect.hpRegen": "{0} regenerates {1} HP.",
   "pg.fight.effect.manaRegen": "{0} restores {1} mana.",

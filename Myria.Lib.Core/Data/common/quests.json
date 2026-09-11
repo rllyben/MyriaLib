@@ -1,6 +1,7 @@
 [
   {
     "Id": "co1_first_day",
+    "Category": "main",
     "Name": "quest.co1_first_day.name",
     "Description": "quest.co1_first_day.desc",
     "GiverNpcId": "smith_default",
@@ -43,6 +44,7 @@
   },
   {
     "Id": "co1_gather_ore",
+    "Category": "main",
     "Name": "quest.co1_gather_ore.name",
     "Description": "quest.co1_gather_ore.desc",
     "GiverNpcId": "smith_default",
@@ -79,6 +81,7 @@
   },
   {
     "Id": "co1_first_ironwork",
+    "Category": "main",
     "Name": "quest.co1_first_ironwork.name",
     "Description": "quest.co1_first_ironwork.desc",
     "GiverNpcId": "smith_default",
@@ -115,6 +118,7 @@
   },
   {
     "Id": "co1_goblins",
+    "Category": "main",
     "Name": "quest.co1_goblins.name",
     "Description": "quest.co1_goblins.desc",
     "GiverNpcId": "villager_lumina",
@@ -159,6 +163,7 @@
   },
   {
     "Id": "co1_skill_intro",
+    "Category": "main",
     "Name": "quest.co1_skill_intro.name",
     "Description": "quest.co1_skill_intro.desc",
     "GiverNpcId": "villager_lumina",
@@ -201,6 +206,7 @@
   },
   {
     "Id": "co1_troll",
+    "Category": "main",
     "Name": "quest.co1_troll.name",
     "Description": "quest.co1_troll.desc",
     "GiverNpcId": "villager_lumina",
@@ -245,6 +251,7 @@
   },
   {
     "Id": "co1_trusted",
+    "Category": "main",
     "Name": "quest.co1_trusted.name",
     "Description": "quest.co1_trusted.desc",
     "GiverNpcId": "smith_default",
@@ -2052,6 +2059,7 @@
   },
   {
     "Id": "co1_mudcrawler_remedy",
+    "Category": "main",
     "Name": "quest.co1_mudcrawler_remedy.name",
     "Description": "quest.co1_mudcrawler_remedy.desc",
     "GiverNpcId": "healer_default",
@@ -2085,6 +2093,7 @@
   },
   {
     "Id": "co1_leech_problem",
+    "Category": "main",
     "Name": "quest.co1_leech_problem.name",
     "Description": "quest.co1_leech_problem.desc",
     "GiverNpcId": "healer_default",
@@ -2118,6 +2127,7 @@
   },
   {
     "Id": "co1_hound_pack",
+    "Category": "main",
     "Name": "quest.co1_hound_pack.name",
     "Description": "quest.co1_hound_pack.desc",
     "GiverNpcId": "villager_ceralith",
